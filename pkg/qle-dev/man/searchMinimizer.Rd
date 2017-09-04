@@ -95,7 +95,8 @@ data(normal)
 # many iterations needed with `cobyla` 
 searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="cobyla",verbose=TRUE)
 # if quasi-scoring fails, use DFO method 
-searchMinimizer(c("mu"=0.1,"sd"=3),qsd,method=c("qscoring","bobyqa"),verbose=TRUE) 
+searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,
+ method=c("qscoring","bobyqa"),verbose=TRUE) 
 
 }
 \seealso{

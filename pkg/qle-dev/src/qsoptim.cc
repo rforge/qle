@@ -351,7 +351,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 void backtr(int n, double *xold, double fold,  double *p, double *x, double *f, int *check,
              fnCompare monitor, double tau, double *delta, void *data) {
   int i=0, ntry=0;
-  double s=1.0, stol=1e-7, EPS=1e-6;
+  double s=1.0, stol=1e-10, EPS=1e-8;
 
   *check=0;
   for (i=0;i<n;++i)

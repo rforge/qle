@@ -1,13 +1,13 @@
 Package: qle
 Title: Simulation-Based Quasi-Likelihood Estimation
 Version: 0.16-5
-Date: 2017-08-29
+Date: 2017-09-04
 Authors@R: c(person("Markus", "Baaske", role = c("aut", "cre", "cph"),
 			 email = "markus.baaske@uni-jena.de"),
 			 person("K. Gerald", "van den Boogaart", role = c("ths"),
 			 email = "boogaart@math.tu-freiberg.de"))		
 Description: Implements methods for simulation-based quasi-likelihood estimation.
-Depends: R (>= 3.4.1), parallel
+Depends: R (>= 3.3.3), parallel
 Imports: nloptr, digest, expm, lhs, mvtnorm
 Suggests: rlecuyer, spatstat
 License: GPL (>= 2)

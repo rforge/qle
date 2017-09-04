@@ -91,7 +91,7 @@ qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean")
 ## kriging variance matrix approximation
 # mods <- fitSIRFk(qldata, var.type="kriging",		
 #            var.opts=list("var.sim"=0.01),verbose=TRUE)	
-# qsd <- QLmodel(qldata,lb,ub,obs,mods$covT,mods$covL,var.type="kriging")
+# qsd <- QLmodel(qldata,lb,ub,obs,mods,var.type="kriging")
 	
 ###########################################################
 #	optional: contour plots
@@ -151,18 +151,15 @@ OPT$ctls
 # which one stopped iteration
 OPT$ctls[OPT$ctls[,"stop"]>0,]
 # last local estimation results
-local <- attr(OPT,"local")
-# variance matrix estimates
-var(obs0)
-# estimated variance (average approximation)
-attr(attr(OPT,"final")[[1]],"Sigma")
+local <- attr(OPT,"final")
+info <- attr(OPT,"optInfo")
 
 # fit CV models
 cvm0 <- prefitCV(qsd, reduce=FALSE)
 # CV prediction variance at `theta0` using initial design
-crossValTx(qsd, cvm0, theta0, type = "cve")
-# compare with kriging variance
-varKM(qsd$covT,theta0,X,Tstat)
+crossValTx(qsd, cvm0, type = "cve")
+# compare with kriging variance at left out sample points
+crossValTx(qsd, cvm0, type = "sigK")
 # check design: Kriging variances seem to
 # appropriately model the prediction variance
 crossValTx(qsd, cvm0, type = "acve")
@@ -171,13 +168,29 @@ crossValTx(qsd, cvm0, type = "acve")
 crossValTx(qsd, cvm0, type = "ascve")
 # compare estimated variance with sample variance
 obs0 <- simQLdata(simfunc,X=OPT$par,nsim=1000,mode="matrix")[[1]]
+
+# compare simulated and predicted variance matrix
 var(obs0)
-attr(attr(OPT,"final"),"Sigma")
+attr(local,"Sigma")
 
 # MC hypothesis test of OPT$par
+# using `local$method`="qscoring"
 Stest <- qleTest(OPT,sim=simfunc,nsim=1000,		
-	  fun="mclapply",verbose=TRUE)
+	  	    method=c("qscoring","bobyqa"),
+			fun="mclapply",verbose=TRUE)
 print(Stest)
+
+## Perform MC test using Mahalanobis criterion,
+## first try to improve estimated parameter with final weighting
+## matrix `W` at `theta` from the results of function `qle`
+## (because of the weighted variance matrix type of approximation).
+# info <- attr(OPT,"optInfo")
+# MD <- searchMinimizer(x0,OPT$qsd,method=c("lbfgs","bobyqa"),
+#		 W=info$W,theta=info$theta,verbose=TRUE)
+# Stest.LS <- qleTest(OPT,MD,sim=simfunc,nsim=1000,		
+#			fun="mclapply",verbose=TRUE)
+# print(Stest.LS)
+
 
 ###########################################################
 #	optional: contour plots of final approximation
@@ -198,6 +211,8 @@ print(Stest)
 #		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
 # try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
+
+## save results as data set 
 ## qsd$sim <- simfunc
 ## save(qsd,file="normal.rda")
 }

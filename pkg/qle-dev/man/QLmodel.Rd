@@ -4,9 +4,9 @@
 \alias{QLmodel}
 \title{Construct quasi-likelihood model}
 \usage{
-QLmodel(qldata, lb, ub, obs, covT, covL = NULL, nfit = 1,
-  var.type = c("wcholMean", "cholMean", "wlogMean", "logMean", "kriging",
-  "const"), useVar = TRUE, criterion = c("qle", "mahal"))
+QLmodel(qldata, lb, ub, obs, mods, nfit = 1, var.type = c("wcholMean",
+  "cholMean", "wlogMean", "logMean", "kriging", "const"), useVar = TRUE,
+  criterion = c("qle", "mahal"))
 }
 \arguments{
 \item{qldata}{simulation data (see \code{\link{setQLdata}})}
@@ -17,9 +17,7 @@ QLmodel(qldata, lb, ub, obs, covT, covL = NULL, nfit = 1,
 
 \item{obs}{numeric vector of (real data) statistics}
 
-\item{covT}{list of (fitted) covariance models of the statistics}
-
-\item{covL}{list of (fitted) covariance models of kriging variance matrix interpolation}
+\item{mods}{list of (fitted) covariance models (see \code{\link{fitSIRFk}})}
 
 \item{nfit}{number of cycles, \code{nfit=1} (default), after which covariance
 parameters are re-estimated otherwise re-used}

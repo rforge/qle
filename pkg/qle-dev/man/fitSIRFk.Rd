@@ -33,7 +33,10 @@ approximations of the variance matrix}
 \item{verbose}{if \code{TRUE}, print intermediate information}
 }
 \value{
-List of fitted covariance models
+List of fitted covariance models for kriging the 
+ sample means of statistics named `\code{covT}` and optionally
+ the variance matrix of statistics, `\code{covL}`. The object also stores
+ the reml optimization parameters `\code{controls}`.
 }
 \description{
 Fit a generalized covariance model to simulation data
@@ -57,9 +60,10 @@ The function estimates the parameters of the covariance model `\code{sirfk}` by 
   The same principle applies in case of kriging the variance matrix. Here the values in `\code{var.opts$var.sim}` (of length one or
   equal to the number of corresponding sample points) are used as scale factors for all Cholesky decomposed terms
   if `\code{intrinsic}` is \code{TRUE} and otherwise considered as local nugget variances. A global nugget value is estimated during
-  the REML covariance parameter estimation for both cases. 
-
-	 See \code{\link{getQLmodel}} for an example.
+  the REML covariance parameter estimation for both cases.
+	 Note that the returned object can also be constructed manually and passed as an input argument to
+  \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. Also see function
+  \code{\link{getQLmodel}} for an example.
 }
 \author{
 M. Baaske

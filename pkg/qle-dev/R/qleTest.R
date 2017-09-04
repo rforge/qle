@@ -141,7 +141,6 @@ checkMultRoot <- function(est, par = NULL,
 #' @param local	    	optional, object of class \code{QSResult}, \code{NULL} (default), local estimation results 
 #' @param sim			user supplied simulation function (see \code{\link{qle}})
 #' @param ...			arguments passed to the simulation function `\code{sim}`
-#' @param test			name of test statistic, either "\code{qle}" (default) or "\code{mahal}" 
 #' @param nsim			number of model replications to generate the simulated statistics
 #' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesized parameter
 #' @param check.root    logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})  						
@@ -162,7 +161,7 @@ checkMultRoot <- function(est, par = NULL,
 #' 	 \item{msem}{ mean square error matrix of re-estimated parameters}
 #'   \item{aiqm}{ average inverse quasi-information matrix over all re-estimated parameters}
 #'   \item{obs}{ list of simulated observed statistics}
-#'   \item{optInfo}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
+#'   \item{optRes}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
 #'	 \item{mean.score}{ average quasi-score or average gradient of MD at the re-estimated parameters}
 #'   \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
 #'       the re-estimated parameters have NA values, and criterion function minimizations have errors or did not converge} 
@@ -172,14 +171,17 @@ checkMultRoot <- function(est, par = NULL,
 #' 	The function expects an object of class \code{\link{qle}}. Simulated statistics which are already available at the estimated
 #'  parameter can be passed by the argument `\code{obs}`. Otherwise the function first generates those realizations using `\code{nsim}`
 #'  model replications. The criterion functions are used as specified in the object `\code{qsd}` and will not be further improved by
-#'  additional samples during the test since this would result in a full estimation procedure again. The test statistic, named by
-#'  `\code{test}`, can be (and should be) different from the criterion function used for estimating the parameter before. Apart from
-#'  the QD as a test statistic, in principle, any supported type of least squares criterion can be used depending on the choice of
-#'  variance matrix approximation. In practice, re-estimations might fail to converge. However, the user can control the convergence
-#'  of local solvers (including quasi-scoring) by the corresponding control parameters passed to the solvers in \code{\link{searchMinimizer}}.
-#'  Failed re-estimation results are extracted and stored in the attribute `\code{info}`. In addition, we return the standard error,
-#'  predicted standard error (based on the average inverse quasi-information matrix), root mean square error, bias and sample mean value
-#'  of the re-estimated parameters in order to assess the precision of the estimated parameter.    
+#'  additional samples during the test since this would result in a full estimation procedure again. The test statistic is either chosen
+#'  as the current criterion function in `\code{OPT}` (see  \code{\link{getQLmodel}}, argument `\code{criterion}`) or taken from the
+#'  optional argument `\code{local}` if supplied. Given optimization results by argument `\code{local}` of class \code{QSResult}, the
+#'  user can select a different criterion function as a test statistic than used before for estimating the parameter. Apart from
+#'  the QD as a test statistic, in principle, any supported type of least squares criterion (or more general Mahalanobis distance) can
+#'  be used depending on the choice of variance matrix approximation (see \code{\link{covarTx}}). In some situations, the re-estimations
+#'  might fail to converge due. However, the user can control the convergence of local solvers (including quasi-scoring) by the
+#'  corresponding control parameters passed to the solvers, see \code{\link{searchMinimizer}}. Failed re-estimation results are extracted
+#'  and stored in the attribute `\code{info}`. In addition, we return the standard error, predicted standard error (based on the average
+#'  inverse quasi-information matrix), root mean square error, bias and sample mean value of the re-estimated parameters in order to assess
+#'  the accuracy of the estimated parameter.    
 #'
 #' 	\subsection{Background}{
 #' 
@@ -200,77 +202,62 @@ checkMultRoot <- function(est, par = NULL,
 #' @author M. Baaske
 #' @rdname qleTest
 #' @export
-qleTest <- function(est, local = NULL, sim, ..., test = c("qle","mahal"),
+qleTest <- function(est, local = NULL, sim, ...,
 			 		 nsim = 100, obs = NULL, check.root=FALSE,
 					  na.rm = TRUE, fun = getOption("qle.fork","lapply"),
 					   cl = NULL, verbose = FALSE)
 {				  
 	if(.isError(est))
 	  stop("Estimation result has errors. Please see attribute `error`.")    
-    # last evaluation of criterion function
-  	final <- attr(est,"final")
-	if(.isError(final))
-	  stop("Final criterion function evaluation has errors. Please see attribute `error`.")
+    # last evaluation of criterion function  	
+	if(.isError(attr(est,"final")))
+	  stop("Final criterion function evaluation has errors. Please check attribute `error`.")
 		
     args <- list(...)
-	test <- match.arg(test)
-	
 	# basic checks
-	stopifnot(class(est) == "qle")	
-	if(check.root && test=="mahal")
-	 stop("Consistency check of multiple roots only for criterion `qle`.")		
-	stopifnot(class(est$qsd)=="QLmodel")
+	stopifnot(class(est) == "qle")
+  	stopifnot(class(est$qsd)=="QLmodel")
 	xdim <- attr(est$qsd$qldata,"xdim")
 	
-	# get (final) estimated parameter	
-	par <- NULL
-	if(is.null(local)){
-	  par <- est$par	
-      qd <- attr(est,"final")
+	# estimated parameter	 
+	if(is.null(local)){		
+		local <- attr(est,"final")
+		if(.isError(local) || !attr(est,"optInfo")$minimized)
+		 stop("Final optimization result has errors. Please check attribute `final` and `optInfo`.")			
     } else {
-		qd <- local
-		par <- local$par	  
-	}
-	if(.isError(qd)) {
-		msg <- paste0("Could not compute test statistic: ")
-		message(msg)
-		return(.qleError(message=msg,call=match.call(),error=qd))			  
-	}
-	stopifnot(class(qd)=="QSResult")
-	stopifnot(xdim == length(par))		
-	
-	# get argument ids
+       stopifnot(class(local)=="QSResult")	 
+	   # set current test statistic
+	   est$qsd$criterion <- local$criterion		
+	}	
+	# argument ids
 	id <- pmatch(names(args),names(formals(searchMinimizer)))
 	# check `searchMinimizer' args 
 	opt.args <- args[which(!is.na(id))]	
 	
 	# check with qsd hidden	
 	.checkfun(searchMinimizer,opt.args,
-			hide.args=c("x0","qsd"),check.default=FALSE)
+		hide.args=c("x0","qsd"),check.default=FALSE)
 		
-	test.args <-
-		list("points"=par,"qsd"=est$qsd,
-		     "cvm"=est$cvm,"inverted"=TRUE,
-		  	 "check"=FALSE,"Sigma"=NULL,"verbose"=verbose)
-
 	# use last Sigma (unless kriging variance matrix)  
-	if(est$qsd$var.type != "kriging") {
+	if(est$qsd$var.type != "kriging"){
 		info <- attr(est,"optInfo")
 		opt.args <- c(opt.args,list(W=info$W,theta=info$theta)) 
-  	}  	
-	# observed test statistic at `par`
-	tval <- qd$val		 
-	qi <- try(solve(qd$I),silent=TRUE)
+  	}
+	# use final (local) method by default
+	# if not given as an input argument
+	if(!("method" %in% names(opt.args)))
+	 opt.args$method <- local$method
+    # invert QI for predicted std. error (asymptotic) at estimated theta 
+	qi <- try(solve(local$I),silent=TRUE)
 	if(inherits(qi,"try-error") || anyNA(qi) )
 	  qi <- NULL
 	
 	# MC simulation of observed `data`
 	# if no observations supplied	
 	if(is.null(obs)) {		
-		nid <- which(is.na(id))
+		nid <- which(!is.na(id))
 		if(length(nid)>0)
-		 args <- args[nid]
-		
+		 args <- args[-nid]		
 		sim <- match.fun(sim)
 		# check `sim` input values
 		.checkfun(sim,args,remove=TRUE)
@@ -278,8 +265,8 @@ qleTest <- function(est, local = NULL, sim, ..., test = c("qle","mahal"),
 				
 		simFun <- function(x) try(do.call(sim,c(list(x),args)))		
 		sim.args <-
-			list(sim=simFun,X=par,nsim=nsim,mode="list",
-			     fun=fun,cl=cl,verbose=verbose)
+			list(sim=simFun,X=local$par,nsim=nsim,
+				 mode="list",fun=fun,cl=cl,verbose=verbose)
 		if(verbose)
 		 cat("Simulating observed statistics...","\n")
  		
@@ -304,9 +291,7 @@ qleTest <- function(est, local = NULL, sim, ..., test = c("qle","mahal"),
 		else if(class(obs) != "simQL" || !is.list(obs))
 		  stop("Argument `obs` must be of class `simQL` and `list` type.")	   
 	}
-					
-	# set test statistic
-	est$qsd$criterion <- test	
+		
 	# search minimizers	
 	hasError <-  badInv <- 0
 	if(verbose)
@@ -315,11 +300,11 @@ qleTest <- function(est, local = NULL, sim, ..., test = c("qle","mahal"),
  	RES <- do.call(doInParallel,
 			  c(list(X=obs[[1]],
 					FUN=function(x,...)	{
-						searchMinimizer(x0=par,qsd=est$qsd,...,    
+						searchMinimizer(x0=local$par,qsd=est$qsd,...,    
 							cvm=est$cvm,obs=x,info=TRUE,inverted=TRUE,
 								check=FALSE,verbose=verbose)
 					},
-				fun=fun, cl=cl),opt.args))    		
+				fun=fun,cl=cl),opt.args))    		
 	
 	if(inherits(RES,"error")) {
 	  msg <- paste0("Could not find MC replicated parameters: ",
@@ -380,24 +365,24 @@ qleTest <- function(est, local = NULL, sim, ..., test = c("qle","mahal"),
 	if(nrow(mpars) <= 10)
 	 warning("Only a number of 10 or less parameters could be re-estimated.")	
     
- 	# some (empirical) measures
-	par <- as.numeric(unlist(par))
+ 	# some (empirical) measures	
 	Mse <- function(x) {(t(x)%*%x)/nrow(x)}
-	msem <- Mse(mpars-do.call(rbind,rep(list(par),nrow(mpars))))
+	msem <- Mse(mpars-do.call(rbind,rep(list(local$par),nrow(mpars))))
 		
-	# value of test statistic: (quasiDeviance or mahalanobis)		
+	# value of test statistic at re-estimated parameters			
 	tvals <- sapply(RES[ok],"[[","value") 
 	stopifnot(is.numeric(tvals))
 	
 	# get efficient score test (with MC parameters)
 	B <- structure(
 			 data.frame(
-			  cbind("par"=par,
+			  cbind("par"=local$par,
 				    "se"=apply(mpars,2,sd),					
 					"rmse"=diag(msem)^0.5,
-					"bias"=colMeans(t(t(mpars)-par)),
+					"bias"=colMeans(t(t(mpars)-local$par)),
 					"mean"=colMeans(mpars))),
-			"sb"=tval, "Sb"=tvals, "test"=test)
+			"sb"=local$val, "Sb"=tvals,
+			"test"=est$qsd$criterion)
 	
 	# had errors
 	hasError <- which(!(1:length(RES) %in% ok))
@@ -405,10 +390,10 @@ qleTest <- function(est, local = NULL, sim, ..., test = c("qle","mahal"),
 	  message(paste0("A total of ",length(hasError)," re-estimations failed."))
   
     chk <- NULL
-    if(check.root) {
-		chk <- checkMultRoot(est,par=par,fun=fun,cl=cl,verbose=verbose)
+    if(check.root && est$qsd$criterion=="qle") {
+		chk <- checkMultRoot(est,local$par,fun=fun,cl=cl,verbose=verbose)
 		if(.isError(chk))
-			message("Consistency check of estimated parameter(s) failed.")		
+		 message(.makeMessage("Consistency check for the estimated model parameter failed."))		
 	}
   
 	# results
@@ -417,7 +402,7 @@ qleTest <- function(est, local = NULL, sim, ..., test = c("qle","mahal"),
 	    	aiqm=aiqm,						# average inverse QI (re-estimated parameters)
 			qi=qi,							# inverse QI at estimated theta
 	    	obs=obs,						# (MC) observations
-	    	optInfo=RES,					# optimization results
+	    	optRes=RES,					    # optimization results
 			mean.score=mScore,				# average score/gradient
 			criterion=est$qsd$criterion,
 			solInfo=chk,					# values of consistency criteria

@@ -4,7 +4,7 @@
 ## the mean number of customers as a statistic 
 library(qle)
 # options
-options(mc.cores=detectCores())
+options(mc.cores=8)
 options("qle.fork"="mclapply")
 
 # setting RNG and seed
@@ -81,7 +81,16 @@ T <- qsd$qldata[grep("mean.",names(qsd$qldata))]
 Y <- predictKM(qsd$covT,rho,X,T,krig.type="var")
 # steady state values
 y0 <- rho/(1-rho)
+
+## ---- plotting ---------
+#pdf("mm1q.pdf",width = 50, height = 25)
+
 dev.new()
+op <-par(mfrow=c(1, 2), mar=c(5.1, 5.1, 1.1, 1.1),
+		oma=c(5,4,1,1), cex=2.2, cex.axis=2.2, cex.lab=2.2,lwd=0.5,
+		cex.main=2.2, cex.sub=2.2, xaxs='i', yaxs='i')
+
+
 plot(NULL, type="n", xlab=expression(rho),
 		ylab="T",xlim=c(0,1), ylim=c(0,10))
 
@@ -91,7 +100,7 @@ lines(as.numeric(rho),y0,col="red")
 legend("topleft", c("Number of customers in the system",
 				    "Expected number at steady state",
 					"Kriging approximation"),
-		lty=c(2,1,1),col=c("black","red","blue"))
+			cex=2.2, lty=c(2,1,1),col=c("black","red","blue"))
 
 # fitted statistic
 # qsd$covT 
@@ -104,7 +113,6 @@ y <- sapply(qd,"[[","val")
 score <- sapply(qd,"[[","score")
 
 ## plot quasi-deviance and quasi-score function
-dev.new()
 plot(NULL, type="n", xlab=expression(rho),
       ylab="quasi-deviance",xlim=c(lb,ub), ylim=c(-10,50))
 abline(h=0)
@@ -112,8 +120,10 @@ points(X,QD,pch=3)
 lines(p,score, type='l',col="blue",lwd=1.5) 
 lines(p,y,col="black",lwd=0.8)
 legend("topleft", c("quasi-deviance","quasi-score","sample points", "solution"),
-		lty=c(1,1),lwd=c(1.5,1.5,NA,NA),pch=c(NA,NA,3,5),
+		lty=c(1,1),lwd=c(1.5,1.5,NA,NA),pch=c(NA,NA,3,5),cex=2.2,
 		col=c("black","blue","black","magenta"))
+par(op)
+#dev.off()
 
 # some options for quasi-scoring
 opts <- list("pl"=0, # change to > 1 for output 

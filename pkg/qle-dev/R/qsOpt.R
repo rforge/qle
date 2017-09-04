@@ -495,14 +495,12 @@ prefitCV <- function(qsd, fit = TRUE, reduce = TRUE, type = c("cv","max"),
 	
     type <- match.arg(type)
 	# Leave-k-Out CV
-	tryCatch({	
-		 opts <- nloptr::nl.opts()
+	tryCatch({			 
 		 if(length(control)>0) {		
+			opts <- nloptr::nl.opts()
 			opts[names(control)] <- control
 		 } else {
-			opts <- list("algorithm" = "NLOPT_GN_DIRECT_L",
-						 "ftol_rel" = 1.0e-6, "xtol_rel" = 1.0e-6,
-						 "maxeval" = 1000)		
+			opts <- attr(qsd,"opts")		
 		 }			
 		 return(
 		   structure(doInParallel(S, updateCV, qsd=qsd, fit=fit, 
@@ -681,7 +679,8 @@ prefitCV <- function(qsd, fit = TRUE, reduce = TRUE, type = c("cv","max"),
 #' # many iterations needed with `cobyla` 
 #' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="cobyla",verbose=TRUE)
 #' # if quasi-scoring fails, use DFO method 
-#' searchMinimizer(c("mu"=0.1,"sd"=3),qsd,method=c("qscoring","bobyqa"),verbose=TRUE) 
+#' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,
+#'  method=c("qscoring","bobyqa"),verbose=TRUE) 
 #' 
 #' @seealso \code{\link[nloptr]{nloptr}}
 #' 			
@@ -1495,11 +1494,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 							  		function(i) {
 									  runif(globals$nsample,qsd$lower[i],qsd$upper[i])
 									}
-							)
-							
+							)							
 							colnames(Y) <- xnames							
-							# Sigma is reused as current best
-							# even during global phase!
+							# reset: no weighting in global phase
 							W <- theta <- NULL				
 							# distances check
 							dists <- .min.distXY(X,Y)
@@ -1547,8 +1544,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 					if(xdim == 1) 
 					 p <- cbind(p,c(0,0))					 
 					cols <- if(status[["global"]]) "blue" else "green"
-					try(points(p[1,,drop=FALSE],pch=8,cex=1,col=cols,bg=cols),silent=TRUE)
-					try(points(p[2,,drop=FALSE],pch=21,cex=0.15,col="magenta",bg="magenta"),silent=TRUE)
+					try(points(p[1,,drop=FALSE],pch=8,cex=1,col=cols,bg=cols))
+					try(points(p[2,,drop=FALSE],pch=21,cex=0.15,col="magenta",bg="magenta"))
 				}		
 						
 				# show info

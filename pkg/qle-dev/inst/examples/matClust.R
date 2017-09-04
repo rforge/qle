@@ -6,7 +6,7 @@ library(qle)
 library(spatstat)
 
 # set options
-options(mc.cores=detectCores())
+options(mc.cores=8)
 options("qle.fork"="mclapply")
 
 RNGkind("L'Ecuyer-CMRG")
@@ -57,10 +57,8 @@ plotGraphs <- function(par, nsim = 100) {
 	print(coef(summary(fit0.ql)))
 	cat("\n\n")
 	cat("Fitted by minimum contrast: \n\n")
-	print(coef(summary(fit0.mc)))
-	
+	print(coef(summary(fit0.mc)))	
 }
-
 
 # load example data set (spatstat)
 data(redwood)
@@ -97,13 +95,13 @@ qsd <- getQLmodel(sim,lb,ub,obs0,criterion="qle",
 # cross-validation: fitting CV covariance models 
 cvm <- prefitCV(qsd, type="max",
         fit=TRUE, reduce=FALSE,
-        fun="mclapply", verbose=TRUE)
+        verbose=TRUE)
 
 # starting point for local search
 x0 <- c("kappa"=20,"R"=0.05,"mu"=3)
 
 # first try quasi-scoring with CV errors (type=max)
-QS <- qscoring(qsd,x0,
+QS0 <- qscoring(qsd,x0,
 		 opts=list("ftol_rel"=1e-6,"slope_tol"=1e-4),
 		 cvm=cvm,pl=10,verbose=TRUE)
 
@@ -139,7 +137,7 @@ crossValTx(qsd, cvm, type = "sigK")
 # of sample means of the statistics
 OPT <- qle(qsd, simClust, cond=cond,  
 		global.opts = list("maxiter"=10,
-				           "maxeval" = 25,
+				           "maxeval" = 20,
 				           "weights"=c(1,5,10)),
 		local.opts = list("lam_max"=1e-2,
 				          "nextSample"="score",
@@ -163,17 +161,17 @@ S0 <- searchMinimizer(OPT$par, OPT$qsd,
 
 # quas-scoring again more precise results
 QS <- qscoring(OPT$qsd,OPT$par,
-		opts=list("slope_tol"=1e-6,"score_tol"=1e-3),
-		cvm=OPT$cvm)
+		opts=list("slope_tol"=1e-4,
+				   "score_tol"=1e-3),
+		cvm=OPT$cvm,pl=10)
 
 # compare the different estimates
-checkMultRoot(OPT,par=rbind(QS$par,OPT$par,S0$par))
+par <- rbind("QS"=QS$par,"OPT"=OPT$par,"S0"=S0$par)
+checkMultRoot(OPT,par=par)
 
 # MC hypothesis testing 
-Stest <- qleTest(OPT,QS,sim=simClust,cond=cond, 
-				 test="qle",nsim=1000,
-				 method=c("qscoring","bobyqa","direct"),				 
-				 verbose=TRUE)
+Stest <- qleTest(OPT,QS,sim=simClust,cond=cond,nsim=1000,
+		  method=c("qscoring","bobyqa","direct"),verbose=TRUE)
 
 print(Stest)
 
@@ -189,12 +187,12 @@ fitM$modelpar
 # ------------------------- ONLY FOR THE VIGNETTE ---------------------------
 
 ## save results for vignette
-# matclust <- list("qsd"=qsd,"OPT"=OPT,"Stest"=Stest)
-# save(matclust,file="matclust.rda")
+#matclust <- list("qsd"=qsd,"cvm"=cvm,"OPT"=OPT,"Stest"=Stest)
+#save(matclust,file="matclust.rda")
 
 ## plot and store envelopes
-# pdf("Kfunc.pdf",width = 8, height = 10)
-# plotGraphs(QS$par,nsim=1000)
-# dev.off()
+#pdf("Kfunc.pdf",width = 8, height = 10)
+#plotGraphs(QS$par,nsim=1000)
+#dev.off()
 
 }

@@ -250,8 +250,10 @@ fnREML <- function(p, y, Xs, P, model, fixed = seq(length(p)), verbose = FALSE)
 	 	W <- crossprod(P, Cmat %*% P)
 		rc <- rcond(Cmat)
 		msg <- NULL	
-		if(rcond(W) < 1e-10 || rc < 1e-10) { 
-	 	  msg <- paste0("Covariance matrix reciprocal condition number is near zero: ",rc,"\n")
+		if(rcond(W) < 1e-10 || rc < 1e-10) {		  
+		  msg <- paste(c("Covariance matrix reciprocal condition number: ", rc,"\nnear zero at parameter: \n\t ",
+						 format(p, digits=6, justify="right"),"\n"),
+				  collapse = " ")
 		  warning(msg)
 	    }
 	  	
@@ -308,47 +310,50 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
  	}
 	 
  	tryCatch({		
-            nms <- names(model$param)				
-			Fmat <- .Call(C_Fmat,Xs,model$trend)		
-			P <- .Call(C_Pmat,Fmat)	
-			
-			# transform to mean zero data				
-			y <- crossprod(P,as.numeric(model$dataT))
-			
-			model$dataT <- NULL		
-			p0 <- .PROJMED(model$start,model$lower,model$upper)
-			
-			res <- nloptr::nloptr(p0, fn, lb = model$lower, ub = model$upper, opts = opts,
-							y = y, Xs = Xs, P = P, model = model, fixed = model$fixed,
-							verbose = verbose)
-			
-			if(inherits(res,"error") ||
-			   is.null(res) || anyNA(res$solution)){
-				msg <- paste0("Function call to 'nloptr' failed.")				
-				message(msg)
-				return(.qleError(message=msg,call=match.call(),error=res))
-			}
-			
-			converged <- FALSE
-			sol <- res$solution			
-			if(res$status %in% c(0:4)) {
-				converged <- TRUE
-				model$param[model$fixed] <- sol						   			   
-		   } else {
-			   if(verbose)
-				 message("Estimation of covariance parameters did not converge.")
-		   }		
-		   structure(
-				  list(model = model,
-					   convergence=converged),
-			  optres=if(verbose) res else NULL, class = "reml") 
+        nms <- names(model$param)				
+		Fmat <- .Call(C_Fmat,Xs,model$trend)		
+		P <- .Call(C_Pmat,Fmat)	
+		
+		# transform to mean zero data				
+		y <- crossprod(P,as.numeric(model$dataT))
+		
+		model$dataT <- NULL		
+		p0 <- .PROJMED(model$start,model$lower,model$upper)
+		
+		res <- nloptr::nloptr(p0, fn, lb = model$lower, ub = model$upper, opts = opts,
+						y = y, Xs = Xs, P = P, model = model, fixed = model$fixed,
+						verbose = verbose)
+		msg <- "Normal convergence"
+		if(inherits(res,"error") ||
+		   is.null(res) || anyNA(res$solution)){
+			msg <- .makeMessage("Function call to 'nloptr' failed.")				
+			message(msg)
+			return(.qleError(message=msg,call=match.call(),error=res))
+		}
+		
+		converged <- FALSE
+		sol <- res$solution			
+		if(res$status %in% c(0:4)) {
+			converged <- TRUE
+			model$param[model$fixed] <- sol						   			   
+	    } else {
+		   verbose <- TRUE
+		   msg <- .makeMessage("Estimation of covariance parameters did not converge.")		   
+		   message(msg)
+	    }		
+	    structure(
+		    list(model=model,
+				 convergence=converged,
+				 message=msg),
+		  optres = if(verbose) res else NULL, class = "reml") 
 				 
-		}, error = function(e){
+	 }, error = function(e){
 			 msg <- .makeMessage("Nloptr error fitting covariance parameters: ",
-					 conditionMessage(e))
+					  conditionMessage(e))
 			 message(msg)
 			 structure(
 				list(model=model,
+					 convergence=FALSE,
 					 message=msg,
 					 call=sys.call()),
 			  error=e)			  		
@@ -408,8 +413,9 @@ fitCov <- function(models, Xs, data, controls = list(),
 	if(length(controls)>0) {		
 		opts[names(controls)] <- controls
 	} else {
-		opts <- list("algorithm" = "NLOPT_GN_DIRECT_L",
-				"ftol_rel" = 1.0e-6, "xtol_rel" = 1.0e-6, "maxeval" = 1000)		
+		opts <- list("algorithm" = "NLOPT_GN_DIRECT",
+				"ftol_rel" = 1.0e-6, "xtol_rel" = 1.0e-6,
+				"maxeval" = 1000)		
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
@@ -435,7 +441,9 @@ fitCov <- function(models, Xs, data, controls = list(),
 		 message("Successfully fitted covariance parameters.","\n")		
 	  }
 	}	
-	return ( structure(mods, error = if(length(errId) > 0) errId else NULL))
+	structure(mods,
+		opts = opts,
+		error = if(length(errId) > 0) errId else NULL)
 }
 
 #' @name QLmodel
@@ -448,8 +456,7 @@ fitCov <- function(models, Xs, data, controls = list(),
 #' @param lb		    numeric vector of lower bounds defining the (hyper)box
 #' @param ub 			numeric vector of upper bounds defining the (hyper)box
 #' @param obs	    	numeric vector of (real data) statistics
-#' @param covT			list of (fitted) covariance models of the statistics
-#' @param covL			list of (fitted) covariance models of kriging variance matrix interpolation
+#' @param mods			list of (fitted) covariance models (see \code{\link{fitSIRFk}}) 
 #' @param nfit			number of cycles, \code{nfit=1} (default), after which covariance
 #' 						parameters are re-estimated otherwise re-used 	
 #' @param var.type  	name of the variance approximation method (see \code{\link{covarTx}})
@@ -473,7 +480,7 @@ fitCov <- function(models, Xs, data, controls = list(),
 #' @author M. Baaske
 #' @rdname QLmodel
 #' @export 
-QLmodel <- function(qldata, lb, ub, obs, covT, covL = NULL, nfit = 1,
+QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1,
 		    var.type = c("wcholMean","cholMean","wlogMean","logMean","kriging","const"),
 				useVar = TRUE, criterion = c("qle","mahal"))
 {	
@@ -492,17 +499,32 @@ QLmodel <- function(qldata, lb, ub, obs, covT, covL = NULL, nfit = 1,
 	 stop("`NA`,`NaN` or `Inf`values detected in argument `obs.")
 	if(!is.numeric(obs))
 	  stop("Argument `obs` must be a (named) numeric vector or list.")
-	if(length(covT) != length(obs))
+  	stopifnot(!is.null(mods$covT))
+	
+	if(length(mods$covT) != length(obs))
 	  stop("Number of covariance models `covT` and length of observations vector `obs` must equal.")
   	var.type <- match.arg(var.type)
 	criterion <- match.arg(criterion)
 		
-	if(is.null(covL) && var.type == "kriging")
+	if(is.null(mods$covL) && var.type == "kriging")
 	  stop("Covariance models for variance matrix interpolation must be set for argument \'var.type\'.")
 	if(!is.numeric(nfit) || length(nfit)>1 )
 	 stop("Argument 'nfit must be numeric of length one.")	
 	
- 	covT <- .extractCovModels(covT)		
+ 	covT <- .extractCovModels(mods$covT)
+	stopifnot(class(covT)=="krige")
+	
+	covL <- NULL
+	if(!is.null(mods$covL)){		
+		covL <- .extractCovModels(mods$covL)
+		stopifnot(class(covL)=="krige")
+	}
+	# reml optimization options 
+	opts <- attr(mods,"opts")
+	if(is.null(opts)){
+	 opts <- list("algorithm" = "NLOPT_GN_DIRECT_L","ftol_rel" = 1.0e-7,
+	 		   "xtol_rel" = 1.0e-5,"maxeval" = 1000)			  
+	}
 	# minimum required sample size
 	minN <- ifelse(min(sapply(covT,	function(x) x$trend)) < 2, dx+2, (dx+1)*(dx+2)/2+1)
 	if(nrow(qldata)<minN) {
@@ -515,13 +537,14 @@ QLmodel <- function(qldata, lb, ub, obs, covT, covL = NULL, nfit = 1,
 			 "lower" = lb,
 			 "upper" = ub,
 			 "covT" = covT,
-			 "covL" = .extractCovModels(covL),			
+			 "covL" = covL,			
 			 "obs" = obs,		 
 			 "var.type" = var.type,			 
 			 "krig.type" = if(useVar) "var" else "dual",
 			 "criterion" = criterion,			 
 			 "minN" = minN,
 			 "nfit" = nfit),
+	  opts = opts,
 	  class="QLmodel"
 	)
 }
@@ -565,7 +588,10 @@ QLmodel <- function(qldata, lb, ub, obs, covT, covL = NULL, nfit = 1,
 #' @param controls		list of control parameters passed to \code{\link[nloptr]{nloptr}} minimization function
 #' @param verbose		if \code{TRUE}, print intermediate information
 #' 
-#' @return List of fitted covariance models
+#' @return List of fitted covariance models for kriging the 
+#'  sample means of statistics named `\code{covT}` and optionally
+#'  the variance matrix of statistics, `\code{covL}`. The object also stores
+#'  the reml optimization parameters `\code{controls}`. 
 #' 
 #' @details The function estimates the parameters of the covariance model `\code{sirfk}` by default using REML for kriging
 #'   the statistics and kriging the variance matrix of statistics only if `\code{var.type}` does not equal "\code{const}".
@@ -585,9 +611,10 @@ QLmodel <- function(qldata, lb, ub, obs, covT, covL = NULL, nfit = 1,
 #'   The same principle applies in case of kriging the variance matrix. Here the values in `\code{var.opts$var.sim}` (of length one or
 #'   equal to the number of corresponding sample points) are used as scale factors for all Cholesky decomposed terms
 #'   if `\code{intrinsic}` is \code{TRUE} and otherwise considered as local nugget variances. A global nugget value is estimated during
-#'   the REML covariance parameter estimation for both cases. 
-#' 
-#' 	 See \code{\link{getQLmodel}} for an example.
+#'   the REML covariance parameter estimation for both cases.
+#' 	 Note that the returned object can also be constructed manually and passed as an input argument to
+#'   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. Also see function
+#'   \code{\link{getQLmodel}} for an example.
 #'  
 #' @author M. Baaske
 #' @rdname fitSIRFk
@@ -679,16 +706,15 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 				  }
 		 )	 
 	 }		 	 
-	 opts <- nloptr::nl.opts()
+	 # (default) reml optimization options 
 	 if(length(controls)>0) {		
+		 opts <- nloptr::nl.opts()
 		 opts[names(controls)] <- controls
 	 } else {
-		 opts <- list("algorithm" = "NLOPT_GN_DIRECT_L",
-				      "ftol_rel" = 1.0e-7,
-				 	  "xtol_rel" = 1.0e-5,
-				      "maxeval" = 1000)			  
+		 opts <- list("algorithm" = "NLOPT_GN_DIRECT_L","ftol_rel" = 1.0e-7,
+				 	  "xtol_rel" = 1.0e-5,"maxeval" = 1000)			  
 	 }
-	 
+	 	 
 	 # REML fit covariance models (statistics and variance matrices)
 	 mods <- doInParallel(c(covT,covL), doREMLfit, Xs=Xs, opts = opts,
 			 	fun = fun, cl=cl, verbose=verbose)
@@ -712,6 +738,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 	ret <- structure(
 			  list("covT" = mods[1:nstat],
 			  	   "var.type" = var.type),
+		     opts = opts,
 			 error = if(length(errId)>0) errId else NULL)	
 	 
 	if(!is.null(covL))
@@ -790,8 +817,7 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 			 c(list(qldata,
 					lb,ub,
 			  	    obs,
-				    mods$covT,
-				    mods$covL,
+				    mods,				    
 					useVar=useVar,
 				    criterion=criterion),
 		     args))
@@ -883,14 +909,12 @@ updateCovModels <- function(qsd, nextData, fit = TRUE,
 	qsd$qldata <- rbind(qsd$qldata,nextData)	
 	Xs <- as.matrix(qsd$qldata[seq(xdim)])
 	np <- nrow(Xs)
-	
-	opts <- nloptr::nl.opts()
+		
 	if(length(controls)>0) {		
+		opts <- nloptr::nl.opts()
 		opts[names(controls)] <- controls
 	} else {
-		opts <- list("algorithm" = "NLOPT_GN_DIRECT_L",
-				     "ftol_rel" = 1.0e-6, "xtol_rel" = 1.0e-6,
-					 "maxeval" = 1000)		
+		opts <- attr(qsd,"opts")	
 	}		 
 	# update function 
 	fitit <- (fit && !(nrow(Xs) %% qsd$nfit))

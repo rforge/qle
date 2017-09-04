@@ -4,9 +4,9 @@
 \alias{qleTest}
 \title{Monte Carlo testing}
 \usage{
-qleTest(est, local = NULL, sim, ..., test = c("qle", "mahal"), nsim = 100,
-  obs = NULL, check.root = FALSE, na.rm = TRUE,
-  fun = getOption("qle.fork", "lapply"), cl = NULL, verbose = FALSE)
+qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
+  check.root = FALSE, na.rm = TRUE, fun = getOption("qle.fork", "lapply"),
+  cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
@@ -16,8 +16,6 @@ qleTest(est, local = NULL, sim, ..., test = c("qle", "mahal"), nsim = 100,
 \item{sim}{user supplied simulation function (see \code{\link{qle}})}
 
 \item{...}{arguments passed to the simulation function `\code{sim}`}
-
-\item{test}{name of test statistic, either "\code{qle}" (default) or "\code{mahal}"}
 
 \item{nsim}{number of model replications to generate the simulated statistics}
 
@@ -46,7 +44,7 @@ An object of class "\code{qleTest}" as a list of
 	 \item{msem}{ mean square error matrix of re-estimated parameters}
   \item{aiqm}{ average inverse quasi-information matrix over all re-estimated parameters}
   \item{obs}{ list of simulated observed statistics}
-  \item{optInfo}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
+  \item{optRes}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
  \item{mean.score}{ average quasi-score or average gradient of MD at the re-estimated parameters}
   \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
       the re-estimated parameters have NA values, and criterion function minimizations have errors or did not converge}
@@ -58,14 +56,17 @@ Monte Carlo hypothesis testing
 The function expects an object of class \code{\link{qle}}. Simulated statistics which are already available at the estimated
  parameter can be passed by the argument `\code{obs}`. Otherwise the function first generates those realizations using `\code{nsim}`
  model replications. The criterion functions are used as specified in the object `\code{qsd}` and will not be further improved by
- additional samples during the test since this would result in a full estimation procedure again. The test statistic, named by
- `\code{test}`, can be (and should be) different from the criterion function used for estimating the parameter before. Apart from
- the QD as a test statistic, in principle, any supported type of least squares criterion can be used depending on the choice of
- variance matrix approximation. In practice, re-estimations might fail to converge. However, the user can control the convergence
- of local solvers (including quasi-scoring) by the corresponding control parameters passed to the solvers in \code{\link{searchMinimizer}}.
- Failed re-estimation results are extracted and stored in the attribute `\code{info}`. In addition, we return the standard error,
- predicted standard error (based on the average inverse quasi-information matrix), root mean square error, bias and sample mean value
- of the re-estimated parameters in order to assess the precision of the estimated parameter.    
+ additional samples during the test since this would result in a full estimation procedure again. The test statistic is either chosen
+ as the current criterion function in `\code{OPT}` (see  \code{\link{getQLmodel}}, argument `\code{criterion}`) or taken from the
+ optional argument `\code{local}` if supplied. Given optimization results by argument `\code{local}` of class \code{QSResult}, the
+ user can select a different criterion function as a test statistic than used before for estimating the parameter. Apart from
+ the QD as a test statistic, in principle, any supported type of least squares criterion (or more general Mahalanobis distance) can
+ be used depending on the choice of variance matrix approximation (see \code{\link{covarTx}}). In some situations, the re-estimations
+ might fail to converge due. However, the user can control the convergence of local solvers (including quasi-scoring) by the
+ corresponding control parameters passed to the solvers, see \code{\link{searchMinimizer}}. Failed re-estimation results are extracted
+ and stored in the attribute `\code{info}`. In addition, we return the standard error, predicted standard error (based on the average
+ inverse quasi-information matrix), root mean square error, bias and sample mean value of the re-estimated parameters in order to assess
+ the accuracy of the estimated parameter.    
 
 	\subsection{Background}{
 
