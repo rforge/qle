@@ -1202,7 +1202,7 @@ statistic by
   \hat{P} = \hat{\mathrm{P}}(S\geq s_{obs}) = \frac{\sum_{j=1}^m \mathbf{1}_{[s_{obs},\infty)} \{s_j\}+1}{m+1}  
 \]
 as the proportion of values $s_j$, $j=1,\ldots,m$, based on the
-simulated data $X_j$ under the null hypothesis, exceeding the observed value of
+simulated data $X^*_j$ under the null hypothesis, exceeding the observed value of
 the test statistic, i.\,e. $s_{obs}$.
 If the observed statistics can be appropriately fitted by the statistical model,
 the value $s_{obs}$ will not be significantly different from the simulated
