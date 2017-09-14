@@ -5,7 +5,8 @@ Date: 2017-09-04
 Authors@R: c(person("Markus", "Baaske", role = c("aut", "cre", "cph"),
 			 email = "markus.baaske@uni-jena.de"),
 			 person("K. Gerald", "van den Boogaart", role = c("ths"),
-			 email = "boogaart@math.tu-freiberg.de"))		
+			 email = "boogaart@math.tu-freiberg.de"))
+Maintainer: Markus Baaske <markus.baaske@uni-jena.de>		
 Description: Implements methods for simulation-based quasi-likelihood estimation.
 Depends: R (>= 3.3.3), parallel
 Imports: nloptr, digest, expm, lhs, mvtnorm
