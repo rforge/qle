@@ -59,8 +59,6 @@ uncertainty, R}
   Email: \email{markus.baaske@uni-jena.de}\\  
 }
 %
-\SweaveOpts{engine=R,eps=FALSE}
-%
 %% MATH -----------------------------------------------------------
 \newcommand{\thetaOest}{\hat{\theta}_0}
 \newcommand{\R}{\mathbb{R}}
@@ -84,8 +82,6 @@ uncertainty, R}
 \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
 %BEGIN DOCUMENT
 \begin{document}
-\SweaveOpts{engine=R,eps=FALSE}
-
 % tikz settings
 \tikzset{
   decision/.style={
@@ -101,13 +97,13 @@ uncertainty, R}
   },
 }
 %
-\newcommand\linedatRIGHT[2]{% comment out this line-ending  
-  \par\noindent\rule{\textwidth}{1pt}\par\noindent
-  \textbf{Algorithm #1: #2}\par\noindent%
-  \leavevmode\noindent\rule[\fontcharht\font`M]{\textwidth}{0.5pt}  
-}
+%\newcommand\linedatRIGHT[2]{% comment out this line-ending  
+%  \par\noindent\rule{\textwidth}{1pt}\par\noindent
+%  \textbf{Algorithm #1: #2}\par\noindent%
+%  \leavevmode\noindent\rule[\fontcharht\font`M]{\textwidth}{0.5pt}  
+%}
 %
-\newcounter{AlgCount}
+%\newcounter{AlgCount}
 %
 \section{Introduction}
 The \proglang{R} package \pkg{qle} implements methods for parametric inference
@@ -118,7 +114,7 @@ version of the algorithm proposed in \citet{Baaske2014}. The aim of this paper
 is to present the algorithmic framework of our simulation-based quasi-likelihood
 estimation (SQLE) approach for parametric statistical models. The method
 employes the first two moments of the involved summary statistics by simulation and
-constructs a quasi-likelihood approximation model for estimating the model
+constructs a quasi-likelihood approximation for estimating the statistical model
 parameter.\par
 %
 We assume that, given the data, no closed-form expressions or direct computation
@@ -589,7 +585,7 @@ predictor $\hat{Z}$ and $\hat{\Sigma}_K$ denotes the diagonal matrix of kriging 
 Since the inverse of the QI matrix serves as an estimated statistical lower
 bound (like the Cram\'{e}r-Rao bound in ML theory) on the estimation error of $\hat{\theta}_0$,
 we can compare the QS approximation error with the overall achievable accuracy
-given by the QI matrix in (\eqref{QI}. More specifically, if the largest
+given by the QI matrix in \eqref{QI}. More specifically, if the largest
 \emph{generalized eigenvalue} \citep[see, e.\,g.][]{ref:Golub1996}, say
 $\lambda^{max}=\lambda^{max}(\theta)$, of these two matrices drops below some
 limit $c\ll1$ such that
