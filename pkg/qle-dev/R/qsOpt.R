@@ -527,7 +527,12 @@ prefitCV <- function(qsd, fit = TRUE, reduce = TRUE, type = c("cv","max"),
 	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
 	useSigma <- (!is.null(Sigma) && qsd$var.type == "const")
 		
-	if(qsd$var.type != "kriging" && is.null(Sigma)){		 	
+	if(qsd$var.type != "kriging" && is.null(Sigma)){
+		if(qsd$var.type %in% c("wcholMean","wlogMean")){
+			nms <- names(list(...))
+			if(!all( c("W","theta") %in% nms))
+			 warning("Found `var.type`=\"",qsd$var.type, "\" but no weighting matrix `W` or estimate `theta` was supplied!.")		
+		}
 		Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX	
 	} else if(useSigma && !inverted){
 		# Only for constant Sigma, which is used as is!
@@ -752,7 +757,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		S0 <- NULL
     }
 	
-	if(is.null(S0)){ 	  
+	if(is.null(S0)){	  	
 	  S0 <- 
 		tryCatch({
 			nl.args <- list("stopval"=0,"maxeval"=1000,
@@ -1975,7 +1980,12 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
   		
 	if(qsd$var.type != "kriging" && is.null(Sigma)){
 		# Only mean covariance matrix is estimated here. 
-		# Adding prediction variances (kriging/CV) at C level
+		# Adding prediction variances (kriging/CV) at C level		
+		if(qsd$var.type %in% c("wcholMean","wlogMean")){
+			nms <- names(list(...))
+			if(!all( c("W","theta") %in% nms))
+				warning("Found `var.type`=\"",qsd$var.type, "\" but no weighting matrix `W` or estimate `theta` was supplied!.")		
+		}
 		Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX		
 	} 
 	

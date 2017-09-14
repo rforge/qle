@@ -11,7 +11,7 @@
 	degf <- nrow(obj)
 	sb <- attr(obj,"sb")
 	Sb <- attr(obj,"Sb")	
-	pb <- sum(Sb>sb)/(length(Sb)+1)  # same as: 1-ecdf(Sb)(sb)
+	pb <- (1+sum(Sb>=sb))/(length(Sb)+1)  # similar to : 1-ecdf(Sb)(sb)
 	
 	ans <- list()
 	ans$param <- cbind(obj[c("par","se","rmse","bias","mean")])
@@ -223,7 +223,9 @@ qleTest <- function(est, local = NULL, sim, ...,
 	if(is.null(local)){		
 		local <- attr(est,"final")
 		if(.isError(local) || !attr(est,"optInfo")$minimized)
-		 stop("Final optimization result has errors. Please check attribute `final` and `optInfo`.")			
+		 stop("Final optimization result has errors. Please check attribute `final` and `optInfo`.")
+	 	else if( local$convergence < 0)
+		  warning(paste0("Local search did not converge by method: ",local$method))
     } else {
        stopifnot(class(local)=="QSResult")	 
 	   # set current test statistic

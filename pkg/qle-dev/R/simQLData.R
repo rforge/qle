@@ -232,7 +232,7 @@ simQLdata <-
 			  nsim=nsim,
 			  names=nms,
 			  X=.LIST2ROW(X),
-			  call=sys.call(),
+			  call=match.call(),
 		 error = if(length(nErr)>0) nErr else NULL,
 	  class="simQL")
 	
