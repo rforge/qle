@@ -1493,7 +1493,7 @@ using the default options.
 OPT <- qle(qsd,
         simfunc,		
         nsim=100,
-        global.opts=list("maxeval"=10),
+        global.opts=list("maxeval"=100),
         local.opts=list("lam_max"=1e-4,"weights"=0.5))
 print(OPT)
 @
