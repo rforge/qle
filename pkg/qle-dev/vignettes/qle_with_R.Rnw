@@ -1191,23 +1191,23 @@ estimate the corresponding $P$-value:
   statistical model under the null hypothesis,
   \item re-estimate the model parameters
   $\hat{\theta}^*_1,\ldots,\hat{\theta}^*_m$ given $X^*_j$, $j=1,\ldots,m$, 
-  \item compute the test statistics $S_j=S(\hat{\theta}^*_j,X^*_j)$ for each
-   $j$th model outcome
+  \item compute the test statistics $s_j=S_j$, where
+  $S_j=S(\hat{\theta}^*_j,X^*_j)$, for each $j$th model outcome
 \end{enumerate}
 Suppose that $s_{obs} = s(\hat{\theta},x)$ is the observed value of the test
 statistic given the data, i.\,e. $y=T(x)$, and the estimated model parameter
 $\hat{\theta}$. Then, we obtain a MC estimate of the (upper tail) $P$-value of the test
 statistic by
 \[
-  \hat{P} = \hat{\mathrm{P}}(S>s_{obs})   
+  \hat{P} = \hat{\mathrm{P}}(S\geq s_{obs}) = \frac{\sum_{j=1}^m \mathbf{1}_{[s_{obs},\infty)} \{s_j\}+1}{m+1}  
 \]
-as the proportion of values $S_j$, $j=1,\ldots,m$, based on the
-simulated statistics under the null hypothesis, exceeding the observed value of
+as the proportion of values $s_j$, $j=1,\ldots,m$, based on the
+simulated data $X_j$ under the null hypothesis, exceeding the observed value of
 the test statistic, i.\,e. $s_{obs}$.
 If the observed statistics can be appropriately fitted by the statistical model,
 the value $s_{obs}$ will not be significantly different from the simulated
-values of the test statistic. In our implementation, we also allow the test
-statistic to be different from the criterion function which was first used to
+values of the test statistic. Further, in our implementation, we also allow the
+test statistic to be different from the criterion function which was first used to
 estimate the model parameter.\par
 %
 Note that, to be consistent, we re-estimate $\hat{\theta}^*$ (given the
@@ -1493,7 +1493,7 @@ using the default options.
 OPT <- qle(qsd,
         simfunc,		
         nsim=100,
-        global.opts=list("maxeval"=100),
+        global.opts=list("maxeval"=10),
         local.opts=list("lam_max"=1e-4,"weights"=0.5))
 print(OPT)
 @
