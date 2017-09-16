@@ -7,8 +7,6 @@ library(spatstat)
 
 # set options
 options(mc.cores=8)
-options("qle.fork"="mclapply")
-
 RNGkind("L'Ecuyer-CMRG")
 set.seed(297)
 

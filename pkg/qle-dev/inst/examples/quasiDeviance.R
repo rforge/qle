@@ -38,7 +38,7 @@ qsd$var.type <- "wcholMean"
 #points <- as.matrix(expand.grid(x,y))
 #X <- as.matrix(qsd$qldata[,1:2])
 #Xp <- quasiDeviance(X,qsd,cvm=cvm,value.only=TRUE)
-#D <- quasiDeviance(points,qsd,cvm=cvm,fun=mclapply,value.only=TRUE)
+#D <- quasiDeviance(points,qsd,cvm=cvm,value.only=TRUE)
 #
 #z <- matrix(D,ncol=length(y))
 #persp3d(x,y,z,col="red", alpha=0.3, axes=T)

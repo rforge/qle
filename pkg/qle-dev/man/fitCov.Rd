@@ -4,8 +4,7 @@
 \alias{fitCov}
 \title{Fitting covariance models by REML}
 \usage{
-fitCov(models, Xs, data, controls = list(), fun = getOption("qle.fork",
-  "lapply"), cl = NULL, verbose = FALSE)
+fitCov(models, Xs, data, controls = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{models}{object of class `\code{krige}` (list of covariance models) or
@@ -17,8 +16,6 @@ fitCov(models, Xs, data, controls = list(), fun = getOption("qle.fork",
 first column corrspond to first model in list `\code{models}` and so forth}
 
 \item{controls}{list of control arguments, see \code{\link[nloptr]{nloptr}}}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 

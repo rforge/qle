@@ -4,8 +4,8 @@
 \alias{updateCovModels}
 \title{Update covariance models}
 \usage{
-updateCovModels(qsd, nextData, fit = TRUE, fun = getOption("qle.fork",
-  "lapply"), cl = NULL, controls = list(), verbose = FALSE)
+updateCovModels(qsd, nextData, fit = TRUE, cl = NULL, controls = list(),
+  verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}} (to be updated)}
@@ -13,8 +13,6 @@ updateCovModels(qsd, nextData, fit = TRUE, fun = getOption("qle.fork",
 \item{nextData}{object of class \code{QLdata} with new simulation results}
 
 \item{fit}{logical, if \code{TRUE} (default), re-estimate covariance parameters}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{cl}{currently ignored}
 

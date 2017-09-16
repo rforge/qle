@@ -5,8 +5,8 @@
 \title{Monte Carlo testing}
 \usage{
 qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
-  check.root = FALSE, na.rm = TRUE, fun = getOption("qle.fork", "lapply"),
-  cl = NULL, verbose = FALSE)
+  check.root = FALSE, na.rm = TRUE, cl = NULL, iseed = NULL,
+  verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
@@ -26,9 +26,9 @@ qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
 \item{na.rm}{logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 re-estimated parameters}
 
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
-
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+
+\item{iseed}{integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker}
 
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }
@@ -47,13 +47,12 @@ An object of class "\code{qleTest}" as a list of
   \item{optRes}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
  \item{mean.score}{ average quasi-score or average gradient of MD at the re-estimated parameters}
   \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
-      the re-estimated parameters have NA values, and criterion function minimizations have errors or did not converge}
-}
-\description{
-Monte Carlo hypothesis testing
-}
-\details{
-The function expects an object of class \code{\link{qle}}. Simulated statistics which are already available at the estimated
+      the re-estimated parameters have NA values, and criterion function minimizations have errors or did not converge,
+      the integer seed `\code{iseed}`}
+
+ @details 
+ 
+	The function expects an object of class \code{\link{qle}}. Simulated statistics which are already available at the estimated
  parameter can be passed by the argument `\code{obs}`. Otherwise the function first generates those realizations using `\code{nsim}`
  model replications. The criterion functions are used as specified in the object `\code{qsd}` and will not be further improved by
  additional samples during the test since this would result in a full estimation procedure again. The test statistic is either chosen
@@ -77,12 +76,15 @@ The function expects an object of class \code{\link{qle}}. Simulated statistics 
  be an unrealistic assumption for the null hypothesis. For this reason, and in order to retrieve an empirical P-value for
  testing, we (artifically) generate new observations from the outcome of the model replications and re-estimate the model
  parameter for each realization in the same way as done before when estimating the model parameter. This includes all versions
- of variance approximations (by kriging or average approximations) and types of prediction variances (by kriging or a CV-based approach)
- used to construct the statistics for estimating the parameter. 
+ of variance approximations (by kriging or average approximations) and types of prediction variances (by kriging or a CV-based
+ approach) used to construct the statistics for estimating the parameter. 
 
 }
 
 For an in depth example see the package vignette.
+}
+\description{
+Monte Carlo hypothesis testing
 }
 \author{
 M. Baaske

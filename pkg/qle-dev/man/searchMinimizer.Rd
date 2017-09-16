@@ -6,7 +6,7 @@
 \usage{
 searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
   opts = list(), control = list(), ..., obs = NULL, info = TRUE,
-  check = TRUE, pl = 0, verbose = FALSE)
+  check = TRUE, pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{x0}{(named) numeric vector, the starting point}

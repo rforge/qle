@@ -5,8 +5,8 @@
 \title{Quasi-deviance computation}
 \usage{
 quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-  inverted = FALSE, check = TRUE, value.only = FALSE,
-  fun = getOption("qle.fork", "lapply"), cl = NULL, verbose = FALSE)
+  inverted = FALSE, check = TRUE, value.only = FALSE, cl = NULL,
+  verbose = FALSE)
 }
 \arguments{
 \item{points}{list or matrix of points where to compute the QD
@@ -27,8 +27,6 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 
 \item{value.only}{if \code{TRUE} only the values of the QD are returned}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{cl}{cluster object, \code{NULL} (default) (see \code{\link[parallel]{makeCluster}})}
 

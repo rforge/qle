@@ -199,7 +199,7 @@ extract.krigResult <- function(X, type=c("mean","sigma2","weights")) {
 # intern
 #' @importFrom expm logm
 varLOGdecomp <- function(L) {
-	vmats <- try(lapply(1:nrow(L), function(i) .chol2var(unlist(L[i,]))), silent=TRUE)
+	vmats <- try(lapply(1L:nrow(L), function(i) .chol2var(unlist(L[i,]))), silent=TRUE)
 	if(inherits(vmats,"try-error")) {
 	  return(simpleError(.makeMessage("Matrix logarithm of covariance matrices failed.")))
 	}
@@ -211,7 +211,7 @@ varLOGdecomp <- function(L) {
 				   as.vector(m[col(Xs)>=row(Xs)])
 				 }
 		       )
-	as.data.frame(unlist(do.call(rbind,decomp)), ncol=length(decomp[[1]] ) )
+	as.data.frame(unlist(do.call(rbind,decomp)), ncol=length(decomp[[1L]] ) )
 }
 
 #' @title Variance matrix approximation
@@ -274,12 +274,12 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
    	var.type <- qsd$var.type
 	krig.type <- qsd$krig.type
 	Tnames <- names(qsd$obs)
-	dataL <- qsd$qldata[(xdim+2*nstat+1):ncol(qsd$qldata)]		
+	dataL <- qsd$qldata[(xdim+2*nstat+1L):ncol(qsd$qldata)]		
 	nc <- ncol(dataL)
 		
 	sig2 <-
 	  if(useVar && krig.type != "dual") {
-		dataT <- qsd$qldata[(xdim+1):(xdim+nstat)]
+		dataT <- qsd$qldata[(xdim+1L):(xdim+nstat)]
 	 	if(!is.null(cvm)) {
 			if(is.null(theta) || is.null(dataT))
 		  		stop("'Argument `theta` and `dataT` must not be 'NULL' for using CV.")
@@ -398,8 +398,8 @@ varCHOLmerge <- function(Xs, sig2=NULL,var.type="cholMean",doInvert=FALSE,Tnames
 varCHOLmerge.matrix <- function(Xs,sig2=NULL,var.type="cholMean", doInvert=FALSE,Tnames = NULL) {
 	if(!is.null(sig2) && is.matrix(sig2) )
 		structure(lapply(seq_len(NROW(sig2)),
-			function(i) varCHOLmerge(Xs[1,],sig2[i,],var.type,doInvert,Tnames) ),"var.type"=var.type)
-	else structure(list(varCHOLmerge(Xs[1,],NULL,var.type,doInvert,Tnames)),"var.type"=var.type)
+			function(i) varCHOLmerge(Xs[1L,],sig2[i,],var.type,doInvert,Tnames) ),"var.type"=var.type)
+	else structure(list(varCHOLmerge(Xs[1L,],NULL,var.type,doInvert,Tnames)),"var.type"=var.type)
 }
 
 # intern
@@ -486,7 +486,6 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param inverted 		currently ignored
 #' @param check			logical, \code{TRUE} (default), whether to check input arguments
 #' @param value.only  	if \code{TRUE} only the values of the QD are returned
-#' @param fun			either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing 
 #' @param cl			cluster object, \code{NULL} (default) (see \code{\link[parallel]{makeCluster}})
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
@@ -553,8 +552,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @export
 quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL, 
 					 inverted = FALSE, check = TRUE, value.only=FALSE, 
-					  fun = getOption("qle.fork","lapply"),
-					   cl = NULL, verbose=FALSE)
+					  cl = NULL, verbose=FALSE)
 {		
 	if(check)
 	 .checkArguments(qsd,Sigma=Sigma)
@@ -564,14 +562,14 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
  	
  	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
  	
-	# may overwrite (observed) statistics	
+	# overwrite (observed) statistics	
 	if(!is.null(obs)) {
 		obs <- unlist(obs)
 		if(anyNA(obs) | any(!is.finite(obs)))
 			warning("`NA` or `Inf`values detected in `obs.")
 		if(!is.numeric(obs) || length(obs)!=length(qsd$covT))
 			stop("`obs` must be a (named) `numeric` vector or list \n
-							of length equal to the given statistics in `qsd`.")
+					of length equal to the given statistics in `qsd`.")
 		qsd$obs <- obs
 	}
 	# Unless Sigma is given always continuously update.
@@ -581,7 +579,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 		# use Sigma but add prediction variances
 		if(qsd$var.type != "kriging" && is.null(Sigma)){
 			# Sigma is inverted at C level
-			Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX
+			Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX
 		}			
 		qlopts <- list("varType"=qsd$var.type,			   
 				       "useCV"=!is.null(cvm),
@@ -589,11 +587,8 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 
 		# somehow complicated but this is a load ballancing 
 		# (for a cluster) parallized version of quasiDeviance
-		if( length(points) >= 2000 &&
-			((!is.null(cl) && length(cl)>2) ||
-			(isTRUE(all.equal(fun,"mclapply")) && getOption("mc.cores",1L) > 1)))
-		 {
-				m <- max( if(!is.null(cl)) length(cl) else getOption("mc.cores",2L))		
+		if(length(points) >= 2000 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
+				m <- max( if(!is.null(cl)) length(cl) else getOption("mc.cores",1L))		
 				M <- .splitList(points, m)
 				names(M) <- NULL
 			    unlist(
@@ -601,7 +596,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 					  c(list(X=M,
 					    FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only) {
 							.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only)	 
-						}, fun=fun, cl=cl),
+						}, cl=cl),
 				     list(qsd, qlopts, X, Sigma, cvm, value.only))),
 	             recursive = FALSE)
  							
@@ -635,7 +630,6 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' 					  used as constant variance matrix
 #' @param check       logical, \code{TRUE} (default), whether to check all input arguments
 #' @param value.only  only return the value of the MD 
-#' @param fun		  either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing
 #' @param cl		  cluster object, \code{NULL} (default), see e.g. \code{\link[parallel]{makeCluster}}
 #' @param verbose     if \code{TRUE}, then print intermediate output
 #' 
@@ -696,8 +690,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' @export
 mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 		               inverted = FALSE, check = TRUE, value.only = FALSE,
-					    fun = getOption("qle.fork","lapply"),
-						 cl = NULL, verbose = FALSE)
+					    cl = NULL, verbose = FALSE)
 {
 	  
 	  if(check)
@@ -722,12 +715,11 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
  	  #  1. kriging approx.
 	  #  2. Average approx. computed by W and at theta; or by kriging
 	  #  3. Sigma constant
-	  tryCatch(
-	  {		
+	  tryCatch({		
 		   useSigma <- (!is.null(Sigma) && qsd$var.type == "const")
 		   if(qsd$var.type != "kriging" && is.null(Sigma)){			   
 			   # Sigma is inverted at C level
-			   Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX			   
+			   Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX			   
 		   } else if(useSigma && !inverted){
 				# Only for constant Sigma, which is used as is!
 				inverted <- TRUE
@@ -743,11 +735,8 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 						   "useCV"=!is.null(cvm),
 						   "useSigma"=useSigma)  			# use as constant Sigma 
 		   MD <-
-			if( length(points) >= 2000 &&
-				((!is.null(cl) && length(cl)>2) ||
-				(isTRUE(all.equal(fun,"mclapply")) && getOption("mc.cores",1L) > 1)))
-			{
-			   m <- max( if(!is.null(cl)) length(cl) else getOption("mc.cores",2L))			   				
+		    if(length(points) >= 2000 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
+			   m <- max( if(!is.null(cl)) length(cl) else getOption("mc.cores",1L))			   				
 			   M <- .splitList(points, m)
 			   names(M) <- NULL
 			   unlist(
@@ -755,7 +744,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 						c(list(X=M,
 							   FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only) {
 								   .Call(C_mahalanobis,points,qsd,qlopts,X,Sigma,cvm,value.only)	 
-							   }, fun=fun, cl=cl),
+							   }, cl=cl),
 					   list(qsd, qlopts, X, Sigma, cvm, value.only))),
 				recursive = FALSE)			  
 			   
@@ -829,16 +818,16 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 	# back to [0,1]
 	lhs.grid <- 
 		if(!is.null(X)) {				  	
-			for(i in 1:dimX ) {
+			for(i in 1L:dimX ) {
 			 stopifnot(ub[i]!=lb[i])
 			 X[,i] <- (X[,i]-lb[i])/(ub[i]-lb[i])		 
 		 	}
 			# augment X, only return newly generated points
-			if( N < 1)
+			if( N < 1L)
 			  stop("Number of points to augment must be positive (N > 0).")
-			rbind(do.call(method,list("lhs"=X,"m"=N))[(nrow(X)+1):(nrow(X)+N),])		
+			rbind(do.call(method,list("lhs"=X,"m"=N))[(nrow(X)+1L):(nrow(X)+N),])		
 		} else do.call(method,list("n"=N,"k"=dimX))
-	for(i in 1:dimX )
+	for(i in 1L:dimX )
 	 lhs.grid[,i] <- lhs.grid[,i]*(ub[i]-lb[i])+lb[i]	
  	type <- match.arg(type)
  	switch(type,

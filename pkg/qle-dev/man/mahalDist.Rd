@@ -5,8 +5,8 @@
 \title{Mahalanobis distance of statistics}
 \usage{
 mahalDist(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-  inverted = FALSE, check = TRUE, value.only = FALSE,
-  fun = getOption("qle.fork", "lapply"), cl = NULL, verbose = FALSE)
+  inverted = FALSE, check = TRUE, value.only = FALSE, cl = NULL,
+  verbose = FALSE)
 }
 \arguments{
 \item{points}{either matrix or list of points or a vector of parameters (but then considered
@@ -28,8 +28,6 @@ used as constant variance matrix}
 \item{check}{logical, \code{TRUE} (default), whether to check all input arguments}
 
 \item{value.only}{only return the value of the MD}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{cl}{cluster object, \code{NULL} (default), see e.g. \code{\link[parallel]{makeCluster}}}
 

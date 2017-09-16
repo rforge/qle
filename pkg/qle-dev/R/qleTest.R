@@ -36,38 +36,30 @@
 #' 	
 #' @title       Inspect estimated parameters
 #' 
-#' @description		Check out estimated roots of the quasi-score vector and find the best one 
+#' @description		Check out and compare estimated roots of the quasi-score vector
 #' 
 #' @param est 		object of class "\code{qle}", the estimation results from function \code{\link{qle}}
-#' @param par	    list or matrix of roots of quasi-score vector
-#' @param fun		either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing 
-#' @param cl		cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param par	    list or matrix of estimated parameters as roots of the quasi-score vector
 #' @param verbose   logical, \code{TRUE} for intermediate output
 #' 
 #' @return A data frame with columns `\code{quasi-deviance}`, `\code{Minor}`, `\code{det}`, `\code{max}`,
-#'  `\code{trace}` and `\code{score_max}`  (see vignette). The second column shows the leading minor of
-#'   the observed QI matrix which is not positive definite. If so, then the corresponding parameter cannot be an consistent
-#'   estimate of the model parameter. The rows show the corresponding values for each parameter from `\code{x}`.
-#'   Further, the results of function \code{\link{quasiDeviance}} for each parameter in `\code{x}` are
-#'   returned as `attr(,"qdev")`. In case of any errors the corresponding (failed) results are returned as a
-#'   named attribute `\code{X}`. 
+#'  `\code{trace}` and `\code{score_max}` (see vignette). The second column shows the leading minor of
+#'   the observed QI matrix which is not positive definite. If so, then the corresponding parameter estimate
+#'   cannot be consistent at least in theory. The rows show the corresponding values
+#'   for each parameter `\code{par}`. Further, the results of function \code{\link{quasiDeviance}} for each
+#'   parameter in `\code{x}` are returned as `attr(,"qdev")`. In case of any errors the corresponding (failed)
+#'   results are returned as a named attribute `\code{X}`. 
 #' 
-#' @details In case of the quasi-likelihood approach only (using the criterion "\code{qle}")
-#'  we can compare the observed quasi-information matrix with the actual (expected) one by (scalar equivalent)
-#'  criteria (see the vignette). We measure the dissimilarity of both matrices evaluated at approximate
-#'  roots `\code{x}` for which these criteria should be neglectably small if they correspond to plausible roots.
-#'  By the smallest value of any of these criteria we extract the best root.
-#'  Note that you can pass a weighting matrix `W` and location parameter `theta` by `\code{...}` to compute
-#'  a variance matrix approximation, particularly, if these were part of the results of function \code{\link{qle}}. 
-#' 
+#' @details Ony in case of the quasi-likelihood approach using the criterion function "\code{qle}" we can compare the
+#'  observed quasi-information matrix with the expected one by some (scalar equivalent) criteria, see the vignette.
+#'  We measure the dissimilarity of both matrices evaluated at approximate roots given in `\code{par}` for which these
+#'  criteria should be neglectably small if they correspond to a plausible root. By the smallest value of any of these
+#'  criteria we extract the best root.
 #'  
 #' @author M. Baaske
 #' @rdname checkMultRoot
 #' @export
-checkMultRoot <- function(est, par = NULL,
-		                    fun = getOption("qle.fork","lapply"),
-							 cl = NULL, verbose = FALSE)
-{			
+checkMultRoot <- function(est, par = NULL, verbose = FALSE){			
    if(est$qsd$criterion != "qle")
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
@@ -80,7 +72,7 @@ checkMultRoot <- function(est, par = NULL,
 				Sigma=NULL,
 				W=info$W,theta=info$theta,
 				cvm=est$cvm,
-				fun=fun,cl=cl,
+				cl=cl,
 				verbose=verbose),
 		   silent=TRUE)
    
@@ -89,10 +81,9 @@ checkMultRoot <- function(est, par = NULL,
 	   message(msg)
 	   return(.qleError(message=msg,call=match.call(),error=QD))
    }
-   fun <- match.fun(fun)
    xdim <- attr(est$qsd$qldata,"xdim")
    
-   X <- fun(QD,
+   X <- lapply(QD,
 		  function(qd) {
 			  qIinv <- 
 				  if(!.isError(qd)) {
@@ -146,8 +137,8 @@ checkMultRoot <- function(est, par = NULL,
 #' @param check.root    logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})  						
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 #' 						re-estimated parameters
-#' @param fun			either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing 
 #' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param iseed			integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
 #' @return An object of class "\code{qleTest}" as a list of
@@ -164,9 +155,10 @@ checkMultRoot <- function(est, par = NULL,
 #'   \item{optRes}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
 #'	 \item{mean.score}{ average quasi-score or average gradient of MD at the re-estimated parameters}
 #'   \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
-#'       the re-estimated parameters have NA values, and criterion function minimizations have errors or did not converge} 
+#'       the re-estimated parameters have NA values, and criterion function minimizations have errors or did not converge,
+#'       the integer seed `\code{iseed}`}
 #' 
-#' @details 
+#'  @details 
 #'  
 #' 	The function expects an object of class \code{\link{qle}}. Simulated statistics which are already available at the estimated
 #'  parameter can be passed by the argument `\code{obs}`. Otherwise the function first generates those realizations using `\code{nsim}`
@@ -192,8 +184,8 @@ checkMultRoot <- function(est, par = NULL,
 #'  be an unrealistic assumption for the null hypothesis. For this reason, and in order to retrieve an empirical P-value for
 #'  testing, we (artifically) generate new observations from the outcome of the model replications and re-estimate the model
 #'  parameter for each realization in the same way as done before when estimating the model parameter. This includes all versions
-#'  of variance approximations (by kriging or average approximations) and types of prediction variances (by kriging or a CV-based approach)
-#'  used to construct the statistics for estimating the parameter. 
+#'  of variance approximations (by kriging or average approximations) and types of prediction variances (by kriging or a CV-based
+#'  approach) used to construct the statistics for estimating the parameter. 
 #' 
 #' }
 #' 
@@ -204,8 +196,7 @@ checkMultRoot <- function(est, par = NULL,
 #' @export
 qleTest <- function(est, local = NULL, sim, ...,
 			 		 nsim = 100, obs = NULL, check.root=FALSE,
-					  na.rm = TRUE, fun = getOption("qle.fork","lapply"),
-					   cl = NULL, verbose = FALSE)
+					  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
 	if(.isError(est))
 	  stop("Estimation result has errors. Please see attribute `error`.")    
@@ -256,9 +247,9 @@ qleTest <- function(est, local = NULL, sim, ...,
 	
 	# MC simulation of observed `data`
 	# if no observations supplied	
-	if(is.null(obs)) {		
+	if(is.null(obs)){		
 		nid <- which(!is.na(id))
-		if(length(nid)>0)
+		if(length(nid) > 0L)
 		 args <- args[-nid]		
 		sim <- match.fun(sim)
 		# check `sim` input values
@@ -268,7 +259,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 		simFun <- function(x) try(do.call(sim,c(list(x),args)))		
 		sim.args <-
 			list(sim=simFun,X=local$par,nsim=nsim,
-				 mode="list",fun=fun,cl=cl,verbose=verbose)
+				 mode="list",cl=cl,iseed=iseed,verbose=verbose)
 		if(verbose)
 		 cat("Simulating observed statistics...","\n")
  		
@@ -306,7 +297,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 							cvm=est$cvm,obs=x,info=TRUE,inverted=TRUE,
 								check=FALSE,verbose=verbose)
 					},
-				fun=fun,cl=cl),opt.args))    		
+				cl=cl), opt.args))    		
 	
 	if(inherits(RES,"error")) {
 	  msg <- paste0("Could not find MC replicated parameters: ",
@@ -316,7 +307,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	}
 	# check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence>0 ))
-	if(length(ok) == 0){
+	if(length(ok) == 0L){
 		msg <- paste("All re-estimations have errors or did not converge: ")
 		message(msg)
 		return(.qleError(message=msg,call=match.call(),error=RES))	   
@@ -331,9 +322,8 @@ qleTest <- function(est, local = NULL, sim, ...,
 	badInv <- integer(0)
     	  
 	# average quasi-information matrix
-	fun <- match.fun(fun)
 	invI <- 
-		fun(RES[ok],
+		lapply(RES[ok],
 			function(x) {						
 				try(solve(x$I),silent=TRUE) 
 			})
@@ -341,7 +331,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	if(length(badInv) == length(ok)) {
 	  warning("Inversion of quasi-information matrices failed. Check attribute `info`.")
     } else {
-	  if(length(badInv)>0)
+	  if(length(badInv) > 0L)
 		message(paste0("A total of ",length(badInv),
 		 " inversions of quasi-information matrices failed. Check attribute `info`.")) 
 	   
@@ -349,7 +339,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 		aiqm <- matrix(
 		  	      colMeans(
 					do.call(rbind,
-				 	 lapply(invI[ifelse(length(badInv)>0,-badInv,TRUE)],as.numeric)
+				 	 lapply(invI[ifelse(length(badInv) > 0L,-badInv,TRUE)],as.numeric)
 					)
 			 	  ),ncol=xdim)				
  	}
@@ -364,7 +354,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 		mScore <- mScore[ok,,drop=FALSE]		
   	}
 	mScore <- try(colMeans(mScore),silent=TRUE)		
-	if(nrow(mpars) <= 10)
+	if(nrow(mpars) <= 10L)
 	 warning("Only a number of 10 or less parameters could be re-estimated.")	
     
  	# some (empirical) measures	
@@ -388,12 +378,12 @@ qleTest <- function(est, local = NULL, sim, ...,
 	
 	# had errors
 	hasError <- which(!(1:length(RES) %in% ok))
-	if(length(hasError)>0)	
+	if(length(hasError) > 0L)	
 	  message(paste0("A total of ",length(hasError)," re-estimations failed."))
   
     chk <- NULL
     if(check.root && est$qsd$criterion=="qle") {
-		chk <- checkMultRoot(est,local$par,fun=fun,cl=cl,verbose=verbose)
+		chk <- checkMultRoot(est,local$par,verbose=verbose)
 		if(.isError(chk))
 		 message(.makeMessage("Consistency check for the estimated model parameter failed."))		
 	}
@@ -410,8 +400,9 @@ qleTest <- function(est, local = NULL, sim, ...,
 			solInfo=chk,					# values of consistency criteria
 	  info=list(badInv=badInv, 									# inversion errors
 			  	hasNa=which(has.na), 							# indices of NA parameters 
-		 		hasError=hasError),								# simulation of observations								
-	 class=c("qleTest"), call = sys.call())	
+		 		hasError=hasError,
+				iseed=iseed),																
+	 class=c("qleTest"), call=sys.call())	
 }
 
 # printing function

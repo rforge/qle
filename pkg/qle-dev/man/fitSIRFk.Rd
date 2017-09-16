@@ -6,8 +6,7 @@
 \usage{
 fitSIRFk(qldata, set.var = TRUE, var.type = "wcholMean",
   var.opts = list(var.sim = 1e-06), intrinsic = FALSE, ...,
-  controls = list(), fun = getOption("qle.fork", "lapply"), cl = NULL,
-  verbose = FALSE)
+  controls = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{qldata}{object of class \code{QLdata}, a data frame from \code{\link{setQLdata}}}
@@ -25,8 +24,6 @@ approximations of the variance matrix}
 \item{...}{arguments passed to \code{\link{setCovModel}}}
 
 \item{controls}{list of control parameters passed to \code{\link[nloptr]{nloptr}} minimization function}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 

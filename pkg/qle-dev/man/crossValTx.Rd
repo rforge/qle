@@ -5,8 +5,7 @@
 \title{Prediction variances by cross-validation}
 \usage{
 crossValTx(qsd, cvm, theta = NULL, type = c("rmsd", "msd", "cve", "scve",
-  "acve", "mse", "ascve", "sigK"), fun = getOption("qle.fork", "lapply"),
-  cl = NULL)
+  "acve", "mse", "ascve", "sigK"), cl = NULL)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -16,8 +15,6 @@ crossValTx(qsd, cvm, theta = NULL, type = c("rmsd", "msd", "cve", "scve",
 \item{theta}{optional, default \code{NULL}, list or matrix of points where to estimate prediction variances}
 
 \item{type}{name of prediction variance measure}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 }
@@ -65,7 +62,7 @@ X <- as.matrix(qsd$qldata[,1:2])
 Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
 
 # fit CV models
-cvm <- prefitCV(qsd, fit = TRUE, fun = "mclapply")
+cvm <- prefitCV(qsd, fit = TRUE)
 theta0 <- c("mu"=2,"sd"=1)
 
 # get RMSD by cross-validation 

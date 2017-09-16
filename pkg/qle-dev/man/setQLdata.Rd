@@ -4,8 +4,7 @@
 \alias{setQLdata}
 \title{Set quasi-likelihood (QL) data}
 \usage{
-setQLdata(runs, X = NULL, chol = TRUE, na.rm = TRUE,
-  fun = getOption("qle.fork", "lapply"), verbose = FALSE)
+setQLdata(runs, X = NULL, chol = TRUE, na.rm = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{runs}{list or matrix of simulation results (see \code{\link{simQLdata}})}
@@ -15,8 +14,6 @@ setQLdata(runs, X = NULL, chol = TRUE, na.rm = TRUE,
 \item{chol}{logical, \code{TRUE} (default), whether to decompose variance matrices}
 
 \item{na.rm}{if \code{TRUE} (default), remove `NA` values from simulation results}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{verbose}{if \code{TRUE}, print intermediate output}
 }

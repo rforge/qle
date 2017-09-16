@@ -83,10 +83,10 @@ contour(x, y, z2, col = "black", lty = "solid",
 try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
 ## Cross-validation 
-cvm <- prefitCV(qsd, fit = TRUE, fun = "mclapply")
-cv <- crossValTx(qsd, cvm, p, type = "cve", fun = "mclapply")
+cvm <- prefitCV(qsd, fit = TRUE)
+cv <- crossValTx(qsd, cvm, p, type = "cve")
 ## or with rmsd
-# cv <- crossValTx(qsd, cvm, p, type = "rmsd", fun = "mclapply")
+# cv <- crossValTx(qsd, cvm, p, type = "rmsd")
 colMeans(cv)
 z3 <- matrix(cv[,2],ncol=length(y))
 

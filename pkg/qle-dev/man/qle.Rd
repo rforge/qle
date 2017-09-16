@@ -6,8 +6,8 @@
 \usage{
 qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
   local.opts = list(), method = c("qscoring", "bobyqa", "direct"),
-  qscore.opts = list(), control = list(), errType = "kv", pl = 0,
-  fun = getOption("qle.fork", "lapply"), cl = NULL, plot = FALSE)
+  qscore.opts = list(), control = list(), errType = "kv", pl = 0L,
+  cl = NULL, iseed = NULL, plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -37,9 +37,9 @@ qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate output}
 
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
-
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+
+\item{iseed}{integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker}
 
 \item{plot}{if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)}
 }
@@ -70,6 +70,7 @@ List of the following objects:
 	  \item{useCV:}{ logical, whether the CV approach was applied}
 	  \item{method:}{ final search method applied}
    \item{nsim:}{ number of simulation replications at each point}
+	  \item{iseed}{ the seed given by the user, see arguments}
  }
 }
 \description{
@@ -141,7 +142,12 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  requires an active 2D graphical device in advance. The function can also be run in an cluster environment
  using the `parallel` package. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
  loading required packages on each cluster node, which are used in the simulation function
- (see \code{\link[parallel]{clusterExport}} and \code{\link[parallel]{clusterApply}} in \code{parallel} package).    
+ (see \code{\link[parallel]{clusterExport}} and \code{\link[parallel]{clusterApply}} in \code{parallel} package).
+ If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
+ for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link[parallel]{clusterSetRNGStream}},
+ for reproducible results of estimation in case a local cluster is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
+ using a prespecified cluster object \code{cl}, then the user is responsible for seeding whereas the seed can be stored
+ in the return value as well, see attribute `\code{optInfo}$iseed`.     
  }
 
  The following controls `\code{local.opts}` for the local search phase are available:
@@ -217,7 +223,7 @@ searchMinimizer(x0, qsd, method = c("bobyqa"), verbose=TRUE)
 OPT <- qle(qsd,qsd$sim,nsim=100,
 		global.opts=list("maxeval"=50),
 		local.opts=list("lam_max"=1e-3,"weights"=0.5),
-		fun="mclapply", pl=3)
+		pl=3)
 
 # solution (with  details)
 print(OPT,pl=3)

@@ -3,9 +3,7 @@
 ## state distribution, estimate the parameter `rho` by
 ## the mean number of customers as a statistic 
 library(qle)
-# options
 options(mc.cores=8)
-options("qle.fork"="mclapply")
 
 # setting RNG and seed
 RNGkind("L'Ecuyer-CMRG")

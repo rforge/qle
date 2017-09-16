@@ -23,7 +23,7 @@ searchMinimizer(x0, qsd, method = c("bobyqa"), verbose=TRUE)
 OPT <- qle(qsd,qsd$sim,nsim=100,
 		global.opts=list("maxeval"=50),
 		local.opts=list("lam_max"=1e-3,"weights"=0.5),
-		fun="mclapply", pl=3)
+		pl=3)
 
 # solution (with  details)
 print(OPT,pl=3)

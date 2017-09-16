@@ -5,8 +5,7 @@
 \title{Covariance parameter estimation for cross-validation}
 \usage{
 prefitCV(qsd, fit = TRUE, reduce = TRUE, type = c("cv", "max"),
-  control = list(), fun = getOption("qle.fork", "lapply"), cl = NULL,
-  verbose = FALSE)
+  control = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -18,8 +17,6 @@ prefitCV(qsd, fit = TRUE, reduce = TRUE, type = c("cv", "max"),
 \item{type}{type of prediction variances, "\code{cv}" (default), see \code{\link{qle}}}
 
 \item{control}{control arguments for REML estimation passed to \code{\link[nloptr]{nloptr}}}
-
-\item{fun}{either "\code{lapply}" (default) or "\code{mclapply}" for parallel processing}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 

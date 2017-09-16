@@ -24,7 +24,7 @@ theta0 <- c("mu"=2,"sigma"=1)
 nsim <- 10
 sim <- simQLdata(sim=simfunc,nsim=nsim,N=8,
              method="maximinLHS",lb=lb,ub=ub,
-             mode="list",fun="mclapply")	 
+             mode="list")	 
 
 ## here generate some test data
 #obs <- simQLdata(simfunc,X=theta0,nsim=1)
@@ -68,7 +68,7 @@ p <- as.matrix(expand.grid(x,y))
 X <- as.matrix(qsd$qldata[,1:2])
 Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
 Xp <- quasiDeviance(X,qsd,value.only=TRUE)
-D <- quasiDeviance(p,qsd,fun="mclapply",value.only=TRUE)
+D <- quasiDeviance(p,qsd,value.only=TRUE)
 
 # library(rgl)
 # z <- matrix(D,ncol=length(y))
@@ -107,7 +107,7 @@ OPT <- qle(qsd,
           nsim=100,
           global.opts=list("maxeval"=100),
           local.opts=list("lam_max"=1e-4,"weights"=0.5),
-          fun="mclapply", plot=TRUE, pl=5)
+          plot=TRUE, pl=5)
 
 # get table of stopping conditions
 OPT$ctls
@@ -140,7 +140,7 @@ attr(local,"Sigma")
 # using `local$method`="qscoring"
 Stest <- qleTest(OPT,sim=simfunc,nsim=1000,		
 	  	    method=c("qscoring","bobyqa"),
-			fun="mclapply",verbose=TRUE)
+			verbose=TRUE)
 print(Stest)
 
 ## Perform MC test using Mahalanobis criterion,
@@ -151,7 +151,7 @@ print(Stest)
 # MD <- searchMinimizer(x0,OPT$qsd,method=c("lbfgs","bobyqa"),
 #		 W=info$W,theta=info$theta,verbose=TRUE)
 # Stest.LS <- qleTest(OPT,MD,sim=simfunc,nsim=1000,		
-#			fun="mclapply",verbose=TRUE)
+#			    verbose=TRUE)
 # print(Stest.LS)
 
 
@@ -165,7 +165,7 @@ print(Stest)
 # qsd2 <- OPT$qsd
 # X <- as.matrix(qsd2$qldata[,1:2])
 # Xp <- quasiDeviance(X,qsd2,value.only=TRUE)
-# D <- quasiDeviance(p,qsd2,fun="mclapply",value.only=TRUE)
+# D <- quasiDeviance(p,qsd2,value.only=TRUE)
 #
 # dev.new()
 # z1 <- matrix(D,ncol=length(y))
