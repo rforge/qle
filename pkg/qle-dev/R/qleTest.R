@@ -72,7 +72,6 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 				Sigma=NULL,
 				W=info$W,theta=info$theta,
 				cvm=est$cvm,
-				cl=cl,
 				verbose=verbose),
 		   silent=TRUE)
    
