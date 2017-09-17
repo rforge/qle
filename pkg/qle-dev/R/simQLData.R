@@ -58,7 +58,8 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 			if(is.null(cl))
 			  stop("Could not initialize cluster object.")	
 			if(any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))){
-			  if(!is.null(iseed)) clusterSetRNGStream(cl,iseed)
+			  if(length(iseed)>0L)
+				 clusterSetRNGStream(cl,iseed)
 			  parallel::parLapplyLB(cl, X = X, fun = SIM, ...)
 			} else stop("Unsupported cluster object.")				
 	    }
@@ -69,8 +70,10 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 						 call=sys.call()),
 			   class = c("error", "condition"), error = e) )
    },finally = {
-	   if(noCluster && !is.null(cl))
-		 stopCluster(cl)
+	   if(noCluster && !is.null(cl)){
+		   if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
+			   message("Error in stopping cluster.")
+	  }
    })
 }
 

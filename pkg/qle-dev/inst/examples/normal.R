@@ -1,8 +1,11 @@
 \dontrun{
-# A pedagogic example of a simple statistical 
-# simulation model using normal random numbers
+## A pedagogic example of a simple statistical 
+## simulation model using normal random numbers
 library(qle)	
 
+## use mc.cores > 1 for a local cluster
+# options(mc.cores=detectCores()-1)
+	
 # init RNG
 RNGkind("L'Ecuyer-CMRG")
 set.seed(123)
@@ -100,14 +103,13 @@ x0 <- c("mu"=5,"sigma"=3)
 S0 <- qscoring(qsd, x0, verbose=TRUE)
 points(S0$par[1],S0$par[2],col="magenta",pch=23)
 
-#debug(updateCovModels)
 # estimate with sampling new points
 OPT <- qle(qsd,
           simfunc,		
           nsim=100,
           global.opts=list("maxeval"=100),
           local.opts=list("lam_max"=1e-4,"weights"=0.5),
-          plot=TRUE, pl=5)
+          plot=FALSE, pl=5)
 
 # get table of stopping conditions
 OPT$ctls
@@ -175,8 +177,8 @@ print(Stest)
 # try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
 
-## save results as data set 
-## qsd$sim <- simfunc
-## save(qsd,file="normal.rda")
+## save results as data set
+#qsd$sim <- simfunc
+#save(qsd,file="normal.rda")
 }
 

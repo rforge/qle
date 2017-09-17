@@ -1246,10 +1246,13 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 			cores <- getOption("mc.cores",1L)
 			if(cores > 1L) 
 			  try(cl <- parallel::makeCluster(cores,type=type),silent=FALSE)
-		    # re-initialize in any case (see `set.seed`)
-		    if(!is.null(cl) && length(iseed)>0L) clusterSetRNGStream(cl,iseed)
-		}
-	},error = function(e) {
+		    # re-initialize in any case (see `set.seed`)		    
+			if(!is.null(cl)){
+				if(length(iseed)>0L)
+					clusterSetRNGStream(cl,iseed)
+			} else noCluster <- FALSE
+		}				
+	},error = function(e)  {
 		noCluster <- FALSE
 		message(.makeMessage("Could not initialize cluster."))
 	})	
@@ -1655,7 +1658,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 								 "nsim"=nsim,
 								 "iseed"=iseed))					
 		}, finally = {
-			if(noCluster) stopCluster(cl)
+		  if(noCluster) {
+			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
+			  message("Error in stopping cluster.")
+		  }
 		}
 	) # end outer tryCatch	
 	
