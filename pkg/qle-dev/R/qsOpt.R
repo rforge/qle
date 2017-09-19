@@ -1299,7 +1299,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 		
 	if(useCV) {
 		if(pl > 0L)
-		  cat("Fitting cross-valiadation covariance models...\n")
+		  cat("Update cross-valiadation covariance models...\n")
 		cvm <- try(prefitCV(qsd,type=errType,cl=cl),silent=TRUE) 
 		if(.isError(cvm)) {						
 			cvm <- NULL
@@ -1614,7 +1614,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 				# refit
 				if(useCV) {
 					if(pl > 0L)
-					  cat("Fitting cross-validation covariance models...\n")
+					  cat("Update cross-validation covariance models...\n")
 					cvm <- try(prefitCV(qsd,type=errType,cl=cl),silent=TRUE) 
 					if(.isError(cvm)) {						
 						cvm <- NULL
