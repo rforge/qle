@@ -4,9 +4,9 @@
 \alias{QLmodel}
 \title{Construct quasi-likelihood model}
 \usage{
-QLmodel(qldata, lb, ub, obs, mods, nfit = 1, var.type = c("wcholMean",
-  "cholMean", "wlogMean", "logMean", "kriging", "const"), useVar = TRUE,
-  criterion = c("qle", "mahal"))
+QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cvfit = FALSE,
+  var.type = c("wcholMean", "cholMean", "wlogMean", "logMean", "kriging",
+  "const"), useVar = TRUE, criterion = c("qle", "mahal"))
 }
 \arguments{
 \item{qldata}{simulation data (see \code{\link{setQLdata}})}
@@ -21,6 +21,8 @@ QLmodel(qldata, lb, ub, obs, mods, nfit = 1, var.type = c("wcholMean",
 
 \item{nfit}{number of cycles, \code{nfit=1} (default), after which covariance
 parameters are re-estimated otherwise re-used}
+
+\item{cvfit}{logical, \code{FALSE} (default), whether to re-fit CV models (re-estimate covariance parameters)}
 
 \item{var.type}{name of the variance approximation method (see \code{\link{covarTx}})}
 

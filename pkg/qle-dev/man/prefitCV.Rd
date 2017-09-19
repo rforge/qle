@@ -4,13 +4,11 @@
 \alias{prefitCV}
 \title{Covariance parameter estimation for cross-validation}
 \usage{
-prefitCV(qsd, fit = TRUE, reduce = TRUE, type = c("cv", "max"),
-  control = list(), cl = NULL, verbose = FALSE)
+prefitCV(qsd, reduce = TRUE, type = c("cv", "max"), control = list(),
+  cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
-
-\item{fit}{if \code{TRUE} (default), re-estimate covariance parameters}
 
 \item{reduce}{if \code{TRUE} (default), reduce the number of covariance models to refit}
 
@@ -21,6 +19,8 @@ prefitCV(qsd, fit = TRUE, reduce = TRUE, type = c("cv", "max"),
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
 \item{verbose}{if \code{TRUE}, print intermediate output}
+
+\item{fit}{if \code{TRUE} (default), re-estimate covariance parameters}
 }
 \value{
 A list of certain length depending on the current sample size (number of evaluated points).

@@ -470,7 +470,7 @@ updateCV <- function(i, qsd, fit, ...) {
 #' @author M. Baaske
 #' @rdname prefitCV
 #' @export
-prefitCV <- function(qsd, fit = TRUE, reduce = TRUE, type = c("cv","max"),
+prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		              control = list(),	cl = NULL, verbose = FALSE)
 {	
 	N <- nrow(qsd$qldata)
@@ -489,6 +489,7 @@ prefitCV <- function(qsd, fit = TRUE, reduce = TRUE, type = c("cv","max"),
 		split(Ni, sort(Ni%%nb))
 	 } else stop(paste0("Total number of points must be at least ",qsd$minN," for cross-validation."))
 	
+	fit <- isTRUE(qsd$cvfit)
     type <- match.arg(type)
 	# Leave-k-Out CV
 	tryCatch({			 

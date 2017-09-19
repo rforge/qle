@@ -90,10 +90,10 @@ obs0 <- simStat(redwood,cond)
 qsd <- getQLmodel(sim,lb,ub,obs0,criterion="qle",
 		var.type="kriging",verbose=TRUE)
 
-# cross-validation: fitting CV covariance models 
+# cross-validation: fitting CV covariance models
+qsd$cvfit <- TRUE
 cvm <- prefitCV(qsd, type="max",
-        fit=TRUE, reduce=FALSE,
-        verbose=TRUE)
+         reduce=FALSE, verbose=TRUE)
 
 # starting point for local search
 x0 <- c("kappa"=20,"R"=0.05,"mu"=3)

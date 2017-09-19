@@ -109,7 +109,7 @@ OPT <- qle(qsd,
           nsim=100,
           global.opts=list("maxeval"=100),
           local.opts=list("lam_max"=1e-4,"weights"=0.5),
-          plot=FALSE, pl=5)
+          plot=TRUE, pl=5)
 
 # get table of stopping conditions
 OPT$ctls
@@ -118,25 +118,6 @@ OPT$ctls[OPT$ctls[,"stop"]>0,]
 # last local estimation results
 local <- attr(OPT,"final")
 info <- attr(OPT,"optInfo")
-
-# fit CV models
-cvm0 <- prefitCV(qsd, reduce=FALSE)
-# CV prediction variance at `theta0` using initial design
-crossValTx(qsd, cvm0, type = "cve")
-# compare with kriging variance at left out sample points
-crossValTx(qsd, cvm0, type = "sigK")
-# check design: Kriging variances seem to
-# appropriately model the prediction variance
-crossValTx(qsd, cvm0, type = "acve")
-# given the current sample, we would prefer
-# the kriging prediction variance to CV
-crossValTx(qsd, cvm0, type = "ascve")
-# compare estimated variance with sample variance
-obs0 <- simQLdata(simfunc,X=OPT$par,nsim=1000,mode="matrix")[[1]]
-
-# compare simulated and predicted variance matrix
-var(obs0)
-attr(local,"Sigma")
 
 # MC hypothesis test of OPT$par
 # using `local$method`="qscoring"
@@ -181,4 +162,3 @@ print(Stest)
 #qsd$sim <- simfunc
 #save(qsd,file="normal.rda")
 }
-

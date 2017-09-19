@@ -1259,6 +1259,7 @@ We start with a short overview of the main functions and exemplify
 the practical workflow. Note that all examples presented in this Section are
 also available as separate \proglang{R} source files.\par
 <<echo=FALSE>>=
+options(useFancyQuotes="UTF-8")
 options(digits = 4, prompt="R> ")
 @
 First, the user must define a simulation function (simulating a given
@@ -1670,9 +1671,8 @@ prediction errors of the summary statistics first and, if appropriate (see below
 the predicted CV errors. For this, we first re-fit the leave-one-out
 cross-validation models of the sample means of the statistics.
 <<eval=false>>=
-cvm <- prefitCV(qsd,
-        fit=TRUE, reduce=FALSE,
-        verbose=TRUE)
+qsd$cvfit <- TRUE
+cvm <- prefitCV(qsd, reduce=FALSE, verbose=TRUE)
 @
 Then we check whether there is any significant bias (e.\,g. over- or
 underestimation) in estimating the sample means of the statistics $Y$ by

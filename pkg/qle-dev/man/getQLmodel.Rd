@@ -36,10 +36,13 @@ The function is a wrapper to \code{\link{setQLdata}} and \code{\link{fitSIRFk}}
 }
 \examples{
 \dontrun{
-# A pedagogic example of a simple statistical 
-# simulation model using normal random numbers
+## A pedagogic example of a simple statistical 
+## simulation model using normal random numbers
 library(qle)	
 
+## use mc.cores > 1 for a local cluster
+# options(mc.cores=detectCores()-1)
+	
 # init RNG
 RNGkind("L'Ecuyer-CMRG")
 set.seed(123)
@@ -137,7 +140,6 @@ x0 <- c("mu"=5,"sigma"=3)
 S0 <- qscoring(qsd, x0, verbose=TRUE)
 points(S0$par[1],S0$par[2],col="magenta",pch=23)
 
-#debug(updateCovModels)
 # estimate with sampling new points
 OPT <- qle(qsd,
           simfunc,		
@@ -153,25 +155,6 @@ OPT$ctls[OPT$ctls[,"stop"]>0,]
 # last local estimation results
 local <- attr(OPT,"final")
 info <- attr(OPT,"optInfo")
-
-# fit CV models
-cvm0 <- prefitCV(qsd, reduce=FALSE)
-# CV prediction variance at `theta0` using initial design
-crossValTx(qsd, cvm0, type = "cve")
-# compare with kriging variance at left out sample points
-crossValTx(qsd, cvm0, type = "sigK")
-# check design: Kriging variances seem to
-# appropriately model the prediction variance
-crossValTx(qsd, cvm0, type = "acve")
-# given the current sample, we would prefer
-# the kriging prediction variance to CV
-crossValTx(qsd, cvm0, type = "ascve")
-# compare estimated variance with sample variance
-obs0 <- simQLdata(simfunc,X=OPT$par,nsim=1000,mode="matrix")[[1]]
-
-# compare simulated and predicted variance matrix
-var(obs0)
-attr(local,"Sigma")
 
 # MC hypothesis test of OPT$par
 # using `local$method`="qscoring"
@@ -212,11 +195,10 @@ print(Stest)
 # try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
 
-## save results as data set 
-## qsd$sim <- simfunc
-## save(qsd,file="normal.rda")
+## save results as data set
+#qsd$sim <- simfunc
+#save(qsd,file="normal.rda")
 }
-
 }
 \author{
 M. Baaske
