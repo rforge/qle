@@ -2068,5 +2068,5 @@ updateQLmodel <- function(qsd, Xnew, sim, nsim, fit = TRUE,
 	# combine to new data and update
 	if(verbose)
 	  cat("Update covariance models...\n")	
-    updateCovModels(qsd,nextData,fit,verbose=verbose)
+    updateCovModels(qsd,nextData,fit,cl=cl,verbose=verbose)
 }
