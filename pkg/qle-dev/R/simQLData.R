@@ -46,7 +46,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
    tryCatch({
 		noCluster <- is.null(cl)
 		cores <- getOption("mc.cores",1L)
-	    if(length(X)==1L || cores==1L){
+	    if(noCluster && (length(X)==1L || cores==1L)){
 			noCluster <- FALSE
 			lapply(X, SIM, ...)		  
 		} else {
