@@ -587,8 +587,8 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 
 		# somehow complicated but this is a load ballancing 
 		# (for a cluster) parallized version of quasiDeviance
-		if(length(points) >= 2000 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
-				m <- max( if(!is.null(cl)) length(cl) else getOption("mc.cores",1L))		
+		if(length(points) > 1999 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
+				m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)		
 				M <- .splitList(points, m)
 				names(M) <- NULL
 			    unlist(
@@ -735,8 +735,8 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 						   "useCV"=!is.null(cvm),
 						   "useSigma"=useSigma)  			# use as constant Sigma 
 		   MD <-
-		    if(length(points) >= 2000 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
-			   m <- max( if(!is.null(cl)) length(cl) else getOption("mc.cores",1L))			   				
+		    if(length(points) > 1999 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
+			   m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)			   				
 			   M <- .splitList(points, m)
 			   names(M) <- NULL
 			   unlist(
