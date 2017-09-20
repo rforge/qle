@@ -17,3 +17,4 @@ opts <- list("pl"=10,"ftol_stop"=1e-9,"score_tol"=1e-6)
 
 # Scoring with average variance approximation
 qscoring(qsd, x0, opts=opts, verbose=TRUE)
+
