@@ -1251,9 +1251,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 			  try(cl <- parallel::makeCluster(cores,type=type),silent=FALSE)
 		    # re-initialize in any case (see `set.seed`)		    
 			if(!is.null(cl)){
-				if(length(iseed)>0L)
-				  clusterSetRNGStream(cl,iseed)
-			  	else message("You did not set a seed!")
+				if(length(iseed) == 0L)
+				   message("You did not set a seed!")
+				clusterSetRNGStream(cl,iseed)			  	 
 			} else noCluster <- FALSE
 		}				
 	},error = function(e)  {

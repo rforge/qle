@@ -195,7 +195,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 #' @export
 qleTest <- function(est, local = NULL, sim, ...,
 			 		 nsim = 100, obs = NULL, check.root=FALSE,
-					  na.rm = TRUE, cl = NULL, iseed = 1234, verbose = FALSE)
+					  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
 	if(.isError(est))
 	  stop("Estimation result has errors. Please see attribute `error`.")    

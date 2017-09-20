@@ -16,7 +16,7 @@
 
 # internal
 #' @importFrom digest digest
-doInParallel <- function(X, FUN, ... , cl = NULL, iseed = 1234,
+doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 							cache = getOption("qle.cache",FALSE) )
 {
 	SIM <- if(cache) {
@@ -141,7 +141,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = 1234,
 #' @export
 simQLdata <-
   function(sim, ..., nsim, X = NULL, mode = c("list","matrix","mean"), cl = NULL,
-			 iseed = 1234, na.rm = getOption("na.rm",TRUE), verbose = FALSE)
+			 iseed = NULL, na.rm = getOption("na.rm",TRUE), verbose = FALSE)
 {
 	args <- list(...)	
 	if(is.null(X)) {	  

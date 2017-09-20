@@ -5,7 +5,7 @@
 \title{Monte Carlo testing}
 \usage{
 qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
-  check.root = FALSE, na.rm = TRUE, cl = NULL, iseed = 1234,
+  check.root = FALSE, na.rm = TRUE, cl = NULL, iseed = NULL,
   verbose = FALSE)
 }
 \arguments{

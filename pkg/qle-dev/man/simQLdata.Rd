@@ -6,7 +6,7 @@
 \title{Simulate the statistical model}
 \usage{
 simQLdata(sim, ..., nsim, X = NULL, mode = c("list", "matrix", "mean"),
-  cl = NULL, iseed = 1234, na.rm = getOption("na.rm", TRUE),
+  cl = NULL, iseed = NULL, na.rm = getOption("na.rm", TRUE),
   verbose = FALSE)
 }
 \arguments{
