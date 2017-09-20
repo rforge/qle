@@ -39,8 +39,7 @@ B%*%S%*%t(B)
 
 # variance quasi-score vector
 D$varS
-(C <- B%*%diag(D$sig2)%*%t(B))
-(C <- B%*%diag(pred$sigma2)%*%t(B))
+C <- B%*%diag(D$sig2)%*%t(B)
 
 # variance matrix of statistics Var(T(X))
 S
@@ -54,10 +53,3 @@ t(qs)%*%solve(D$I)%*%qs
 # (Mahalanobis distance of quasi-score)
 D$qval
 t(qs)%*%solve(C)%*%qs
-
-D$I%*%solve(C)
-solve(D$I)%*%C
-C%*%solve(D$I)
-diag(solve(attr(D,"Sigma"))^2%*%diag(pred$sigma2))
-
-lam <- geneigen(D$varS,D$I,only.values=TRUE)
