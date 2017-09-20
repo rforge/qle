@@ -5,7 +5,7 @@
 \title{Monte Carlo testing}
 \usage{
 qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
-  check.root = FALSE, na.rm = TRUE, cl = NULL, iseed = NULL,
+  check.root = FALSE, na.rm = TRUE, cl = NULL, iseed = 1234,
   verbose = FALSE)
 }
 \arguments{
@@ -28,7 +28,7 @@ re-estimated parameters}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
-\item{iseed}{integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker}
+\item{iseed}{integer seed for initializing the cluster workers}
 
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }

@@ -6,7 +6,7 @@
 \title{Simulate the statistical model}
 \usage{
 simQLdata(sim, ..., nsim, X = NULL, mode = c("list", "matrix", "mean"),
-  cl = NULL, iseed = NULL, na.rm = getOption("na.rm", TRUE),
+  cl = NULL, iseed = 1234, na.rm = getOption("na.rm", TRUE),
   verbose = FALSE)
 }
 \arguments{
@@ -22,7 +22,7 @@ simQLdata(sim, ..., nsim, X = NULL, mode = c("list", "matrix", "mean"),
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
-\item{iseed}{integer seed, \code{NULL} (default) for no seeding the workers}
+\item{iseed}{integer seed for initializing the cluster workers}
 
 \item{na.rm}{whether to remove `\code{NA}` values from simulation results}
 
@@ -65,11 +65,8 @@ Basically, the given simulation function `\code{sim}` is called for each paramet
 
 # set this option TRUE if we wish to 
 # cache (simulation) results
+options(mc.cores=4)
 options(qle.cache=TRUE)
-
-# only if a iseed is set before cached
-# results can be reused
-set.iseed(1234)
 
 # a simple lognormal model for estimation
 sim <- simQLdata(sim=function(x) rlnorm(1,x[1],x[2]),

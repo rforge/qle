@@ -16,7 +16,7 @@
 
 # internal
 #' @importFrom digest digest
-doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
+doInParallel <- function(X, FUN, ... , cl = NULL, iseed = 1234,
 							cache = getOption("qle.cache",FALSE) )
 {
 	SIM <- if(cache) {
@@ -58,10 +58,9 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 			if(is.null(cl))
 			  stop("Could not initialize cluster object.")	
 			if(any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))){
-			  if(length(iseed)>0L)
-				 clusterSetRNGStream(cl,iseed)
+			  clusterSetRNGStream(cl,iseed)
 			  parallel::parLapplyLB(cl, X = X, fun = SIM, ...)
-			} else stop("Unsupported cluster object.")				
+			} else stop(paste0("Unsupported cluster object: ",class(cl)))			
 	    }
    },error = function(e) {
 			return(
@@ -91,7 +90,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 #' @param nsim			number of simulation replications at each parameter
 #' @param mode			type of return value
 #' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}} 
-#' @param iseed			integer seed, \code{NULL} (default) for no seeding the workers
+#' @param iseed			integer seed for initializing the cluster workers
 #' @param na.rm			whether to remove `\code{NA}` values from simulation results
 #' @param verbose		if \code{TRUE}, then print intermediate output 
 #'
@@ -128,11 +127,8 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 #' 
 #' # set this option TRUE if we wish to 
 #' # cache (simulation) results
+#' options(mc.cores=4)
 #' options(qle.cache=TRUE)
-#' 
-#' # only if a iseed is set before cached
-#' # results can be reused
-#' set.iseed(1234)
 #' 
 #' # a simple lognormal model for estimation
 #' sim <- simQLdata(sim=function(x) rlnorm(1,x[1],x[2]),
@@ -145,7 +141,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 #' @export
 simQLdata <-
   function(sim, ..., nsim, X = NULL, mode = c("list","matrix","mean"), cl = NULL,
-			 iseed = NULL, na.rm = getOption("na.rm",TRUE), verbose = FALSE)
+			 iseed = 1234, na.rm = getOption("na.rm",TRUE), verbose = FALSE)
 {
 	args <- list(...)	
 	if(is.null(X)) {	  

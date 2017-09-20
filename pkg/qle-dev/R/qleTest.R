@@ -137,7 +137,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 #' 						re-estimated parameters
 #' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
-#' @param iseed			integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker
+#' @param iseed			integer seed for initializing the cluster workers
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
 #' @return An object of class \code{qleTest} as a list of
@@ -195,7 +195,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 #' @export
 qleTest <- function(est, local = NULL, sim, ...,
 			 		 nsim = 100, obs = NULL, check.root=FALSE,
-					  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
+					  na.rm = TRUE, cl = NULL, iseed = 1234, verbose = FALSE)
 {				  
 	if(.isError(est))
 	  stop("Estimation result has errors. Please see attribute `error`.")    

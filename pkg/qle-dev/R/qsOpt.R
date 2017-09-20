@@ -910,7 +910,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param errType		type of prediction variances (see details)
 #' @param pl			print level, use \code{pl}>0 to print intermediate output
 #' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}} 
-#' @param iseed			integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker
+#' @param iseed			integer seed, \code{NULL} (default) for no seeding of the RNG stream for each worker
 #' @param plot 			if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)
 #'
 #' @return List of the following objects:
@@ -1252,7 +1252,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 		    # re-initialize in any case (see `set.seed`)		    
 			if(!is.null(cl)){
 				if(length(iseed)>0L)
-					clusterSetRNGStream(cl,iseed)
+				  clusterSetRNGStream(cl,iseed)
+			  	else message("You did not set a seed!")
 			} else noCluster <- FALSE
 		}				
 	},error = function(e)  {

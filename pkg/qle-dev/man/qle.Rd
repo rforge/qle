@@ -39,7 +39,7 @@ qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
-\item{iseed}{integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker}
+\item{iseed}{integer seed, \code{NULL} (default) for no seeding of the RNG stream for each worker}
 
 \item{plot}{if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)}
 }
