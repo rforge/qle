@@ -7,8 +7,8 @@
 reml(models, pars, data, Xs, verbose = FALSE)
 }
 \arguments{
-\item{models}{object of class \code{krige} (list of covariance models) or
-`\code{covModel}` (a single covariance model), see \code{\link{setCovModel}}}
+\item{models}{object of class \code{krige} (list of covariance models) or class
+\code{covModel} (a single covariance model), see \code{\link{setCovModel}}}
 
 \item{pars}{covariance parameter vector (including global scalar nugget value)}
 

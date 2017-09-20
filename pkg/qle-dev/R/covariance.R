@@ -200,8 +200,8 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' 
 #' @description Calculate the REML function value for given covariance parameters 
 #' 
-#' @param models   	 object of class \code{krige} (list of covariance models) or
-#'					 	 `\code{covModel}` (a single covariance model), see \code{\link{setCovModel}}
+#' @param models   	 object of class \code{krige} (list of covariance models) or class
+#'					 	 \code{covModel} (a single covariance model), see \code{\link{setCovModel}}
 #' @param pars 	     covariance parameter vector (including global scalar nugget value)
 #' @param data	  	 data frame of simulated statistics, each column corresponds to a 
 #' 					 single covariance model in `\code{models}`
@@ -369,7 +369,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' 	  the \emph{Restricted Maximum Likelihood} (REML) method .
 #' 
 #' @param models  	 object of class \code{krige} (list of covariance models) or
-#' 	 				 `\code{covModel}` (a single covariance model), see \code{\link{setCovModel}}
+#' 	 				 class \code{covModel} (a single covariance model), see \code{\link{setCovModel}}
 #' @param Xs	 	 matrix of sample points
 #' @param data		 data frame of simulated sample means of statistics
 #' 					 first column corrspond to first model in list `\code{models}` and so forth

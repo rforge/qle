@@ -8,7 +8,7 @@ fitCov(models, Xs, data, controls = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{models}{object of class \code{krige} (list of covariance models) or
-`\code{covModel}` (a single covariance model), see \code{\link{setCovModel}}}
+class \code{covModel} (a single covariance model), see \code{\link{setCovModel}}}
 
 \item{Xs}{matrix of sample points}
 
