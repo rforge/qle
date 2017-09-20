@@ -284,13 +284,13 @@ fnREML <- function(p, y, Xs, P, model, fixed = seq(length(p)), verbose = FALSE)
 ## H <- log(phi*D)
 ## exp(2*alpha*H)*2*H
 #' @importFrom nloptr nl.grad
-fnGradREML <- function(p,y,Xs,P,model,fixed=NULL) {
-	list("objective"=fnREML(p,y,Xs,P,model,fixed),
+fnGradREML <- function(p, y, Xs, P, model, fixed = NULL, verbose = FALSE) {
+	list("objective"=fnREML(p,y,Xs,P,model,fixed,verbose),
 		 "gradient"=nloptr::nl.grad(p, fnREML, heps = .Machine$double.eps^(1/3),y,Xs,P,model,fixed)) 
 }  
 
 ## TODO add data as parameter
-# arguments '...' manipulate global options for Nloptr DIRECT call
+# arguments '...' manipulate global options for nloptr 
 #' @importFrom nloptr nl.opts
 doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 {
@@ -332,7 +332,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 		
 		converged <- FALSE
 		sol <- res$solution			
-		if(res$status %in% c(0:4)) {
+		if(res$status >= 0L) {
 			converged <- TRUE
 			model$param[model$fixed] <- sol						   			   
 	    } else {
@@ -410,9 +410,10 @@ fitCov <- function(models, Xs, data, controls = list(),
 	if(length(controls)>0L) {		
 		opts[names(controls)] <- controls
 	} else {
-		opts <- list("algorithm" = "NLOPT_GN_DIRECT",
-				"ftol_rel" = 1.0e-6, "xtol_rel" = 1.0e-6,
-				"maxeval" = 1000)		
+		opts <- list("algorithm" = "NLOPT_GN_MLSL",
+				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
+						"xtol_rel" = 1.0e-6,"maxeval" = 1000),
+				"maxeval" = 1000, "population"=0)	
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
@@ -456,10 +457,11 @@ fitCov <- function(models, Xs, data, controls = list(),
 #' @param mods			list of (fitted) covariance models (see \code{\link{fitSIRFk}}) 
 #' @param nfit			number of cycles, \code{nfit=1} (default), after which covariance
 #' 						parameters are re-estimated otherwise re-used 
-#' @param cvfit 		logical, \code{FALSE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
+#' @param cvfit 		logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
 #' @param var.type  	name of the variance approximation method (see \code{\link{covarTx}})
 #' @param useVar    	logical, \code{TRUE} (default), whether to use prediction variances (see details)
 #' @param criterion 	global criterion function for sampling and minimization, either "\code{qle}" or "\code{mahal}"				    	
+#' @param verbose       logical, \code{FALSE} (default), whether to give further output 
 #' 
 #' @return Object of class \code{\link{QLmodel}} which stores the data frame of simulation results, bounds on
 #'  the parameter space, covariance models for kriging, observations vector as well as options for kriging and fitting. 
@@ -478,9 +480,9 @@ fitCov <- function(models, Xs, data, controls = list(),
 #' @author M. Baaske
 #' @rdname QLmodel
 #' @export 
-QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cvfit = FALSE,
+QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cvfit = TRUE,
 		    var.type = c("wcholMean","cholMean","wlogMean","logMean","kriging","const"),
-				useVar = TRUE, criterion = c("qle","mahal"))
+				useVar = TRUE, criterion = c("qle","mahal"), verbose = FALSE)
 {	
 	if(!inherits(qldata,"QLdata"))
 	 stop("expected argument `qldata` of class `QLdata`.")
@@ -509,19 +511,21 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cvfit = FALSE,
 	if(!is.numeric(nfit) || length(nfit)>1L )
 	 stop("Argument 'nfit must be numeric of length one.")	
 	
- 	covT <- .extractCovModels(mods$covT)
+ 	covT <- .extractCovModels(mods$covT,verbose)
 	stopifnot(class(covT)=="krige")
 	
 	covL <- NULL
 	if(!is.null(mods$covL)){		
-		covL <- .extractCovModels(mods$covL)
+		covL <- .extractCovModels(mods$covL,verbose)
 		stopifnot(class(covL)=="krige")
 	}
 	# reml optimization options 
 	opts <- attr(mods,"opts")
-	if(is.null(opts)){
-	 opts <- list("algorithm" = "NLOPT_GN_DIRECT_L","ftol_rel" = 1.0e-7,
-	 		   "xtol_rel" = 1.0e-5,"maxeval" = 1000)			  
+	if(is.null(opts) || length(opts) == 0L){
+		opts <- list("algorithm" = "NLOPT_GN_MLSL",
+				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
+						"xtol_rel" = 1.0e-6,"maxeval" = 1000),
+				"maxeval" = 1000, "population"=0)			  
 	}
 	# minimum required sample size
 	minN <- ifelse(min(sapply(covT,	function(x) x$trend)) < 2, dx+2, (dx+1)*(dx+2)/2+1)
@@ -561,7 +565,9 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cvfit = FALSE,
     structure(
 		lapply(covs,
 		 function(x) {
-			x$model
+			if(verbose)
+			 structure(x$model,"optres"=attr(x,"optres"))
+			else x$model
 		 }
 	    ), error = if(length(errId)>0L) errId else NULL,
 	  class = "krige"
@@ -707,8 +713,10 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 opts <- nloptr::nl.opts()
 		 opts[names(controls)] <- controls
 	 } else {
-		 opts <- list("algorithm" = "NLOPT_GN_DIRECT_L","ftol_rel" = 1.0e-7,
-				 	  "xtol_rel" = 1.0e-5,"maxeval" = 1000)			  
+		 opts <- list("algorithm" = "NLOPT_GN_MLSL",
+				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
+						 "xtol_rel" = 1.0e-6,"maxeval" = 1000),
+				 "maxeval" = 1000, "population"=0)		  
 	 }
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)

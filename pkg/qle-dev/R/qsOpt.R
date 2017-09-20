@@ -658,8 +658,10 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #'  a good guess being in the vicinity of an approximate root. If it fails we switch to any of the above alternative methods
 #'  (e.g. \code{\link[nloptr]{bobyqa}} as the default method) or eventually - in some real hard situations - to the
 #'  method `\code{direct}` or its locally biased version `\code{directL}`. The order of processing is determined
-#'  by the order of appearance of the names in `\code{method}`. Only if there are reasonable arguments against quasi-scoring,
-#'  such as expecting a local minimum rather than a root first or an available limited computational budget, we can always apply
+#'  by the order of appearance of the names in `\code{method}`. Any method available from package `\code{nloptr}` can be
+#'  chosen. In particular, setting \code{method="nloptr"} and `\code{control}` allows to choose a multistart algorithm such
+#'  as \code{\link[nloptr]{mlsl}}. Only if there are reasonable arguments against quasi-scoring, such as expecting a local
+#'  minimum rather than a root first or an available limited computational budget, we can always apply
 #'  the direct search method `\code{direct}` leading to a globally exhaustive search. Note that we must always supply a starting
 #'  point `\code{x0}`, which could be any vector valued parameter of the parameter space unless method `\code{direct}` is
 #'  chosen. Then `\code{x0}` is still required but ignored as a starting point since it uses the "center point" of
@@ -756,23 +758,11 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	
 	if(is.null(S0)){	  	
 	  S0 <- 
-		tryCatch({
-			nl.args <- list("stopval"=0,"maxeval"=1000,
-					        "ftol_rel"=1e-6,"xtol_rel"=1e-5)
-							
-			if(length(control) == 0L)
-			  control <- nl.args
-			else {
-				namc <- match.arg(names(control), choices = names(nl.args), 
-			   		 several.ok = TRUE)
-				if(!all(names(control) %in% names(nl.args))) 
-				  stop("Unknown names in control: ",
-						names(control)[!(names(control) %in% names(nl.args))])
-				if(!is.null(namc)) 
-			  		nl.args[namc] <- control[namc]
-				control <- nl.args
-			}
-			
+		tryCatch({			
+			if(length(control) == 0L){
+			  control <- list("stopval"=0,"maxeval"=1000,
+							  "ftol_rel"=1e-7,"xtol_rel"=1e-6)		  	  	
+	  		}			
 			# alloc C level
 			if(!.qdAlloc(qsd,...))
 			 stop("Could not allocate C memory and construct QL model.")
@@ -814,14 +804,25 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 									   	},
 										lower=qsd$lower, upper=qsd$upper, control=control)
 							   	},
+								"nloptr" = {
+									if(is.null(control$algorithm)){
+										control["algorithm"] <- "NLOPT_LN_BOBYQA"
+										message(paste0("Using default derivative-free method: ",control$algorithm))									
+									}
+									ret <- do.call(nloptr::nloptr, list(x0, eval_f=fn, lb=qsd$lower,
+													ub=qsd$upper, opts=control))
+									structure(list("par"=ret$solution,
+												   "value"=ret$objective,
+												   "iter"=ret$iterations,
+												   "convergence"=ret$status,
+												   "message"=ret$message))									
+								},
 								{
 									fun <- try(get(fun.name),silent=TRUE)
 									if(inherits(fun,"try-error") || !is.function(fun))
-									   stop(paste0("Unknown function: ",fun.name,".\n"))
-									## default call to `nloptr`
-								    do.call(fun, list(x0, fn=fn,
-												  lower=qsd$lower, upper=qsd$upper,
-													control=control))								
+									   stop(paste0("Unknown function call: ",fun.name,".\n"))									
+								    # default call to `nloptr`
+								    do.call(fun, list(x0, fn, lower=qsd$lower, upper=qsd$upper, control=control))								
 								}
 						)		 
 					  }, error = function(e) {e})
@@ -1183,7 +1184,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 	xdim <- attr(qsd$qldata,"xdim")
 	# available local optimization method(s) to choose
 	nlopt.fun <- c("cobyla","bobyqa","neldermead",
-			       "direct","directL","lbfgs")		   
+			       "direct","directL","lbfgs","nloptr")		   
 	all.local <- 
 	 if(qsd$criterion == "qle") {		
 		c("qscoring",nlopt.fun)

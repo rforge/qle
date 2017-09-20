@@ -4,9 +4,9 @@
 \alias{QLmodel}
 \title{Construct quasi-likelihood model}
 \usage{
-QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cvfit = FALSE,
+QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cvfit = TRUE,
   var.type = c("wcholMean", "cholMean", "wlogMean", "logMean", "kriging",
-  "const"), useVar = TRUE, criterion = c("qle", "mahal"))
+  "const"), useVar = TRUE, criterion = c("qle", "mahal"), verbose = FALSE)
 }
 \arguments{
 \item{qldata}{simulation data (see \code{\link{setQLdata}})}
@@ -22,13 +22,15 @@ QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cvfit = FALSE,
 \item{nfit}{number of cycles, \code{nfit=1} (default), after which covariance
 parameters are re-estimated otherwise re-used}
 
-\item{cvfit}{logical, \code{FALSE} (default), whether to re-fit CV models (re-estimate covariance parameters)}
+\item{cvfit}{logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)}
 
 \item{var.type}{name of the variance approximation method (see \code{\link{covarTx}})}
 
 \item{useVar}{logical, \code{TRUE} (default), whether to use prediction variances (see details)}
 
 \item{criterion}{global criterion function for sampling and minimization, either "\code{qle}" or "\code{mahal}"}
+
+\item{verbose}{logical, \code{FALSE} (default), whether to give further output}
 }
 \value{
 Object of class \code{\link{QLmodel}} which stores the data frame of simulation results, bounds on

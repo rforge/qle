@@ -80,8 +80,10 @@ The function provides an interface to local and global numerical minimization
  a good guess being in the vicinity of an approximate root. If it fails we switch to any of the above alternative methods
  (e.g. \code{\link[nloptr]{bobyqa}} as the default method) or eventually - in some real hard situations - to the
  method `\code{direct}` or its locally biased version `\code{directL}`. The order of processing is determined
- by the order of appearance of the names in `\code{method}`. Only if there are reasonable arguments against quasi-scoring,
- such as expecting a local minimum rather than a root first or an available limited computational budget, we can always apply
+ by the order of appearance of the names in `\code{method}`. Any method available from package `\code{nloptr}` can be
+ chosen. In particular, setting \code{method="nloptr"} and `\code{control}` allows to choose a multistart algorithm such
+ as \code{\link[nloptr]{mlsl}}. Only if there are reasonable arguments against quasi-scoring, such as expecting a local
+ minimum rather than a root first or an available limited computational budget, we can always apply
  the direct search method `\code{direct}` leading to a globally exhaustive search. Note that we must always supply a starting
  point `\code{x0}`, which could be any vector valued parameter of the parameter space unless method `\code{direct}` is
  chosen. Then `\code{x0}` is still required but ignored as a starting point since it uses the "center point" of
