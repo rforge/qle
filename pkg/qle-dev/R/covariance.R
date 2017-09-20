@@ -29,7 +29,7 @@
 #' @param upper			upper bounds for REML estimation
 #' @param ...			additional arguments which can be stored
 #' 
-#' @return Object of class `\code{covModel}`
+#' @return Object of class \code{covModel}
 #' 
 #' @details The function sets the a covariance model for kriging the sample mean values of statistic. The covariance model
 #'  (including a polynomial trend function) defines the spatial dependence between different locations (points) of the
@@ -200,7 +200,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' 
 #' @description Calculate the REML function value for given covariance parameters 
 #' 
-#' @param models   	 object of class `\code{krige}` (list of covariance models) or
+#' @param models   	 object of class \code{krige} (list of covariance models) or
 #'					 	 `\code{covModel}` (a single covariance model), see \code{\link{setCovModel}}
 #' @param pars 	     covariance parameter vector (including global scalar nugget value)
 #' @param data	  	 data frame of simulated statistics, each column corresponds to a 
@@ -368,7 +368,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @description The function estimates the (hyper)parameters of the covariance models by
 #' 	  the \emph{Restricted Maximum Likelihood} (REML) method .
 #' 
-#' @param models  	 object of class `\code{krige}` (list of covariance models) or
+#' @param models  	 object of class \code{krige} (list of covariance models) or
 #' 	 				 `\code{covModel}` (a single covariance model), see \code{\link{setCovModel}}
 #' @param Xs	 	 matrix of sample points
 #' @param data		 data frame of simulated sample means of statistics
@@ -377,7 +377,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @param cl		 cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
 #' @param verbose 	 logical, \code{TRUE} for intermediate output
 #' 
-#' @return An object of class `\code{reml}` which consists of a list of named lists
+#' @return An object of class \code{reml} which consists of a list of named lists
 #'  (`\code{model}`, `\code{convergence}`) each storing a fitted covariance model itself
 #'  together with the optimization results from \code{\link[nloptr]{nloptr}} as an attribute
 #'  named `\code{optres}`. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.  

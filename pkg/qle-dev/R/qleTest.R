@@ -38,7 +38,7 @@
 #' 
 #' @description		Check out and compare estimated roots of the quasi-score vector
 #' 
-#' @param est 		object of class "\code{qle}", the estimation results from function \code{\link{qle}}
+#' @param est 		object of class \code{qle}, the estimation results from function \code{\link{qle}}
 #' @param par	    list or matrix of estimated parameters as roots of the quasi-score vector
 #' @param verbose   logical, \code{TRUE} for intermediate output
 #' 
@@ -140,7 +140,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 #' @param iseed			integer, the seed, \code{NULL} (default) for no seeding of the RNG stream for each worker
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
-#' @return An object of class "\code{qleTest}" as a list of
+#' @return An object of class \code{qleTest} as a list of
 #'  (predicted) standard errors as follows:
 #' 
 #' 	\item{param}{ data frame of estimated parameters and error measures}
@@ -411,7 +411,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 #' 
 #' @description print the results of call to \code{\link{qleTest}}
 #' 
-#' @param x      object of class `\code{qleTest}` from call to \code{\link{qleTest}}
+#' @param x      object of class \code{qleTest} from call to \code{\link{qleTest}}
 #' @param pl	 not used yet
 #' @param digits number of (significant) digits to display
 #' @param ... 	 ignored, additional arguments

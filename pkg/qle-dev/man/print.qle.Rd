@@ -2,7 +2,7 @@
 % Please edit documentation in R/qsOpt.R
 \name{print.qle}
 \alias{print.qle}
-\title{print results of class "\code{qle}"}
+\title{print results of class \code{qle}}
 \usage{
 \method{print}{qle}(x, pl = 1, digits = 5, ...)
 }

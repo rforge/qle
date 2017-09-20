@@ -33,7 +33,7 @@ a fixed local nugget variance}
 \item{...}{additional arguments which can be stored}
 }
 \value{
-Object of class `\code{covModel}`
+Object of class \code{covModel}
 }
 \description{
 Set a covariance model for kriging the statistics or for the variance matrix of statistics.

@@ -29,7 +29,7 @@ simQLdata(sim, ..., nsim, X = NULL, mode = c("list", "matrix", "mean"),
 \item{verbose}{if \code{TRUE}, then print intermediate output}
 }
 \value{
-List of (aggregated) simulation results of class `\code{simQL}`
+List of (aggregated) simulation results of class \code{simQL}
  and the following attributes:
    
 	\item{X}{ matrix of sample points equal to `\code{X}`, if supplied, or

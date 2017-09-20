@@ -14,7 +14,7 @@
 #'
 #' @description 	
 #'
-#' @param models 	object of class `\code{krige}` (as a list of covariance models) or
+#' @param models 	object of class \code{krige} (as a list of covariance models) or
 #' 	 				`\code{covModel}` (as a single covariance model), see \code{\link{setCovModel}}
 #' @param points 	matrix or list of points to predict the sample means of statistics
 #' @param Xs		matrix of sample points

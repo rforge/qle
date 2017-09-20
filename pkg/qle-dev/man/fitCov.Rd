@@ -7,7 +7,7 @@
 fitCov(models, Xs, data, controls = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
-\item{models}{object of class `\code{krige}` (list of covariance models) or
+\item{models}{object of class \code{krige} (list of covariance models) or
 `\code{covModel}` (a single covariance model), see \code{\link{setCovModel}}}
 
 \item{Xs}{matrix of sample points}
@@ -22,7 +22,7 @@ first column corrspond to first model in list `\code{models}` and so forth}
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }
 \value{
-An object of class `\code{reml}` which consists of a list of named lists
+An object of class \code{reml} which consists of a list of named lists
  (`\code{model}`, `\code{convergence}`) each storing a fitted covariance model itself
  together with the optimization results from \code{\link[nloptr]{nloptr}} as an attribute
  named `\code{optres}`. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.

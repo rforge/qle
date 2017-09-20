@@ -7,7 +7,7 @@
 checkMultRoot(est, par = NULL, verbose = FALSE)
 }
 \arguments{
-\item{est}{object of class "\code{qle}", the estimation results from function \code{\link{qle}}}
+\item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
 
 \item{par}{list or matrix of estimated parameters as roots of the quasi-score vector}
 

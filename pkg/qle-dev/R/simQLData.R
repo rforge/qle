@@ -96,7 +96,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 #' @param verbose		if \code{TRUE}, then print intermediate output 
 #'
 #' @return
-#' 	List of (aggregated) simulation results of class `\code{simQL}`
+#' 	List of (aggregated) simulation results of class \code{simQL}
 #'  and the following attributes:
 #'    
 #' 	\item{X}{ matrix of sample points equal to `\code{X}`, if supplied, or

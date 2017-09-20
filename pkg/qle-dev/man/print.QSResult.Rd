@@ -2,7 +2,7 @@
 % Please edit documentation in R/qsOpt.R
 \name{print.QSResult}
 \alias{print.QSResult}
-\title{print results of class "\code{QSResult}"}
+\title{print results of class \code{QSResult}}
 \usage{
 \method{print}{QSResult}(x, pl = 1, digits = 5, ...)
 }

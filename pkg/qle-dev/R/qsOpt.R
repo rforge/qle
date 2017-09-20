@@ -1718,7 +1718,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 
 #' @name print.qle
 #' 
-#' @title print results of class "\code{qle}"
+#' @title print results of class \code{qle}
 #' 
 #' @description S3 method to print the results of \code{\link{qle}}.
 #' 
@@ -1784,7 +1784,7 @@ print.qle <- function(x, pl = 1, digits = 5,...){
 
 #' @name print.QSResult
 #' 
-#' @title print results of class "\code{QSResult}"
+#' @title print results of class \code{QSResult}
 #'
 #' @description S3 method to print the results of \code{\link{qscoring}}.
 #' 

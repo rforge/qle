@@ -33,7 +33,7 @@ re-estimated parameters}
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }
 \value{
-An object of class "\code{qleTest}" as a list of
+An object of class \code{qleTest} as a list of
  (predicted) standard errors as follows:
 
 	\item{param}{ data frame of estimated parameters and error measures}

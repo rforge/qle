@@ -10,7 +10,7 @@ estim(models, points, Xs, data, krig.type = c("dual", "var", "both"))
 jacobian(models, points, Xs, data, krig.type = c("dual", "var", "both"))
 }
 \arguments{
-\item{models}{object of class `\code{krige}` (as a list of covariance models) or
+\item{models}{object of class \code{krige} (as a list of covariance models) or
 `\code{covModel}` (as a single covariance model), see \code{\link{setCovModel}}}
 
 \item{points}{matrix or list of points to predict the sample means of statistics}

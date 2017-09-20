@@ -7,7 +7,7 @@
 \method{print}{qleTest}(x, pl = 1, digits = 5, ...)
 }
 \arguments{
-\item{x}{object of class `\code{qleTest}` from call to \code{\link{qleTest}}}
+\item{x}{object of class \code{qleTest} from call to \code{\link{qleTest}}}
 
 \item{pl}{not used yet}
 
