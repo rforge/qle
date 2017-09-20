@@ -652,6 +652,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' 	  \item{}{ \code{\link[nloptr]{bobyqa}}, \code{\link[nloptr]{cobyla}} and \code{\link[nloptr]{neldermead}}}
 #'    \item{}{ \code{\link[nloptr]{direct}}, locally biased version: \code{directL}}
 #' 	  \item{}{ \code{\link[nloptr]{lbfgs}} for minimizing the MD with constant `\code{Sigma}` only}
+#' 	  \item{}{ \code{\link[nloptr]{nloptr}} as the general optimizer, which allows to use further methods}
 #'  }
 #'    
 #'  Using quasi-scoring first, which is only valid for minimizing the QD function, is always a good idea since we might have done
