@@ -1663,8 +1663,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 								 "iseed"=iseed))					
 		}, finally = {
 		  if(noCluster) {
-			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
-			  message("Error in stopping cluster.")
+			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error")){
+			  	rm(cl)
+				message("Error in stopping cluster.")
+		  	} else cl <- NULL
 		  }
 		}
 	) # end outer tryCatch	
