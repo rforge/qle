@@ -380,7 +380,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @return An object of class `\code{reml}` which consists of a list of named lists
 #'  (`\code{model}`, `\code{convergence}`) each storing a fitted covariance model itself
 #'  together with the optimization results from \code{\link[nloptr]{nloptr}} as an attribute
-#'  named `\code{optres}`.   
+#'  named `\code{optres}`. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.  
 #' 
 #' @details The function fits a list of covariance models using the REML method. In order to avoid singularities
 #'  of the so-called trend matrices make sure to use at least the minimum required number of sample points in
@@ -618,7 +618,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cvfit = TRUE,
 #'   the REML covariance parameter estimation for both cases.
 #' 	 Note that the returned object can also be constructed manually and passed as an input argument to
 #'   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. Also see function
-#'   \code{\link{getQLmodel}} for an example.
+#'   \code{\link{getQLmodel}} for an example. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.
 #'  
 #' @author M. Baaske
 #' @rdname fitSIRFk

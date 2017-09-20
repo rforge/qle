@@ -60,7 +60,7 @@ The function estimates the parameters of the covariance model `\code{sirfk}` by 
   the REML covariance parameter estimation for both cases.
 	 Note that the returned object can also be constructed manually and passed as an input argument to
   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. Also see function
-  \code{\link{getQLmodel}} for an example.
+  \code{\link{getQLmodel}} for an example. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.
 }
 \author{
 M. Baaske
