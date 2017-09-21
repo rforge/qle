@@ -15,7 +15,6 @@ mahalDist(x,qsd)
 quasiDeviance(x,qsd)
 
 ## Fit cross-validation models
-qsd$cvfit <- TRUE
 cvm <- prefitCV(qsd, verbose=TRUE)
 # use prediction errors based on these
 qsd$var.type <- "cholMean"

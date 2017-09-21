@@ -19,8 +19,6 @@ prefitCV(qsd, reduce = TRUE, type = c("cv", "max"), control = list(),
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
 \item{verbose}{if \code{TRUE}, print intermediate output}
-
-\item{fit}{if \code{TRUE} (default), re-estimate covariance parameters}
 }
 \value{
 A list of certain length depending on the current sample size (number of evaluated points).

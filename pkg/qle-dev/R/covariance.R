@@ -457,7 +457,7 @@ fitCov <- function(models, Xs, data, controls = list(),
 #' @param mods			list of (fitted) covariance models (see \code{\link{fitSIRFk}}) 
 #' @param nfit			number of cycles, \code{nfit=1} (default), after which covariance
 #' 						parameters are re-estimated otherwise re-used 
-#' @param cvfit 		logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
+#' @param cv.fit 		logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
 #' @param var.type  	name of the variance approximation method (see \code{\link{covarTx}})
 #' @param useVar    	logical, \code{TRUE} (default), whether to use prediction variances (see details)
 #' @param criterion 	global criterion function for sampling and minimization, either "\code{qle}" or "\code{mahal}"				    	
@@ -480,7 +480,7 @@ fitCov <- function(models, Xs, data, controls = list(),
 #' @author M. Baaske
 #' @rdname QLmodel
 #' @export 
-QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cvfit = TRUE,
+QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 		    var.type = c("wcholMean","cholMean","wlogMean","logMean","kriging","const"),
 				useVar = TRUE, criterion = c("qle","mahal"), verbose = FALSE)
 {	
@@ -546,7 +546,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cvfit = TRUE,
 			 "criterion" = criterion,			 
 			 "minN" = minN,
 			 "nfit" = nfit,
-			 "cvfit"=cvfit),
+			 "cv.fit"=cv.fit),
 	  opts = opts,
 	  class="QLmodel"
 	)

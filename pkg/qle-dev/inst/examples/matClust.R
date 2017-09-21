@@ -91,7 +91,6 @@ qsd <- getQLmodel(sim,lb,ub,obs0,criterion="qle",
 		var.type="kriging",verbose=TRUE)
 
 # cross-validation: fitting CV covariance models
-qsd$cvfit <- TRUE
 cvm <- prefitCV(qsd, type="max",
          reduce=FALSE, verbose=TRUE)
 

@@ -345,7 +345,7 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #' Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
 #' 
 #' # fit CV models
-#' cvm <- prefitCV(qsd, fit = TRUE)
+#' cvm <- prefitCV(qsd)
 #' theta0 <- c("mu"=2,"sd"=1)
 #' 
 #' # get RMSD by cross-validation 
@@ -437,7 +437,6 @@ updateCV <- function(i, qsd, fit, ...) {
 #'  variances by a cross-validation (CV) approach at unsampled points. 
 #'
 #' @param qsd   	  object of class \code{\link{QLmodel}}
-#' @param fit		  if \code{TRUE} (default), re-estimate covariance parameters
 #' @param reduce	  if \code{TRUE} (default), reduce the number of covariance models to refit
 #' @param type		  type of prediction variances, "\code{cv}" (default), see \code{\link{qle}}
 #' @param control	  control arguments for REML estimation passed to \code{\link[nloptr]{nloptr}}  	
@@ -489,7 +488,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		split(Ni, sort(Ni%%nb))
 	 } else stop(paste0("Total number of points must be at least ",qsd$minN," for cross-validation."))
 	
-	fit <- isTRUE(qsd$cvfit)
+	fit <- isTRUE(qsd$cv.fit)
     type <- match.arg(type)
 	# Leave-k-Out CV
 	tryCatch({			 

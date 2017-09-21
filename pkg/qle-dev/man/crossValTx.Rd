@@ -62,7 +62,7 @@ X <- as.matrix(qsd$qldata[,1:2])
 Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
 
 # fit CV models
-cvm <- prefitCV(qsd, fit = TRUE)
+cvm <- prefitCV(qsd)
 theta0 <- c("mu"=2,"sd"=1)
 
 # get RMSD by cross-validation 

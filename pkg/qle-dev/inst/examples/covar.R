@@ -83,7 +83,7 @@ contour(x, y, z2, col = "black", lty = "solid",
 try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
 ## Cross-validation 
-cvm <- prefitCV(qsd, fit = TRUE)
+cvm <- prefitCV(qsd)
 cv <- crossValTx(qsd, cvm, p, type = "cve")
 ## or with rmsd
 # cv <- crossValTx(qsd, cvm, p, type = "rmsd")

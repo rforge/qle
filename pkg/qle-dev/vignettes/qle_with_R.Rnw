@@ -1671,7 +1671,6 @@ prediction errors of the summary statistics first and, if appropriate (see below
 the predicted CV errors. For this, we first re-fit the leave-one-out
 cross-validation models of the sample means of the statistics.
 <<eval=false>>=
-qsd$cvfit <- TRUE
 cvm <- prefitCV(qsd, reduce=FALSE, verbose=TRUE)
 @
 Then we check whether there is any significant bias (e.\,g. over- or
