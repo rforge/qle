@@ -68,12 +68,9 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
    if(is.null(par))
 	 par <- est$par   
    info <- attr(est,"optInfo")  			   
-   QD <- try(quasiDeviance(par,est$qsd,
-				Sigma=NULL,
-				W=info$W,theta=info$theta,
-				cvm=est$cvm,
-				verbose=verbose),
-		   silent=TRUE)
+   QD <- try(quasiDeviance(par,est$qsd,W=info$W,
+			  theta=info$theta,cvm=est$cvm,verbose=verbose),
+		  silent=TRUE)
    
    if(.isError(QD)) {
 	   msg <- paste0("Failed to get quasi-deviance: ","\n")
