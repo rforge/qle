@@ -4,8 +4,13 @@
 # File: 	helpers.R
 # Date:  	12.04.2017
 # Author: 	Markus Baaske
-#
-# Helper routines
+
+.isPosDef <- function(X) {
+	.C(C_isPositiveDefinite,
+			as.matrix(X),
+			as.integer(NROW(X)),
+			pos=integer(1))$pos
+}
 
 .splitList <- function(x, ncl) { 
   lapply(parallel::splitIndices(length(x), ncl), function(i) x[i])

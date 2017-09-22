@@ -7,13 +7,6 @@
 #
 # Functions to collect the simulation results
 
-.isPosDef <- function(X) {
-  .C(C_isPositiveDefinite,
-		  as.matrix(X),
-		  as.integer(NROW(X)),
-		  pos=integer(1))$pos
-}
-
 # internal
 #' @importFrom digest digest
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,

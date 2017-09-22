@@ -100,7 +100,9 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  required at any point of the parameter space. In this way the algorithm can also be seen as a simulated version of a least squares
  method or even as a special case of a \emph{simulated method of moments} (see, e.g. [3]). Note that some input combinations
  concerning the variance approximation types are not applicable since the criterion "\code{qle}", which exploits the
- QD criterion function, does not use a constant variance at all. 
+ QD criterion function, does not use a constant variance at all. For this criterion the consistency is automatically checked for all
+ roots found during the estimation procedure and stored in the data frame object `\code{minima}` where the best one is marked by a `*` and
+ otherwise these are given without a consistency check. 
  }
       
  \subsection{Sampling new points}{  

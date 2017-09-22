@@ -966,7 +966,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  required at any point of the parameter space. In this way the algorithm can also be seen as a simulated version of a least squares
 #'  method or even as a special case of a \emph{simulated method of moments} (see, e.g. [3]). Note that some input combinations
 #'  concerning the variance approximation types are not applicable since the criterion "\code{qle}", which exploits the
-#'  QD criterion function, does not use a constant variance at all. 
+#'  QD criterion function, does not use a constant variance at all. For this criterion the consistency is automatically checked for all
+#'  roots found during the estimation procedure and stored in the data frame object `\code{minima}` where the best one is marked by a `*` and
+#'  otherwise these are given without a consistency check. 
 #'  }
 #'       
 #'  \subsection{Sampling new points}{  
@@ -1203,15 +1205,16 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 		if(mid!=1)
 		 method <- c("qscoring",method[-mid])		
 	}
-		
-	# matrix of approximate roots
-	loc_min <- matrix(,nrow=0L,ncol=xdim)	
-	# get initial sample
-	X <- as.matrix(qsd$qldata[seq(xdim)])
+	# get initial design points
+	X <- data.matrix(qsd$qldata[seq(xdim)])
+	nstart <- nrow(X)
 	xnames <- colnames(X)
-	# initial sample size
-	nstart <- nrow(X)	
-	
+	# list of consistency checks
+	dm.roots <- list()
+	# matrix of approximate roots
+	roots <- matrix(vector(),nrow=0L,ncol=xdim+2L,
+			  dimnames=list(c(), c(xnames,"value","iter")))
+		
 	## set 'globals'
 	globals <- .getDefaultGLoptions(xdim)
 	if(length(global.opts) > 0L) {
@@ -1420,7 +1423,11 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 					W <- QD$I		
 					theta <- xt
 					# found minimizer/root?
-					loc_min <- rbind(loc_min,xt)
+					roots <- rbind(roots,c(xt,ft,nglobal+nlocal+1L))
+					if(qsd$criterion == "qle"){
+					  # compare with previously found roots (only iff `qle`)
+					  dm.roots <- c(dm.roots,list(try(.evalRoots(list(QD),best=FALSE),silent=TRUE)))
+				    }			
 					if(status[["global"]]) {
 						w <- locals$weights[1]
 						status[["global"]] <- FALSE
@@ -1639,27 +1646,29 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 			NULL
 		}, error = function(e) {
 			msg <- .makeMessage("Current iteration stopped unexpectedly: ",
-					conditionMessage(e))
+					  conditionMessage(e))
 			message(msg)
-			# return last state of loop
-			.qleError("qle",msg,sys.call(),
-					  error=list("par"=xt,
-							     "value"=ft,
-								 "ctls"=ctls,	
-								 "qsd"=qsd,	
-								 "cvm"=cvm,
-								 "convergence"=FALSE,
-								 "why"=NULL,
-								 "minima"=loc_min,
-						    	 "final" = S0,
-						   		 "x0"=x0,
-								 "W"=W,
-								 "theta"=theta,
-								 "last.global"=status[["global"]],
-								 "minimized"=status[["minimized"]],
-								 "useCV"=useCV,
-								 "nsim"=nsim,
-								 "iseed"=iseed))					
+			structure(
+				list("par"=xt,
+					"value"=ft,
+					"ctls"=ctls,
+					"qsd"=qsd,
+					"cvm"=cvm,
+					"why"=NULL,
+					"minima"=roots,			 
+					"convergence"=FALSE),
+				"final" = S0,
+				"optInfo" = list("x0"=x0,
+								"W"=W,
+								"theta"=theta,						   
+								"last.global"=status[["global"]],
+								"minimized"=status[["minimized"]],
+								"useCV"=useCV,
+								"method"=S0$method,
+								"nsim"=nsim,
+								"iseed"=iseed),
+				class = c("qle","error"), call = sys.call())	
+							
 		}, finally = {
 		  if(noCluster) {
 			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error")){
@@ -1694,28 +1703,43 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 	}
 	# why stopped		
 	arg.names <- row.names(ctls[which(ctls[,"stop"] > 0L),])
-				
-	return (
-		structure(
-		    list("par"=xt,
-				 "value"=ft,
-				 "ctls"=ctls,
-			 	 "qsd"=qsd,
-				 "cvm"=cvm,
-				 "why"=arg.names,
-				 "minima"=loc_min,				 
-				 "convergence"=(status[["minimized"]] && length(arg.names) > 0L)),
-		 	"final" = S0,
-		 	"optInfo" = list("x0"=x0,
-					 	     "W"=W,
-						     "theta"=theta,						   
-				    	     "last.global"=status[["global"]],
-					  	     "minimized"=status[["minimized"]],
-					  	     "useCV"=useCV,
-					  	     "method"=S0$method,
-					  	     "nsim"=nsim,
-							 "iseed"=iseed),
-		 class = "qle", call = sys.call()))	
+	# find best root if any and criterion equals `qle`
+	if(length(dm.roots) > 0L){
+		ok <- sapply(dm.roots,function(x) !.isError(x))
+		if(length(ok) == 0L)
+			message(.makeMessage("All evaluations of roots failed, see object `minima`."))
+		else {
+		   dm.roots <- try(cbind(roots[ok,seq(xdim)],
+						     .evalBestRoot(do.call(rbind,dm.roots[ok]))),
+					    silent=TRUE)
+		   if(length(ok) < nrow(roots)){
+			message(paste(c("Could only check consistency of found roots: ",as.character(ok)), collapse=" "))
+			attr(dm.roots,"failed") <- roots[-ok,]
+		   }
+	   }
+	}
+	
+	structure(
+	    list("par"=xt,
+			 "value"=ft,
+			 "ctls"=ctls,
+		 	 "qsd"=qsd,
+			 "cvm"=cvm,
+			 "why"=arg.names,
+			 "minima"=if(nrow(dm.roots) > 0L) dm.roots else roots,			 
+			 "convergence"=(status[["minimized"]] && length(arg.names) > 0L)),
+	 	"final" = S0,
+		"optInfo" = list("x0"=x0,
+				 	     "W"=W,
+					     "theta"=theta,						   
+			    	     "last.global"=status[["global"]],
+				  	     "minimized"=status[["minimized"]],
+				  	     "useCV"=useCV,
+				  	     "method"=S0$method,
+				  	     "nsim"=nsim,
+						 "iseed"=iseed),
+		 class = "qle", call = sys.call())  	
+ 	 
 }
 
 #' @name print.qle

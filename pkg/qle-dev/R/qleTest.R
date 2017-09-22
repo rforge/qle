@@ -32,6 +32,54 @@
 	return(ans)
 }
 
+.evalBestRoot <- function(dm) {
+	stopifnot(is.data.frame(dm))
+	nm <- apply(dm,2,which.min)	
+	id <- sapply(1:length(nm),function(x)sum(nm[1:x]==nm[x]))
+	id <- nm[which.max(cbind(nm, id)[,2])]	
+	dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")	
+	attr(dm,"best") <- as.numeric(id)	
+	return(dm)	
+}
+
+.evalRoots <- function(QD, pnames = NULL, best = TRUE) {
+	X <- lapply(QD,
+			function(qd) {
+				qIinv <- 
+					if(!.isError(qd)) {
+						try(solve(qd$I),silent=TRUE)
+					} else NA	  	
+				xdim <- ncol(qd$I)
+				if(.isError(qIinv) || !is.numeric(qIinv) || anyNA(qIinv)) {		
+					msg <- .makeMessage("Failed to invert quasi-information.")
+					message(msg)
+				   .qleError(message=msg,call=sys.call(),error=qIinv)
+				}
+				M <- qIinv%*%qd$Iobs				
+				c("quasi-deviance"=qd$val,
+				  "Minor"=.isPosDef(qd$Iobs),
+			   	  "|det|"=abs(1-det(M)),
+				  "|max|"=max(abs(M-diag(xdim))),
+				  "|trace|"=abs(1-sum(diag(M))/xdim), 
+				  "|score_max|"=max(abs(qd$score)))                						   
+			})
+	
+	isErr <- sapply(X,function(x) .isError(x) || !is.numeric(x) || anyNA(x))	
+	M <- do.call(rbind,X[which(isErr == FALSE)])
+	row.names(M) <- pnames				
+	ret <- 
+	 if(best) {
+		 # get best choice
+		.evalBestRoot(as.data.frame(M))
+	 } else as.data.frame(M)
+  
+     structure(ret,
+		"X" = if(any(isErr)) X[isErr] else NULL,
+		"error" = if(any(isErr)) isErr else NULL)
+	
+}
+
+
 #' @name		checkMultRoot
 #' 	
 #' @title       Inspect estimated parameters
@@ -65,8 +113,13 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
   
-   if(is.null(par))
-	 par <- est$par   
+   # always use estimate from est first
+   if(!is.null(par)){
+	   if(!is.matrix(par))
+		 stop("`par` should be a matrix of additional parameters.")
+	   stopifnot(length(par) != length(est$par))	   
+   }
+   par <- rbind("par"=est$par,par) 
    info <- attr(est,"optInfo")  			   
    QD <- try(quasiDeviance(par,est$qsd,W=info$W,
 			  theta=info$theta,cvm=est$cvm,verbose=verbose),
@@ -77,44 +130,13 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 	   message(msg)
 	   return(.qleError(message=msg,call=match.call(),error=QD))
    }
-   xdim <- attr(est$qsd$qldata,"xdim")
-   
-   X <- lapply(QD,
-		  function(qd) {
-			  qIinv <- 
-				  if(!.isError(qd)) {
-					try(solve(qd$I),silent=TRUE)
-				  } else NA	  	
-			  
-			  if(.isError(qIinv) || !is.numeric(qIinv) || anyNA(qIinv)) {		
-				  warning("Failed to invert quasi-information.")
-				  return (qIinv)
-			  }
-			  M <- qIinv%*%qd$Iobs
-			  
-			  c("quasi-deviance"=qd$val,
-				"Minor"=.isPosDef(qd$Iobs),
-		        "|det|"=abs(1-det(M)),
-			    "|max|"=max(abs(M-diag(xdim))),
-			    "|trace|"=abs(1-sum(diag(M))/xdim), 
-			    "|score_max|"=max(abs(qd$score)))                						   
-		  })
-  
-	isErr <- sapply(X,function(x) .isError(x) || !is.numeric(x) || anyNA(x))	
-	M <- do.call(rbind,X[which(isErr == FALSE)])
-	# check names
-	row.names(M) <-
-	 if(is.matrix(par) && !is.null(row.names(par)))
-	  row.names(par)
-     else if(is.list(par) && !is.null(names(par))) 		
-	  names(par) 
-     else paste0("par",1:nrow(M)) 
-	
-	structure(
-	  as.data.frame(M),
-	  "qdev" = QD,
-	  "X" = if(any(isErr)) X[isErr] else NULL,
-	  "error" = if(any(isErr)) isErr else NULL)		   	 
+   dm <- try(.evalRoots(QD,row.names(par)),silent=TRUE)	
+   if(.isError(dm)) {
+	   msg <- .makeMessage("Could not evaluate roots.")
+	   message(msg)
+	   return(.qleError(message=msg,call=match.call(),error=dm))	   
+   }
+   return (dm)  
 }
 
 
