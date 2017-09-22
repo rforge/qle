@@ -967,8 +967,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  method or even as a special case of a \emph{simulated method of moments} (see, e.g. [3]). Note that some input combinations
 #'  concerning the variance approximation types are not applicable since the criterion "\code{qle}", which exploits the
 #'  QD criterion function, does not use a constant variance at all. For this criterion the consistency is automatically checked for all
-#'  roots found during the estimation procedure and stored in the data frame object `\code{minima}` where the best one is marked by a `*` and
-#'  otherwise these are given without a consistency check. 
+#'  roots found during the estimation procedure and stored in the data frame object `\code{minima}` where the best one is marked by a star `*` and
+#'  otherwise these are given without a consistency check. A parameter gets a second star if it has a smaller maximum component of the quasi-score
+#'  among more than one equivalently rated roots.
 #'  }
 #'       
 #'  \subsection{Sampling new points}{  
@@ -1212,8 +1213,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 	# list of consistency checks
 	dm.roots <- list()
 	# matrix of approximate roots
-	roots <- matrix(vector(),nrow=0L,ncol=xdim+2L,
-			  dimnames=list(c(), c(xnames,"value","iter")))
+	roots <- matrix(vector(),nrow=0L,ncol=xdim+3L,
+			  dimnames=list(c(), c(xnames,"qchi.sim","value","iter")))
 		
 	## set 'globals'
 	globals <- .getDefaultGLoptions(xdim)
@@ -1423,7 +1424,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 					W <- QD$I		
 					theta <- xt
 					# found minimizer/root?
-					roots <- rbind(roots,c(xt,ft,nglobal+nlocal+1L))
+					qt <- if(nrow(roots)>0L) quantile(roots[,"value"],0.95,na.rm=TRUE) else 1.0
+					roots <- rbind(roots,c(xt,qt,ft,nglobal+nlocal+1L))
 					if(qsd$criterion == "qle"){
 					  # compare with previously found roots (only iff `qle`)
 					  dm.roots <- c(dm.roots,list(try(.evalRoots(list(QD),best=FALSE),silent=TRUE)))
@@ -1709,13 +1711,15 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 		if(length(ok) == 0L)
 			message(.makeMessage("All evaluations of roots failed, see object `minima`."))
 		else {
-		   dm.roots <- try(cbind(roots[ok,seq(xdim)],
-						     .evalBestRoot(do.call(rbind,dm.roots[ok]))),
-					    silent=TRUE)
-		   if(length(ok) < nrow(roots)){
-			message(paste(c("Could only check consistency of found roots: ",as.character(ok)), collapse=" "))
-			attr(dm.roots,"failed") <- roots[-ok,]
-		   }
+		   rbest <- try(.evalBestRoot(do.call(rbind,dm.roots[ok])),silent=TRUE)
+		   if(!.isError(rbest)){
+		     dm.roots <- cbind(roots[ok,seq(xdim+1L)],rbest)
+		     attr(dm.roots,"best") <- attr(rbest,"best")
+	   	     if(length(ok) < nrow(roots)){
+			   message(paste(c("Could only check consistency of found roots: ",as.character(ok)), collapse=" "))
+			   attr(dm.roots,"failed") <- roots[-ok,]
+		     }
+		   } else message(.makeMessage("Could not evaluate best of found roots."))
 	   }
 	}
 	
@@ -1726,7 +1730,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 		 	 "qsd"=qsd,
 			 "cvm"=cvm,
 			 "why"=arg.names,
-			 "minima"=if(nrow(dm.roots) > 0L) dm.roots else roots,			 
+			 "minima"=if(NROW(dm.roots) > 0L) dm.roots else roots,			 
 			 "convergence"=(status[["minimized"]] && length(arg.names) > 0L)),
 	 	"final" = S0,
 		"optInfo" = list("x0"=x0,

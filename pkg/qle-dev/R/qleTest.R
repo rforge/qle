@@ -32,13 +32,25 @@
 	return(ans)
 }
 
+# choose the best acc. to consistency 
+# criteria and the smallest value of quasi-score
 .evalBestRoot <- function(dm) {
 	stopifnot(is.data.frame(dm))
 	nm <- apply(dm,2,which.min)	
-	id <- sapply(1:length(nm),function(x)sum(nm[1:x]==nm[x]))
-	id <- nm[which.max(cbind(nm, id)[,2])]	
-	dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")	
-	attr(dm,"best") <- as.numeric(id)	
+	id <- sapply(1:length(nm),function(x) sum(nm[1:x] == nm[x]))
+	maxid <- cbind(nm, id)[,2]
+	id <- as.numeric(nm[which(maxid == max(maxid),arr.ind=TRUE)])
+	
+	if(length(id) > 1L){
+		for(i in id) {		  	
+	  	  dimnames(dm)[[1]][i] <- paste0(c(row.names(dm)[i],"*"),collapse=" ")
+	    }
+		mi <- which.min(dm[id,length(dm)])
+		dimnames(dm)[[1]][id[mi]] <- paste0(c(row.names(dm)[id[mi]],"*"),collapse="")
+	} else {
+		dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
+	}
+	attr(dm,"best") <- id	
 	return(dm)	
 }
 
