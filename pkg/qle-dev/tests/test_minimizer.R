@@ -10,4 +10,9 @@
 library(qle)
 data(normal)
 
-searchMinimizer(c(2.5,1.5), qsd,verbose=TRUE) 
+# default method is quasi-scoring
+# here: use a dummy weighting matrix because 
+qsd$var.type # =wcholMean and then W, theta is needed.
+
+# local root finding
+searchMinimizer(c(2.5,1.5), qsd, W=diag(2), theta=c(2,1), verbose=TRUE) 

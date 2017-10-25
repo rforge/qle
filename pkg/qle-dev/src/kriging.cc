@@ -117,8 +117,10 @@ intern_dualKrigingWeights(double *Cmat, int nlx, double *Fmat, int fddim, double
   MEMCPY(w,data,nlx);
 
   solveLU(K,dK,w,ONE_ELEMENT,&info);
-  if(info > 0)
-    XWRR(info)
+  if(info != 0){
+	  FREE(K);
+	  XWRR(info,"LU decomposition/solving failed for dual kriging weights computation.")
+  }
   FREE(K);
 }
 
@@ -143,12 +145,14 @@ intern_dualKrigingPrediction(double *s0, double *f0, int fddim, double *w, int n
 	zx += w[i]*s0[i];
   for(i = 0; i < fddim; i++)
 	zx += w[i+nz]*f0[i];
+  if(!R_finite(zx) || ISNA(zx) || ISNAN(zx))
+	 WRR("`NaN` detected in computation of dual kriging prediction.")
   *mean = zx;
 }
 
 SEXP estimateJacobian(SEXP R_Xmat, SEXP R_data, SEXP R_points, SEXP R_covT, SEXP R_krigtype) {
    if(!isMatrix(R_Xmat))
-	   ERR("Expected matrix of sample points.");
+	 XERR(1,"Expected matrix of sample points.");
 
    int *dimX = GET_DIMS(R_Xmat),
 		nCov = LENGTH(R_covT);
@@ -324,15 +328,26 @@ void solveKriging(double *Cinv,double *Fmat, double *X1mat, double *Qmat,
 	CALLOCX(mu,fddim, double);
 
 	matmult(Cinv,lx,lx,sigma0,lx,ONE_ELEMENT,lambdak,&info);
+	if(info)
+	  WRR("Na detected in matrix multiplication")
 	matmult_trans(Fmat,lx,fddim,lambdak,lx,ONE_ELEMENT,Rvec,&info);
+	if(info)
+	  WRR("Na detected in matrix multiplication")
 
 	for(k=0; k<fddim; k++)
 	  mu[k] = Rvec[k] - f0[k];
 
 	/*!  solve Q mu = R */
 	solve_DSPTRS(Qmat,fddim,mu,ONE_ELEMENT,&info);
-	if(info > 0)
-	  XWRR(info)
+	if(info != 0){
+	  FREE(lambdak);
+	  FREE(Rvec);
+	  FREE(mu);
+	  *sigma2 = R_NaN;
+	  *lambda = R_NaN;
+	  XWRR(info,"Solving in kriging procedure failed.");
+	  return;
+	}
 	matmult(X1mat, lx, fddim, mu, fddim, ONE_ELEMENT, lambda,&info);
 	//Rprintf("%s:%u: %f", __FILE__, __LINE__, *sigma2);
 
@@ -386,7 +401,7 @@ SEXP finalizeQL() {
 
 SEXP qDValue(SEXP R_point) {
   if(!qlm_global) {
-     ERR("Pointer to `qldata` not set");
+     ERR("Pointer to `qldata` object not set (NULL).");
      return R_NilValue;
   }
   return ScalarReal(qlm_global->intern_qfScoreStat(REAL(AS_NUMERIC(R_point))));
@@ -403,7 +418,7 @@ SEXP qDValue(SEXP R_point) {
  */
 SEXP mahalValue(SEXP R_point) {
   if(!qlm_global) {
-     ERR("Pointer to `qldata` not set");
+     ERR("Pointer to `qldata` object not set (NULL).");
      return R_NilValue;
   }
   int info = 0,
@@ -521,7 +536,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  if(glkm->krigType)
 			  {
             	  double fval = 0;
-            	  const char *nms[] = {"val", "I", "score", "sig2", "jac","varS",""};
+            	  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS",""};
 
 				  for(i=0;i<np;i++)
 				  {
@@ -562,11 +577,12 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 					 PROTECT(R_ans = mkNamed(VECSXP, nms));
 					 SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					 SET_VECTOR_ELT(R_ans, 1, R_I);
-					 SET_VECTOR_ELT(R_ans, 2, R_S);
-					 SET_VECTOR_ELT(R_ans, 3, R_sig2);
-					 SET_VECTOR_ELT(R_ans, 4, R_jac);
-					 SET_VECTOR_ELT(R_ans, 5, R_varS);
+					 SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+					 SET_VECTOR_ELT(R_ans, 2, R_I);
+					 SET_VECTOR_ELT(R_ans, 3, R_S);
+					 SET_VECTOR_ELT(R_ans, 4, R_sig2);
+					 SET_VECTOR_ELT(R_ans, 5, R_jac);
+					 SET_VECTOR_ELT(R_ans, 6, R_varS);
 
 					 SET_VECTOR_ELT(R_ret, i, R_ans);
 					 UNPROTECT(6);
@@ -576,7 +592,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 				  /* no prediction variances */
 				  double fval=0;
-				  const char *nms[] = {"val", "I", "score", "jac",""};
+				  const char *nms[] = {"value", "par", "I", "score", "jac",""};
 
 				  for(i=0;i<np;i++)
 				  {
@@ -601,9 +617,10 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 					 PROTECT(R_ans = mkNamed(VECSXP, nms));
 					 SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					 SET_VECTOR_ELT(R_ans, 1, R_I);
-					 SET_VECTOR_ELT(R_ans, 2, R_S);
-					 SET_VECTOR_ELT(R_ans, 3, R_jac);
+					 SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+					 SET_VECTOR_ELT(R_ans, 2, R_I);
+					 SET_VECTOR_ELT(R_ans, 3, R_S);
+					 SET_VECTOR_ELT(R_ans, 4, R_jac);
 
 					 SET_VECTOR_ELT(R_ret, i, R_ans);
 					 UNPROTECT(4);
@@ -649,7 +666,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  if(glkm->krigType)
 			  {
 					  double fval=0;
-					  const char *nms[] = {"val", "I", "score", "sig2", "jac","varS",""};
+					  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS",""};
 
 					  for(i=0;i<np;i++)
 					  {
@@ -682,11 +699,12 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 							PROTECT(R_ans = mkNamed(VECSXP, nms));
 							SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-							SET_VECTOR_ELT(R_ans, 1, R_I);
-							SET_VECTOR_ELT(R_ans, 2, R_S);
-							SET_VECTOR_ELT(R_ans, 3, R_sig2);
-							SET_VECTOR_ELT(R_ans, 4, R_jac);
-							SET_VECTOR_ELT(R_ans, 5, R_varS);
+							SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+							SET_VECTOR_ELT(R_ans, 2, R_I);
+							SET_VECTOR_ELT(R_ans, 3, R_S);
+							SET_VECTOR_ELT(R_ans, 4, R_sig2);
+							SET_VECTOR_ELT(R_ans, 5, R_jac);
+							SET_VECTOR_ELT(R_ans, 6, R_varS);
 							setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 							SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -696,7 +714,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  } else {
 
 					  double fval=0;
-					  const char *nms[] = {"val", "I", "score", "jac",""};
+					  const char *nms[] = {"value", "par", "I", "score", "jac",""};
 
 					  for(i=0;i<np;i++)
 					  {
@@ -721,9 +739,10 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 							PROTECT(R_ans = mkNamed(VECSXP, nms));
 							SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-							SET_VECTOR_ELT(R_ans, 1, R_I);
-							SET_VECTOR_ELT(R_ans, 2, R_S);
-							SET_VECTOR_ELT(R_ans, 3, R_jac);
+							SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+							SET_VECTOR_ELT(R_ans, 2, R_I);
+							SET_VECTOR_ELT(R_ans, 3, R_S);
+							SET_VECTOR_ELT(R_ans, 4, R_jac);
 							setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 							SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -747,8 +766,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
  */
 double
 ql_model_s::intern_mahalValue_theta(double *x) {
-  int k = 0, info = 0;
-
+  int k = 0;
   /* kriging */
   glkm->intern_kriging(x);
   krig_result krig = glkm->krigr[0];
@@ -762,8 +780,10 @@ ql_model_s::intern_mahalValue_theta(double *x) {
   varMatrix(x,krig->sig2,qld->vmat);
 
   solve_DSPTRS(qld->vmat,nCov,qld->tmp,ONE_ELEMENT, &info);
-  if(info>0)
-	XERR(info)
+  if(info != 0){
+	XWRR(info,"Internal computation of Mahalanobis distance failed.")
+	return R_NaN;
+  }
   double sum = 0;
   for(k = 0; k < nCov; ++k)
 	 sum += qld->tmp[k] * qld->qtheta[k];
@@ -780,7 +800,10 @@ ql_model_s::intern_mahalValue(double *x) {
 	   qld->qtheta[k] = qld->obs[k] - krig->mean[k];
 
 	matmult(qld->vmat,nCov,nCov,qld->qtheta,nCov,ONE_ELEMENT,qld->tmp,&info);
-
+	if(info != 0){
+	  XWRR(info,"Internal computation of Mahalanobis distance failed.")
+	  return R_NaN;
+	}
 	double sum=0;
 	for(k = 0; k < nCov; ++k)
 	  sum += qld->tmp[k] * qld->qtheta[k];
@@ -802,11 +825,17 @@ ql_model_s::intern_mahalVarTrace(double *x) {
 	 /* score vector */
 	 glkm->intern_jacobian(x,jac);
 	 matmult(jac,dx,nCov,qld->tmp,nCov,ONE_ELEMENT,score,&info);
-
+	 if(info != 0){
+	 	   XWRR(info,"NaN detected in matrix multiplication.")
+	 	   return R_NaN;
+	 }
 	 /* variance of score vector stored in qimat */
 	 mat_trans(qld->jactmp,nCov,jac,dx,dx,nCov);
 	 matmult(qld->vmat,nCov,nCov,qld->jactmp,nCov,dx,qld->Atmp,&info);
-
+	 if(info != 0){
+	   XWRR(info,"NaN detected in matrix multiplication.")
+	   return R_NaN;
+	 }
 	 /* We need prediction variances
 	  * for the variance of quasi-score. The variance
 	  * matrix is fixed and thus has no additional
@@ -891,11 +920,13 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
           SEXP R_dimnames = R_NilValue;
           PROTECT(R_dimnames = allocVector(VECSXP,2));
           SET_DIMNAMES_MATRIX(R_dimnames,R_nI)
+
           // names Jacobian
           SEXP R_dimT = R_NilValue;
           SEXP R_nT = getListElement( R_qsd, "obs" );
           PROTECT(R_dimT = allocVector(VECSXP,2));
           SET_DIMNAMES_MATRIX2(R_dimT,R_nI,R_nT)
+
           // names variance matrix
           SEXP R_VmatNames = R_NilValue;
           PROTECT(R_VmatNames = allocVector(VECSXP,2));
@@ -903,7 +934,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 
           if(qlm.glkm->krigType) {
         	  const char *nms[] =
-        	  	  {"val", "I", "score", "sig2",
+        	  	  {"value", "par", "I", "score", "sig2",
         	  	   "jac","varS", "Iobs", "qval", ""};
 
         	  for(; i < np; ++i) {
@@ -928,13 +959,14 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 
 					  PROTECT(R_ans = mkNamed(VECSXP, nms));
 					  SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					  SET_VECTOR_ELT(R_ans, 1, R_I);
-					  SET_VECTOR_ELT(R_ans, 2, R_S);
-					  SET_VECTOR_ELT(R_ans, 3, R_sig2);
-					  SET_VECTOR_ELT(R_ans, 4, R_jac);
-					  SET_VECTOR_ELT(R_ans, 5, R_varS);
-					  SET_VECTOR_ELT(R_ans, 6, R_Iobs);
-					  SET_VECTOR_ELT(R_ans, 7, ScalarReal(qval));
+					  SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+					  SET_VECTOR_ELT(R_ans, 2, R_I);
+					  SET_VECTOR_ELT(R_ans, 3, R_S);
+					  SET_VECTOR_ELT(R_ans, 4, R_sig2);
+					  SET_VECTOR_ELT(R_ans, 5, R_jac);
+					  SET_VECTOR_ELT(R_ans, 6, R_varS);
+					  SET_VECTOR_ELT(R_ans, 7, R_Iobs);
+					  SET_VECTOR_ELT(R_ans, 8, ScalarReal(qval));
 					  setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 					  SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -942,7 +974,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
         	  }
           } else {
         	  const char *nms[] =
-				  {"val", "I", "score", "jac", "Iobs" ,""};
+				  {"value", "par", "I", "score", "jac", "Iobs" ,""};
 
 			  for(; i < np;  ++i) {
 					  PROTECT(R_S = allocVector(REALSXP,dx));
@@ -960,10 +992,11 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 
 					  PROTECT(R_ans = mkNamed(VECSXP, nms));
 					  SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					  SET_VECTOR_ELT(R_ans, 1, R_I);
-					  SET_VECTOR_ELT(R_ans, 2, R_S);
-					  SET_VECTOR_ELT(R_ans, 3, R_jac);
-					  SET_VECTOR_ELT(R_ans, 4, R_Iobs);
+					  SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+					  SET_VECTOR_ELT(R_ans, 2, R_I);
+					  SET_VECTOR_ELT(R_ans, 3, R_S);
+					  SET_VECTOR_ELT(R_ans, 4, R_jac);
+					  SET_VECTOR_ELT(R_ans, 5, R_Iobs);
 					  setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 					  SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -1011,7 +1044,7 @@ ql_model_s::qfScoreStat(double *x, double *jac, double *score, double *qimat) {
 
 double
 ql_model_s::intern_qfTrace(double *x) {
-	int i=0, info=0;
+	int i=0;
 
 	/* kriging */
 	glkm->intern_kriging(x);
@@ -1025,9 +1058,10 @@ ql_model_s::intern_qfTrace(double *x) {
 	/*! unfortunately transpose jac  and calculate matrix A */
 	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov);
 	solve_DSPTRS(qld->vmat,nCov,qld->Atmp,dx,&info);
-	if(info > 0)
-	  ERR("solving failed.");
-
+	if(info > 0){
+	  XERR(info,"Computation of variance of quasi-score failed.");
+	  return R_NaN;
+	}
 	/* this actually computes the variance of quasi-score */
 	intern_varScore(qimat);
 	double sum=0;
@@ -1038,8 +1072,6 @@ ql_model_s::intern_qfTrace(double *x) {
 
 double
 ql_model_s::intern_qfVarStat(double *x) {
-	int info=0;
-
 	/* kriging */
 	glkm->intern_kriging(x);
 	glkm->intern_jacobian(x,jac);
@@ -1052,9 +1084,10 @@ ql_model_s::intern_qfVarStat(double *x) {
 	/*! unfortunately transpose jac  and calculate matrix A */
 	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov);
 	solve_DSPTRS(qld->vmat,nCov,qld->Atmp,dx,&info);
-	if(info > 0)
-	  ERR("solving failed: ");
-
+	if(info != 0){
+	  XERR(info,"Computation of quasi-score variance failed.");
+	  return R_NaN;
+	}
 	/* this actually computes the variance of quasi-score */
 	intern_varScore(qimat);
 
@@ -1067,11 +1100,14 @@ ql_model_s::intern_qfVarStat(double *x) {
  */
 double
 ql_model_s::qfValue(double *score, double *varS) {
-	int i=0, info=0;
+	int i=0;
 	MEMCPY(qld->score_work,score,dx);
 	solve_DSPTRS(varS,dx,qld->score_work,ONE_ELEMENT,&info);
-	if(info>0)
-	  ERR("`qfValue`: solving failed.");
+	if(info != 0){
+	  XERR(info,"Computation of quasi-score statistic failed.");
+	  return R_NaN;
+	}
+
 	double sum=0;
 	for(; i < dx; ++i)
 	  sum += qld->score_work[i]*score[i];
@@ -1081,12 +1117,13 @@ ql_model_s::qfValue(double *score, double *varS) {
 
 void
 ql_model_s::intern_quasiInfo(double *jac, double *qimat) {
-	int info = 0;
 	/*! unfortunately transpose jac */
 	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov);
 	solve_DSPTRS(qld->vmat,nCov,qld->Atmp,dx,&info);
-	if(info > 0)
-	 ERR("solving failed: ");
+	if(info != 0){
+	  XERR(info,"Computation of quasi-information matrix failed.");
+	  return;
+	}
 	matmult(jac,dx,nCov,qld->Atmp,nCov,dx,qimat,&info);
 	if(info)
 	 WRR("`NaN` detected in `matmult`.")
@@ -1095,15 +1132,17 @@ ql_model_s::intern_quasiInfo(double *jac, double *qimat) {
 
 void
 ql_model_s::quasiScore(double *mean, double *jac, double *vmat, double *score) {
-	int i=0, info=0;
+	int info=0, i=0;
 	for(;i<nCov;i++)
 	 qld->qtheta[i]=qld->obs[i]-mean[i];
+
 	solve_DSPTRS(vmat,nCov,qld->qtheta,ONE_ELEMENT,&info);
-	if(info)
-	  ERR("solving failed: ");
+	if(info != 0)
+	  XWRR(info,"Computation of quasi-score (solving) failed: ");
+
 	matmult(jac,dx,nCov,qld->qtheta,nCov,ONE_ELEMENT,score,&info);
 	if(info)
-	  WRR("`NaN` detected in `matmult`.")
+	  WRR("`NaN` detected in matrix multiplication.")
 }
 
 
@@ -1130,6 +1169,7 @@ wrap_intern_quasiScore(double *x, void *data, double *score) {
    }
 
    qlm->quasiScore(krig_tmp->mean,qld->jactmp,qld->vmat_work,score);
+
 }
 
 /** \brief Wrapper function: intern_kriging
@@ -1152,7 +1192,7 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat) {
 	/* kriging prediction variances */
 	if(qld->qlopts.varType == KRIG) {
 	   if(varkm == NULL)
-		 ERR("Null pointer to Kriging models for covariance interpolation.");
+		 XERR(1,"Null pointer to Kriging models for covariance interpolation.");
 	   varkm->intern_kriging(x);
 	   /*! Merge to matrix*/
 	   chol2var(varkm->krigr[0]->mean,vmat,nCov,qld->workx);
@@ -1231,7 +1271,7 @@ krig_model_s::setup(double *_data)
 	  Fmatrix(Xmat,Fmat,lx,dx,trend);
 	  // REML covariance matrix
 	  if( intern_covMatrix(Xmat,dx,lx,Cmat,&cov) )
-	    WRR("NaN` detected in covariance matrix.")
+	    ERR("NaN` detected in covariance matrix computation.")
 
 	  // init matrices
 	  int info=0;
@@ -1239,10 +1279,13 @@ krig_model_s::setup(double *_data)
 		 MEMCPY(Cinv,Cmat,lx*lx);
 		 invMatrix(Cinv,lx,&info);
 		 if(info)
-		   XERR(info)
+		   XERR(info,"Setting up kriging model failed due to inversion error of covariance matrix.")
 		 /* store matrices for solving kriging equations */
 		 matmult(Cinv,lx,lx,Fmat,lx,fddim, X1mat,&info);
 		 matmult_trans(Fmat,lx,fddim,X1mat,lx,fddim, Qmat,&info);
+		 if(info){
+			 WRR("`NaN` detected in matrix multiplication.")
+		 }
 		 /* init dual kriging equations */
 		 intern_dualKrigingWeights(Cmat,lx,Fmat,fddim,data,dw);
 	 } else {
@@ -1259,6 +1302,7 @@ cv_model_s::set(SEXP R_Xmat, SEXP R_data, SEXP R_cm) {
 	int *id=0,
 	    *dim=GET_DIMS(R_Xmat);
 
+	double tmp=0;
 	double *Xmatp=NULL,
 		  **datap=NULL;
 
@@ -1306,7 +1350,10 @@ cv_model_s::set(SEXP R_Xmat, SEXP R_data, SEXP R_cm) {
 			 }
 			 if(isin) continue;
 			 for(j = 0; j < nCov; j++) {
-			   datap[j][m] = REAL(AS_NUMERIC(VECTOR_ELT(AS_LIST(R_data),j+dx)))[i];
+			   tmp = REAL(AS_NUMERIC(VECTOR_ELT(AS_LIST(R_data),j+dx)))[i];
+			   if (ISNAN(tmp) || ISNA(tmp) || !R_finite(tmp) )
+				   WRR("`NaN` detected in data vector.")
+			   datap[j][m] = tmp;
 			 }
 			 for(j = 0; j < dx; j++)
 			   Xmatp[lx*j+m] = Xmat[np*j+i];
@@ -1343,6 +1390,10 @@ cv_model_s::cvError(double *x, krig_model *km, double *cv) {
 				kmp[k]->dualKriging(x,ONE_ELEMENT,&yhat);
 				ytil[k*nc+i] = nc*y0[k] - (nc-1)*yhat;
 				ybar[k] = ybar[k] + ytil[k*nc+i];
+				if (!R_finite(ybar[k]) || ISNA(ybar[k]) || ISNAN(ybar[k])){
+				  WRR("`NaN` detected in cross-validation errors.");
+			      break;
+				}
 			}
 	}
 	for(i = 0; i < nc; ++i) {
@@ -1353,11 +1404,21 @@ cv_model_s::cvError(double *x, krig_model *km, double *cv) {
 	 for(k = 0; k < nCov; ++k) {
 	     tmp = fnc*s2[k];
 		 cv[k] = MAX(tmp,cv[k]);
+		 if (!R_finite(cv[k]) || ISNA(cv[k]) || ISNAN(cv[k])) {
+			 WRR("`NaN` detected in cross-validation errors.");
+		     break;
+		 }
 	 }
 	} else {
-		for(k = 0; k < nCov; ++k)
+		for(k = 0; k < nCov; ++k){
 		 cv[k] = fnc*s2[k];
+		 if (!R_finite(cv[k]) || ISNA(cv[k]) || ISNAN(cv[k])) {
+		   WRR("`NaN` detected in cross-validation errors.");
+		   break;
+		 }
+		}
 	}
+
 }
 
 

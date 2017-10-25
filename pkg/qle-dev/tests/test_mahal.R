@@ -20,12 +20,13 @@ qsd$criterion <- "mahal"
 # some parameters
 theta <- c("mu"=2,"sigma"=0.95) 
 
+# criterion function values
 MD <- mahalDist(theta,qsd)
 QD <- quasiDeviance(theta,qsd)
 
 # must be equal due to the same
 # number of parameters and statistics
-all.equal(MD[[1]]$val,QD[[1]]$val)
+all.equal(MD[[1]]$value,QD[[1]]$value)
 
 # least-squares (constant variance)
 mahalDist(theta,qsd,Sigma=diag(2))

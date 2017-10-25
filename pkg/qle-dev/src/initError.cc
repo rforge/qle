@@ -44,7 +44,7 @@ void errorMSG(int err, char* m) {
       case LAPACK_SOLVE_ERROR:  std::strcpy(m,"Error in routine dpotrs!"); break;
       case LAPACK_INVERSION_ERROR:  std::strcpy(m,"Error in routine invMatrix!"); break;
       default:
-    	 std::strcpy(m,"Unknown error value\n");
+    	 std::strcpy(m,"default error: ");
          break;
   }
 }
@@ -54,7 +54,7 @@ void warningMSG(int wrr, char* m) {
   case NO_WARNING: return;
   case GENERIC_WARNING: std::strcpy(m,"Generic warning"); break;
   default:
-	  std::strcpy(m,"Unknown warning value\n");
+	  std::strcpy(m,"default warning: ");
     break;
   }
 }

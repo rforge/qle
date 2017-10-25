@@ -104,18 +104,16 @@ intern_covVector(double *x, int dx, int lx, double *y, int ly, double *z, cov_mo
 		/* filter out nugget-effect component, that is, estimate
 		 * the simulation variance free value of the statistics */
 		z[i] = (*cf)(cov,&h);
-		if (ISNAN(z[i]))
-		 naflag = 1;
-
-		/* not filtering out the nugget-effect component, that is,
-		 * kriging as an exact interpolator */
-
+		if(ISNAN(z[i]) || ISNA(z[i]) || !R_finite(z[i])){
+			WRR("`NaN` detected in covariance vector.");
+			return 1;
+		}
+	    /* not filtering out the nugget-effect component, that is, kriging as an exact interpolator */
 		//if( h < MIN_DISTANCE) {
 		//   z[i] = (*cf)(cov,&zero) + cov->nugget + cov->nuggfix[i];
 		//} else {
 		//   z[i] = (*cf)(cov,&h);
 		//}
-
 	}
 	return naflag;
 }
@@ -140,7 +138,7 @@ SEXP covMatrix(SEXP R_Xmat, SEXP R_cov ) {
   PROTECT(R_C = allocMatrix(REALSXP,lx,lx));
 
   if( intern_covMatrix(REAL(R_Xmat),dx,lx,REAL(R_C),&cov) != 0 )
-    ERR("NaN_ERROR: ");
+    WRR("`NaN` detected in covariance matrix.");
 
   UNPROTECT(1);
   return R_C;
@@ -259,10 +257,10 @@ SEXP covFct(SEXP R_Xmat, SEXP R_Ymat, SEXP R_covStruct) {
         dx = dimX[1];
 
     if(!isVector(R_covStruct))
-       error(_("expected Cov list argument"));
+       ERR("Expected covariance model as list argument");
 
     if( lx != GET_DIMS(R_Ymat)[0] || dx != GET_DIMS(R_Ymat)[1]) {
-        error(_("Matrix dimensions do not match!\n"));
+       ERR("Matrix dimensions do not match.");
     }
     cov_model cov(R_covStruct);
 

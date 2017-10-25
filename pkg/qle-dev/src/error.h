@@ -62,11 +62,11 @@ extern char ERROR_LOC[nErrorLocations];
     error(_(R_MSG_BUFFER)); \
 }
 
-#define XERR(X) { \
+#define XERR(X,MSG) { \
      BEGIN_ERR; \
      errorMSG(X, C_MSG_BUFFER); \
      std::sprintf(ERROR_LOC, "in `%s', at %u\n", __FILE__, (unsigned)__LINE__); \
-     std::sprintf(R_MSG_BUFFER, "%s, error code %d: %s", ERROR_LOC, X, C_MSG_BUFFER); \
+     std::sprintf(R_MSG_BUFFER, "%s, error code %d. (%s) %s", ERROR_LOC, X, MSG, C_MSG_BUFFER); \
      error(_(R_MSG_BUFFER)); \
   }
 
@@ -78,11 +78,11 @@ extern char ERROR_LOC[nErrorLocations];
 }
 
 // X is integer error code
-#define XWRR(X) { \
+#define XWRR(X,MSG) { \
     BEGIN_WRR; \
     errorMSG(X, C_MSG_BUFFER); \
     std::sprintf(ERROR_LOC, "in `%s', at %u\n", __FILE__, (unsigned)__LINE__); \
-    std::sprintf(R_MSG_BUFFER, "%s, warning code %d: %s", ERROR_LOC, X, C_MSG_BUFFER); \
+    std::sprintf(R_MSG_BUFFER, "%s, warning code %d: (%s) %s", ERROR_LOC, X, MSG, C_MSG_BUFFER); \
     warning(_(R_MSG_BUFFER)); \
 }
 
@@ -169,7 +169,7 @@ void printArray(const char fmt[], const Type *v, int *lx) {
 
 /////////////////////// Error /////////////////////////////////////////////////////////////////////////////////////
 extern void errorMSG(int, char*);
-extern void warningMSG(int , char* );
+extern void warningMSG(int , char *, char* );
 extern void setError(int, const char *, int ,const char *, int);
 extern void setWarning(int , const char* , int , const char* , int);
 extern void printMSG(int, const char *, int, const char * );

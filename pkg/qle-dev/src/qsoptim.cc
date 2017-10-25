@@ -239,11 +239,14 @@ qfs_result qfscoring(double *x,			 	/* start */
 	     fold=*f;
 	     MEMCPY(xold,x,n);
 	     MEMCPY(gradf,qlm->score,n);
-
          solveCH(qlm->qimat,n,n,gradf,1,d,info);
          if(*info){
-           ERR((char*)info);
+        	 WRR("Solving for the direction failed. Try something else.")
+			 MEMCPY(d,gradf,n);
+			 solveLU(qlm->qimat,n,d,n,info);
+        	 XERR(*info,"Solving also failed by LU decomposition.");
          }
+
          backtr(n,xold,fold,d,x,f,&check,fnMonitor,tau,&delta,(void*) qfs);
          slope2 = innerProduct(d,d,n);
 

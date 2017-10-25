@@ -1,8 +1,8 @@
 # Copyright (C) 2017 Markus Baaske. All Rights Reserved.
-# This code is published under the L-GPL.
+# This code is published under the GPL (>=3).
 #
 # File: 	simQLData.R
-# Date:  	12.04.2017
+# Date:  	2012 -- 2017
 # Author: 	Markus Baaske
 #
 # Functions to collect the simulation results
@@ -60,13 +60,16 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 			  structure(
 				 list(message=.makeMessage("Calling `",deparse(substitute(SIM)), "` failed: ",conditionMessage(e)),
 						 call=sys.call()),
-			   class = c("error", "condition"), error = e) )
+			   class = c("error", "condition"), error = e))
    },finally = {
 	   if(noCluster && !is.null(cl)){
 		   if(inherits(try(stopCluster(cl),silent=TRUE),"try-error")){
-			   rm(cl)
+			   rm(cl)			   
 			   message("Error in stopping cluster.")
-		   } else  cl <- NULL
+		   } else {
+			   cl <- NULL
+			   invisible(gc())
+		   } 
 	  }
    })
 }
@@ -169,6 +172,8 @@ simQLdata <-
 			      FUN=simFun, cl=cl, iseed=iseed)
 			
     # simulate model
+	if(verbose)
+	  cat("Simulating the model...\n")
  	res <- do.call(doInParallel, arg.list)	
 	
 	# check results from user function simulation
@@ -329,13 +334,7 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 	 X <- attr(runs,"X")
 	if(!is.matrix(X)) 
    	 X <- .LIST2ROW(X)
- 	
- 	## TODO:
-    # check p >= q
-	# if(ncol(X) > length(runs[[1]][[1]]))
-	#   stop("Parameter length is less than number of statistics.\n
-	#		 Both should be at least equal!")
- 
+ 	 
 	.extract <-  function(dataT) {
 		if( !is.null(attr(dataT,"error")) || inherits(dataT,"error")) {
 			msg <- paste0("Value of statistics has errors: ","\n")
@@ -368,9 +367,12 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 	res <- tryCatch(
 			  lapply(runs,.extract),
 			error = function(e) e)
-	if(.isError(res)) 
-	  stop("Extracting values of statistics failed.")		
-
+	if(.isError(res)){
+		msg <- .makeMessage("Extracting values of statistics failed.")
+		message(msg)
+		return(.qleError(message=msg,call=sys.call(),error=res))
+	}
+	
 	ok <- which(
 		   sapply(res,
 		    function(x){
@@ -477,5 +479,3 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 			  call=sys.call(),
 			  class=c("QLdata","data.frame"))
 }
-
-

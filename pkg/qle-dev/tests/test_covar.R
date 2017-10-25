@@ -10,14 +10,21 @@
 library(qle)
 data(normal)
 
+# default reml optimization controls, see nloptr
+attr(qsd,"opts")
+
 # first covariance model
 covT <- qsd$covT[1]
+
 # sampled parameters
 X <- as.matrix(qsd$qldata[1:2])
+
 # 1st statistic
 T <- qsd$qldata[c("mean.T1")]
+
 # reml estimation
 fit <- fitCov(covT,X,T,verbose=TRUE)[[1]]
+
 # reml value at fitted parameters
 p <- attr(fit,"optres")$solution
 reml(covT,p,T,X)

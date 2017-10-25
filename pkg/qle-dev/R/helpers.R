@@ -1,9 +1,11 @@
 # Copyright (C) 2017 Markus Baaske. All Rights Reserved.
-# This code is published under the L-GPL.
+# This code is published under the GPL (>=3).
 #
 # File: 	helpers.R
 # Date:  	12.04.2017
 # Author: 	Markus Baaske
+#
+# Define a set of auxiliary functions 
 
 .isPosDef <- function(X) {
 	.C(C_isPositiveDefinite,
@@ -16,24 +18,14 @@
   lapply(parallel::splitIndices(length(x), ncl), function(i) x[i])
 }
 
-## split a matrix every nch rows
-## not used anymore
-#.matsplit <- function(M, nch, trans=FALSE) {
-#  nr <- nrow(M)
-#  nc <- ncol(M)
-#  r <- nr %% nch
-#  ln <- nr - r
-# 
-#  if(r!=0) {
-#	 return(c(lapply(split(M[seq(ln),],
-#				interaction((row(M[seq(ln),])-1)%/%nch+1,(col(M[seq(ln),])-1)%/%nc+1)),
-#					  function(x) {dim(x) <- c(nch,nc); if(trans) t(x) else x;}),
-#			 if(trans) list(t(M[(ln+1):nr,,drop=FALSE])) else list(M[(ln+1):nr,,drop=FALSE])))
-#  }   
-#  lapply(split(M[seq(ln),], interaction((row(M[seq(ln),])-1)%/%nch+1,(col(M[seq(ln),])-1)%/%nc+1)),
-#		  function(x) { dim(x) <- c(nch,nc); if(trans) t(x) else x;})	    
-#       	
-#} 
+.MSE <- function(estimate,param) {	
+	stopifnot(is.vector(param))
+	stopifnot(is.matrix(estimate))	
+	param <- matrix(rep(param,nrow(estimate)),
+				ncol=length(param),byrow=TRUE)
+	x <- as.matrix(estimate-param)
+	(t(x)%*%x)/nrow(x)
+}
 
 .COL2LIST  <- function(x) {
  	lapply(seq_len(NCOL(x)), function(i) x[,i])
@@ -239,7 +231,7 @@ geneigen <- function(A = NULL, B, vl=TRUE, vr=TRUE, only.values = TRUE,
     
 }
 
-gsiSolve <- function(X,b,cond=1E12) {
+gsiSolve <- function(X,b,cond=1e-10) {
 	if( length(X) > 1 ) {
 		SVD <- svd(X)
 		MEV <- max(SVD$d)
@@ -247,7 +239,7 @@ gsiSolve <- function(X,b,cond=1E12) {
 	} else if(all(is.finite(b/X))) b/X else b*0
 }
 
-gsiInv <- function(X,cond=1E12) {
+gsiInv <- function(X,cond=1e-10) {
 	if(length(X) > 1) {
 		SVD <- svd(X)
 		if(inherits(SVD,"error"))

@@ -36,7 +36,8 @@ used as constant variance matrix}
 \value{
 Either a vector of MD values or a list of lists, where each
 		   contains the following elements:
-\item{val}{ Mahalanobis distance value}
+\item{value}{ Mahalanobis distance value}
+\item{par}{ parameter estimate}
 \item{I}{ approximate variance matrix of the parameter estimate}
 \item{score}{ gradient of MD (for fixed `\code{Sigma}`)}
 \item{jac}{ Jacobian of sample average statistics}

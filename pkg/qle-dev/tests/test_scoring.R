@@ -16,5 +16,5 @@ x0 <- c("mu"=2.5,"sigma"=1.5)
 opts <- list("pl"=10,"ftol_stop"=1e-9,"score_tol"=1e-6)
 
 # Scoring with average variance approximation
-qscoring(qsd, x0, opts=opts, verbose=TRUE)
+qscoring(qsd, x0, opts=opts, W=diag(2), theta=c(2,1), verbose=TRUE)
 

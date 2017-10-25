@@ -2,7 +2,7 @@
 % Please edit documentation in R/covariance.R
 \name{QLmodel}
 \alias{QLmodel}
-\title{Construct quasi-likelihood model}
+\title{Construct quasi-likelihood approximation}
 \usage{
 QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
   var.type = c("wcholMean", "cholMean", "wlogMean", "logMean", "kriging",

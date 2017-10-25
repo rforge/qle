@@ -14,23 +14,21 @@ checkMultRoot(est, par = NULL, verbose = FALSE)
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }
 \value{
-A data frame with columns `\code{quasi-deviance}`, `\code{Minor}`, `\code{det}`, `\code{max}`,
+A data frame with columns named corresponding to each component of the investigated parameter,
+ `\code{quasi-deviance}`, `\code{Minor}`, `\code{det}`, `\code{max}`,
  `\code{trace}` and `\code{score_max}` (see vignette). The second column shows the leading minor of
   the observed QI matrix which is not positive definite. If so, then the corresponding parameter estimate
-  cannot be consistent at least in theory. The rows show the corresponding values
-  for each parameter `\code{par}`. Further, the results of function \code{\link{quasiDeviance}} for each
-  parameter in `\code{x}` are returned as `attr(,"qdev")`. In case of any errors the corresponding (failed)
-  results are returned as a named attribute `\code{X}`.
+  cannot be consistent at least in theory. The rows show the corresponding values for each parameter passed by
+  `\code{par}`.
 }
 \description{
 Check out and compare estimated roots of the quasi-score vector
 }
 \details{
 Ony in case of the quasi-likelihood approach using the criterion function "\code{qle}" we can compare the
- observed quasi-information matrix with the expected one by some (scalar equivalent) criteria, see the vignette.
- We measure the dissimilarity of both matrices evaluated at approximate roots given in `\code{par}` for which these
- criteria should be neglectably small if they correspond to a plausible root. By the smallest value of any of these
- criteria we extract the best root.
+ observed quasi-information matrix with the expected one by some (scalar equivalent) criteria (see vignette).
+ We measure this dissimilarity of both matrices evaluated at some given approximate roots `\code{par}` for which these
+ criteria should be neglectably small to be a plausible root. By the smallest value we extract the best root.
 }
 \author{
 M. Baaske

@@ -1,5 +1,5 @@
 # Copyright (C) 2017 Markus Baaske. All Rights Reserved.
-# This code is published under the L-GPL.
+# This code is published under the GPL (>=3).
 #
 # File: 	covariance.R
 # Date:  	12.04.2017
@@ -411,9 +411,9 @@ fitCov <- function(models, Xs, data, controls = list(),
 		opts[names(controls)] <- controls
 	} else {
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
-				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
+				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-6,
 						"xtol_rel" = 1.0e-6,"maxeval" = 1000),
-				"maxeval" = 1000, "population"=0)	
+				"maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)	
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
@@ -446,7 +446,7 @@ fitCov <- function(models, Xs, data, controls = list(),
 
 #' @name QLmodel
 #' 
-#' @title Construct quasi-likelihood model 
+#' @title Construct quasi-likelihood approximation 
 #' 
 #' @description Aggregate and construct the data for quasi-likelihood estimation
 #' 
@@ -523,9 +523,9 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 	opts <- attr(mods,"opts")
 	if(is.null(opts) || length(opts) == 0L){
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
-				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
+				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-6,
 						"xtol_rel" = 1.0e-6,"maxeval" = 1000),
-				"maxeval" = 1000, "population"=0)			  
+				"maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)			  
 	}
 	# minimum required sample size
 	minN <- ifelse(min(sapply(covT,	function(x) x$trend)) < 2, dx+2, (dx+1)*(dx+2)/2+1)
@@ -714,9 +714,9 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 opts[names(controls)] <- controls
 	 } else {
 		 opts <- list("algorithm" = "NLOPT_GN_MLSL",
-				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
+				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-6,
 						 "xtol_rel" = 1.0e-6,"maxeval" = 1000),
-				 "maxeval" = 1000, "population"=0)		  
+				 "maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)		  
 	 }
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)

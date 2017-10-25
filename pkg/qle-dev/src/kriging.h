@@ -155,7 +155,7 @@ typedef struct glkrig_models_s
 	  dx = dim[1];
 
 	  if(isNull(_R_covList))
-		ERR("Covariance model is `Null`.");
+		ERR("Covariance model is not set (NULL).");
 	  nCov = LENGTH(_R_covList);
 
 	  if(isNull(R_krigType))
@@ -302,13 +302,12 @@ typedef struct ql_data_s {
 
   ql_options_t qlopts;
 
-  int info,		  /* bound constraints info */
-	  dx,lx,nCov; /* dimension parameter, number of samples, number of statistics */
+  int dx,lx,nCov; /* dimension parameter, number of samples, number of statistics */
 
   // alloc and init
   ql_data_s(SEXP R_obs, SEXP R_Vmat, SEXP R_qlopts, int _nCov, int *_dims) :
 		  obs(0), qtheta(0), vmat(0), vmat_work(0), score_work(0), work(0),
-		  workx(0), jactmp(0), Atmp(0), tmp(0), qlopts(R_qlopts), info(0),
+		  workx(0), jactmp(0), Atmp(0), tmp(0), qlopts(R_qlopts),
 		  dx(_dims[1]), lx(_dims[0]), nCov(_nCov)
   {
 	 int nCov2 = SQR(nCov);
@@ -417,9 +416,9 @@ typedef struct ql_model_s {
 		 if(!qld->qlopts.useSigma && qld->qlopts.varType)
 		 {
 			 if(!isNull(R_Vmat))
-			   ERR("R_Vmat is not NULL, but should be if using kriging approximation of variance.");
+			   ERR("R_Vmat is not NULL but should be if using kriging approximation of variance.");
 			 if(isNull(R_covL))
-			   ERR("Covariance model for kriging variance matrix is `Null` !");
+			   ERR("Covariance model for kriging variance matrix is not set (Null).");
 
 			 int idx = dx+2*nCov;
 			 if( (varkm = new(std::nothrow) glkrig_models_s(R_covL,R_Xmat,R_qldata,R_NilValue,idx,_cpy)) == NULL)
@@ -433,11 +432,10 @@ typedef struct ql_model_s {
 		 if( (glkm = new(std::nothrow) glkrig_models_s(R_covT,R_Xmat,R_qldata,R_krigType,dx,_cpy)) == NULL)
 			MEM_ERR(1,glkrig_models_s)
 
+		 CALLOCX(score,dx,double);
 		 CALLOCX(qiobs,dxdx,double);
 		 CALLOCX(qimat,dxdx,double);
 		 CALLOCX(jac,dx*nCov,double);
-		 CALLOCX(score,dx,double);
-
 	}
 
 	~ql_model_s()
@@ -456,6 +454,8 @@ typedef struct ql_model_s {
 	inline void intern_cvError(double *x) {
 		  if(glkm->krigType && qld->qlopts.useCV) {
 		  	 cvmod->cvError(x,glkm->km,glkm->krigr[0]->sig2);
+		  	 if(info)
+		  	   WRR("`NaN` detected in cross-validation errors.")
 		  }
     }
 
@@ -464,6 +464,9 @@ typedef struct ql_model_s {
 	{
    		 matmult_diag_sqrt(qld->Atmp,nCov,dx,glkm->krigr[0]->sig2);
 		 matmult_trans(qld->Atmp,nCov,dx,qld->Atmp,nCov,dx,vars,&info);
+		 if(info){
+		   WRR("`NaN` detected in matrix multiplication.")
+		 }
 
 #if DEBUG
 		printMatrix("Atmp (1)",qld->Atmp,&nCov,&dx);

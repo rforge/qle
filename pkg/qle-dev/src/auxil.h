@@ -66,6 +66,7 @@ void matrix_col_sum(double *x, int *nx, int *y);
 
 void solveLU(double *A, int nA, double *B, int nB, int *err);
 void solveQR(double *X, int nrx, int ncx, double *y, int ncy, int *err);
+//
 void solveCH(double *X, int nrx, int ncx, double *y, int ncy, double *ans /* ncx x ncy */, int *err);
 void solve_DSPTRS( double *A, int n, double *B, int nrhs, int *err);
 //

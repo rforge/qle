@@ -39,17 +39,16 @@ B%*%S%*%t(B)
 
 # variance quasi-score vector
 D$varS
-C <- B%*%diag(D$sig2)%*%t(B)
+(C <- B%*%diag(D$sig2)%*%t(B))
 
 # variance matrix of statistics Var(T(X))
 S
 covarTx(qsd,theta=x0,useVar=TRUE)
 
 # value quasi-deviance
-D$val
+D$value
 t(qs)%*%solve(D$I)%*%qs
 
-# modified quasi-information
-# (Mahalanobis distance of quasi-score)
+# modified quasi-information: Mahalanobis distance of quasi-score
 D$qval
 t(qs)%*%solve(C)%*%qs

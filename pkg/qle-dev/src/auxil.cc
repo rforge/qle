@@ -40,17 +40,25 @@ SEXP getListElement (SEXP list, const char *str) {
 
 void chol2var(double *x, double *z, int nx, double *y) {
   int info = 0;
+  double tmp = 0;
   if(nx>1) {
 	  int i,j,k;
       MEMZERO(y,nx*nx);
   	  for(k=j=0; j<nx; j++)
-  		  for(i=0;i<j+1; i++,k++)
-  			  y[j*nx+i] = x[k];
+  		  for(i=0;i<j+1; i++,k++){
+  			  tmp = x[k];
+  			  if (!R_finite(tmp) || ISNA(tmp) || ISNAN(tmp))
+  			    WRR("`NaN` detected.");
+  			  y[j*nx+i] = tmp;
+  		  }
   	  matmult_trans(y,nx,nx,y,nx,nx,z,&info);
   	  if(info)
-  		WRR("`NaN` detected in `matmult_trans`.");
+  		WRR("`NaN` detected in matrix multiplication.");
   } else {
-	  *z = SQR(*x);
+	  tmp = SQR(*x);
+	  if (!R_finite(tmp) || ISNA(tmp) || ISNAN(tmp))
+		  WRR("`NaN` detected.");
+	  *z = tmp;
   }
 }
 
@@ -506,6 +514,7 @@ ErrHandler:
   *err=LAPACK_PMAT_ERROR;
 }
 
+
 void solveLU(double *A, int nA, double *B, int nB, int *err) {
   int info = 0;
   int lda = nA, ldb = nA;
@@ -749,7 +758,7 @@ void triangMat_U(double *A, int nA, double *AP, int nAP) {
     int n1 = nA, n2 = nAP, i, j, k;
 
     if( (n1*(n1+1)/2) != n2 )
-    	error(_("Wrong array dimension!\n"));
+    	error(_("Invalid array dimension!\n"));
 
     for(k=j=0; j<n1; j++)
     	for(i=0;i<j+1; i++,k++)
@@ -759,7 +768,7 @@ void triangMat_U(double *A, int nA, double *AP, int nAP) {
 void triangMat_U_back(double *A, int nA, double *AP, int nAP) {
     int n1 = nA, n2 = nAP, i, j, k;
     if( (n1*(n1+1)/2) != n2 )
-    	error(_("Wrong array dimension!\n"));
+    	error(_("Invalid array dimension!\n"));
 
     for(k=j=0; j<n1; j++)
     	for(i=0;i<j+1; i++,k++)
@@ -777,7 +786,7 @@ void Imat(double *x, int n) {
 
 void trendfunc(double *x, int nx, int dx, double *f, int model){
 	if(!model)
-	 error(_("No trend model specified!\n"));
+	 error(_("No trend order specified!\n"));
 
 	switch (model) {
 	case 0:
@@ -790,9 +799,8 @@ void trendfunc(double *x, int nx, int dx, double *f, int model){
 		basis2(x,nx,dx,f);
 		break;
 	default:
-	        std::strcpy(ERROR_LOC, __FILE__);
-	        ERR("Wrong model argument in trendfunc!");
-	        break;
+		ERR("Invalid trend order number. Choose either k=1,2.");
+	    break;
 	};
 
 }
@@ -834,12 +842,12 @@ void Fmatrix(double *x,double *F, int n, int d, int trend) {
 	if(trend >= 0 && trend < 3)
 	  //constant terms
 	    if(n < 2)
-	      error(_("F matrix is singular!\n"));
+	      error(_("Trend matrix is singular!\n"));
 	for(int i = 0; i < n; i++, pF++) *pF = 1;
 	if(trend > 0) {
 		//linear terms
 	   if(n < d+2)
-	     error(_("F matrix is singular!\n"));
+	     error(_("Trend matrix is singular!\n"));
 
 	   for(int j = 0; j < d; j++) //columns of x
 		   for(int k = 0; k < n; k++,pF++) // rows of F
@@ -848,7 +856,7 @@ void Fmatrix(double *x,double *F, int n, int d, int trend) {
 	if(trend > 1) {
 	 //quadratic terms
 		if( n < (d+1)*(d+2)/2+1 )
-	      error(_("F matrix is singular!\n"));
+	      error(_("Trend matrix is singular!\n"));
 
 		for (int k = 0; k < d; k++)
 		  for (int l = k; l < d; l++)
@@ -856,8 +864,7 @@ void Fmatrix(double *x,double *F, int n, int d, int trend) {
 			  *pF = x[k*n+i]*x[l*n+i];
 
 	} else if(trend > 2){
-	    std::strcpy(ERROR_LOC, __FILE__);
-	    ERR("Invalid drift term specified!");
+	    ERR("Invalid trend order number. Choose either k=1,2.");
 	}
 
 }

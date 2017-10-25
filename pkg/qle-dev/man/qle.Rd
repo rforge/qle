@@ -6,7 +6,7 @@
 \usage{
 qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
   local.opts = list(), method = c("qscoring", "bobyqa", "direct"),
-  qscore.opts = list(), control = list(), errType = "kv", pl = 0L,
+  qscore.opts = list(), control = list(), errType = "kv", pl = 0,
   cl = NULL, iseed = NULL, plot = FALSE)
 }
 \arguments{
@@ -14,7 +14,7 @@ qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
 
 \item{sim}{simulation function (see details)}
 
-\item{...}{arguments passed to function `\code{sim}`}
+\item{...}{further arguments passed to the simulation function `\code{sim}`}
 
 \item{nsim}{optional, number of simulation replications at each new sample point,
 `\code{qsd$nsim}` (default)}
@@ -33,7 +33,8 @@ qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
 
 \item{control}{list of control arguments passed to any of the routines defined in `\code{method}`}
 
-\item{errType}{type of prediction variances (see details)}
+\item{errType}{type of prediction variances, choose one of "\code{kv,cv,max}" which stands for using kriging variances,
+CV errors or the maximum of both}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate output}
 
@@ -52,25 +53,29 @@ List of the following objects:
 				  and covariance models}
 	  \item{cvm}{ CV fitted covariance models}
    \item{why}{ names of stopping conditions matched}
-	  \item{minima}{ matrix of all local minima found so far}
-	  \item{score}{ quasi-score or gradient of MD}
+  \item{final}{ final local minimization results of the criterion function, see \code{\link{searchMinimizer}} }
+  \item{roots}{ data frame of estimated roots of the quasi-score}
+	  \item{score}{ quasi-score vector or gradient of the Mahalanobis distance}
 	  \item{convergence}{ logical, whether the iterates converged, see details} 	  
 
  Attributes: 	 
- \item{final}{ final minimization results of criterion function (see \code{\link{searchMinimizer}}) }
  
- \item{optInfo}{ a list:}
+ \item{tracklist}{ an object (list) of class \code{QDtrack} containing the local minimization results,
+    criterion function evaluations (only in case of non-convergence), evaluated sample points and
+		 the status of the corresponding iteration}    
+ \item{optInfo}{ a list of arguments related to the estimation procedure:}
    \itemize{
-   \item{x0:}{ starting vector (parameter)}
-	  \item{W:}{ final weighting matrix for average approximation of variance matrix and
-				 quasi-information matrix at \code{theta} for local sampling of new candidate points}
-   \item{theta:}{ parameter corresponding to \code{W}} 
+   \item{x0:}{ starting parameter vector}
+	  \item{W:}{ final weighting matrix (equal to quasi-information matrix at \code{theta}) used for both variance
+			 average approximation, if applicable, and as the predicted variance for (local) sampling of new candidate points
+			 according to a multivariate normal distribution with this variance and the current root as the mean parameter.}
+   \item{theta:}{ the parameter corresponding to \code{W}, typically an approximate root or local minimzer} 
 	  \item{last.global:}{ logical, whether last iteration sampled a point globally}
-	  \item{minimized:}{ whether last minimization was successful}
+	  \item{minimized:}{ whether last local minimization was successful}
 	  \item{useCV:}{ logical, whether the CV approach was applied}
-	  \item{method:}{ final search method applied}
-   \item{nsim:}{ number of simulation replications at each point}
-	  \item{iseed}{ the seed given by the user, see arguments}
+	  \item{method:}{ name of final search method applied}
+   \item{nsim:}{ number of simulation replications at each evaluation point}
+	  \item{iseed}{ the seed to initialize the random number generator}
  }
 }
 \description{
@@ -79,17 +84,16 @@ This is the main function using a simulated quasi-likelihood estimation (QLE) ap
 \details{
 The function sequentially estimates the unknown model parameter. Basically, the user supplies a simulation function `\code{sim}`
  which must return a vector of summary statistics (as the outcome of model simulations) and expects a vector of parameters
- as its first argument. Further arguments can be passed by the `\code{\ldots}` ellipsis. The object
+ as its first argument. Further arguments can be passed by the `\code{\ldots}` argument. The object
  `\code{qsd}` aggregates the type of variance matrix approximation, the data frame of observed and simulated data, the
  initial sample points and the covariance models of the involved statistics (see \code{\link{QLmodel}}). In addition, it defines
  the criterion function by `\code{qsd$criterion}`, which is either used to monitor the sampling process or minimized itself. The user
  also has the option to choose among different types of prediction variances: either "\code{kv}" (kriging variances), "\code{cv}"
- (cross-validation variances) or the maximum of both, by "\code{max}", are available.
+ (CV variances) or the maximum of both, by "\code{max}", are available.
 
- \subsection{Criterion functions}{  
- The QD criterion function follows the quasi-likelihood estimation principle (see vignette) and seeks a solution to the quasi-score
- equation. Besides, the Mahalanobis distance (MD) as an alternative (simulation-based) criterion function has a more direct
- interpretation. It can be seen as a (weighted or generalized) least squares criterion
+ \subsection{Criterion functions}{The QD criterion function follows the quasi-likelihood estimation principle (see vignette)
+ and seeks a solution to the quasi-score equation. Besides, the Mahalanobis distance (MD) as an alternative (simulation-based)
+ criterion function has a more direct interpretation. It can be seen as a (weighted or generalized) least squares criterion
  depending on the employed type of variance matrix approximation. For this reason, we support several types of variance matrix
  approximations. In particular, given `\code{Sigma}` and setting `\code{qsd$var.type}` equal to "\code{const}" treats `\code{Sigma}`
  as a constant estimate throughout the whole estimation procedure. Secondly, if `\code{Sigma}` is supplied and used as
@@ -100,58 +104,70 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  required at any point of the parameter space. In this way the algorithm can also be seen as a simulated version of a least squares
  method or even as a special case of a \emph{simulated method of moments} (see, e.g. [3]). Note that some input combinations
  concerning the variance approximation types are not applicable since the criterion "\code{qle}", which exploits the
- QD criterion function, does not use a constant variance at all. For this criterion the consistency is automatically checked for all
- roots found during the estimation procedure and stored in the data frame object `\code{minima}` where the best one is marked by a star `*` and
- otherwise these are given without a consistency check. A parameter gets a second star if it has a smaller maximum component of the quasi-score
- among more than one equivalently rated roots.
+ QD criterion function, does not use a constant variance at all. For this criterion the (numerical) consistency is automatically checked for all
+ roots found during the estimation procedure and stored in the data frame object `\code{roots}` where the best one is marked by a star `*`.
+ A parameter gets a second star if it has a smaller maximum component of the quasi-score among more than one equivalently rated roots.
  }
       
- \subsection{Sampling new points}{  
- Our QLE approach dynamically switches from a \emph{local} to a \emph{global search phase} and vise versa for sampling new promising
- candidates for evaluation, that is, performing new simulations of the statistical model. Depending on the current value of the criterion
+ \subsection{Monte Carlo (MC) hypothesis testing}{ The algorithm sequentially evaluates promising local minimizers of the criterion function during
+ the local phase in order to assess the plausibility of being an approximate root of the corresponding quasi-score vector. We use essentially
+ the same MC test procedure as in \code{\link{qleTest}} (see also the vignette). First, having found a local minimum of the test statistic, i.e. the criterion
+ function, given the data, new observations are simulated w.r.t. to the local minimizer and the algorithm re-estimates the approximate roots for each
+ observation independently. If the current minimizer is accepted as an approximate root at the significance level `\code{alpha}`, then the algorithm stays
+ in its local phase and continues sampling around the current minimizer accoring to its asymptotic variance (measured by the inverse of the
+ predicted quasi-information) and uses the additional simulations to improve the current kriging approximations. Otherwise we switch to the global phase and
+ do not consider the current minimizer as an approximate root.
+
+ This procedure also allows for a stopping condition derived from the reults of the MC test. We can compare the estimated mean squared error (MSE) with the
+ predicted error of the approximate root by its relative difference and terminate in case this value drops below a user-defined bound `\code{perr_tol}`
+ (either as a scalar value or numeric vector of length equal to the dimension of the unknown parameter). A value close to zero suggests a good match of both
+ error measures. The testing procedure can be disabled by the option `\code{local.opts$test=FALSE}`. A value of the criterion function smaller
+ than `\code{local.opts$ftol_abs}` indicates that the corresponding minimizer could be an approximate root. Otherwise the last evaluation point is used as
+ a starting point for next local searches which mimics a random multistart type minimization over the next iterations of the algorithm. This behaviour is
+ also implemented for results of the above MC test when the local minimizer is not accepted as an approximate root. Note that this approach has the
+ potential to escape regions where the criterion function value is quite low but, however, is not considered trustworthy in relation to the upper bound
+ `\code{local.opts$ftol_abs}` or the results of the MC test procedure.
+ 
+ If one of the other termination criteria is met in conjunction with a neglectable value of the criterion function, we
+ say that the algorithm successfully terminated and converged to a local minimizer of the criterion function which could be an approximate root of the quasi-score
+ vector. We then can perform a goodness-of-fit test in order to assess its plausibility (see \code{\link{qleTest}}) and quantify the empirical and predicted
+ estimation error. In case of multiple local minima the data frame `\code{roots}` also gives a hint on the best root found (see \code{\link{checkMultRoot}} and the vignette).
+ If we wish to improve the final estimate the algorithm allows for a simple warm start strategy though not yet as an fully automated
+ procedure. The algorithm can be easily restarted based on the final result of the preceeding run. We only need to extract the object
+ `\code{OPT$qsd}` as an input argument to function \code{\link{qle}} again. 
+ }
+
+ \subsection{Sampling new points}{Our QLE approach dynamically switches from a \emph{local} to a \emph{global search phase} and vise versa for
+ sampling new promising candidates for evaluation, that is, performing new simulations of the statistical model. Depending on the current value of the criterion
  function three different sampling criteria are used to select next evaluation points which aim on potentially improving the quasi-score
- or criterion function approximation. Values less than a user defined tolerance `\code{local.opts$ftol_abs}` trigger the local
- phase for sampling and searching. In this case it is assumed to have found a local minimizer such that it seems
- to be worth sampling in its local vicinity. Then local searches mostly try to improve on the current best parameter estimate.
- Either the next evaluation point is selected according to a weighted minimum-distance criterion (see [2] and the vignette),
+ or criterion function approximation. If a local minimizer of the criterion function has been accepted as an approximate root, then a local search
+ tries to improve its accuracy. The next evaluation point is either selected according to a weighted minimum-distance criterion (see [2] and the vignette),
  for the choice `\code{nextSample}` equal to "\code{score}", or by maximizing the weighted variance of the quasi-score vector in
  case `\code{nextSample}` is equal to "\code{var}". In all other cases, for example, if identifiable roots of the QS could not be found
  or the (numerical) convergence of the local solvers failed, the global phase of the algorithm is invoked and selects new potential
  candidates accross the whole search space based on a weighted selection criterion. This assigns large weights to candidates
  with low criterion function values and vise versa. During both phases the cycling between local and global candidates is
- controlled by the weights `\code{global.opts$weights}` and `\code{locals.opts$weights}`, respectively. (If the algorithm is within the 
- global phase at last iteration, then finally a global exhaustive search (if "\code{direct}" is part of the argument `\code{method}`)
- for the best minimizer is done.) Besides this, the smaller the weights the more the candidates tend to be globally selected and vice versa.
- Within the local phase, weights approaching one result in selecting candidates close to the current minimizer of the criterion
+ controlled by the weights `\code{global.opts$weights}` and `\code{locals.opts$weights}`, respectively. Besides this, the smaller
+ the weights the more the candidates tend to be globally selected and vice versa during the global phase. Within the local phase,
+ weights approaching one result in selecting candidates close to the current minimizer of the criterion
  function. Weights approximately zero maximize the minimum distance between candidates and previously sampled points and
  thus densely sample the search space almost everywhere if the algorithm is allowed to run infinitely. The choice of weights
  is somewhat ad hoc but may reflect the users preference on guiding the whole estimation more biased towards either a local
  or global search. In addition the local weights can be dynamically adjusted if `\code{useWeights}` is \code{FALSE}
  depending on the current progress of estimation. In this case the first weight given by `\code{locals.opts$weights}` is 
- used as a starting point for this kind of adjustment.   
- 
- If any of the termination criteria is met, in conjunction with a neglectable value of the criterion function, we
- say that the algorithm successfully terminated and converged to a reasonable parameter estimate. In addition, we 
- can access the precision of the found estimator by a goodness-of-fit test (see \code{\link{qleTest}}). Also
- in case of multiple roots, stored in the matrix of found roots `\code{minima}`, the function
- \code{\link{checkMultRoot}} may be helpful to select the \emph{best} of these roots (see vignette). If we wish to improve the
- final estimate the algorithm allows for a simple warm start strategy though not yet as an fully automated procedure. The
- algorithm can be easily restarted based on the final result of the preceeding run. We only need to extract the object
- `\code{OPT$qsd}` as an input argument to function \code{\link{qle}} again.  
+ initially used for this kind of adjustment.   
  }
 
- \subsection{Some notes}{   
-	For a 2D parameter estimation problem the function can visualize the sampling and selection process, which
+ Some notes: For a 2D parameter estimation problem the function can visualize the sampling and selection process, which
  requires an active 2D graphical device in advance. The function can also be run in an cluster environment
- using the `parallel` package. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
+ using the `\code{parallel}` package. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
  loading required packages on each cluster node, which are used in the simulation function
  (see \code{\link[parallel]{clusterExport}} and \code{\link[parallel]{clusterApply}} in \code{parallel} package).
  If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
  for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link[parallel]{clusterSetRNGStream}},
  for reproducible results of estimation in case a local cluster is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
  using a prespecified cluster object \code{cl}, then the user is responsible for seeding whereas the seed can be stored
- in the return value as well, see attribute `\code{optInfo}$iseed`.     
- }
+ in the return value as well, see attribute `\code{optInfo}$iseed`.  
 
  The following controls `\code{local.opts}` for the local search phase are available:
   \itemize{
@@ -169,11 +185,13 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 	 \item{\code{nsample}:}{ sampling size of candidate locations at the local phase}
 	 \item{\code{weights}:}{ vector of weights, \eqn{0\leq\code{weights}\leq 1}, for local sampling}
 	 \item{\code{useWeights}:} {logical, if \code{FALSE} (default), dynamically adjust the weights, see vignette}
- \item{\code{ftol_abs}:}{ upper bound on function criterion, values smaller than this trigger the local phase
-					  following the reasoning that the algorithm has found an approximate root of the quasi-score
-					  (or the gradient of the Mahalanobis distance).}
+ \item{\code{ftol_abs}:}{ upper bound on the function criterion: values smaller trigger the local phase
+   treating the current minimzer as an approximate root otherwise forces the algorithm to switch to the global phase and vice versa.}
   \item{\code{eta}:}{ values for decrease and increase of the local weights, which is intended to faciliate convergence
-		 while sampling new points more and more around the current best parameter estimate.} 				
+		 while sampling new points more and more around the current best parameter estimate.} 
+	 \item{\code{alpha}:}{ significance level for computation of empirical quantiles of one of the test statistics, that is,
+         testing a parameter to be a	root of the quasi-score vector in probability.}
+  \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
   \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{var}" (see details)} 
@@ -181,8 +199,8 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 
  The following controls `\code{global.opts}` for the global search phase are available:   
 	\itemize{
-  \item{\code{stopval}:}{ stopping value for criterion function, if `\code{stopval>0}` then the main iteration terminates
-				     as soon as the function value drops below. This might be preferable to a time consuming
+  \item{\code{stopval}:}{ stopping value related to the criterion function value, the main iteration terminates
+				     as soon as the criterion function value drops below this value. This might be preferable to a time consuming
 					 sampling procedure if one whishes to simply minimize the criterion function or find a first
 					 approximation to the unknown model parameter.}
   \item{\code{C_max}:}{ upper bound on the relative maximum quasi-score interpolation error. The algorithm terminates
@@ -193,11 +211,16 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 	 \item{\code{sampleTol}:}{ minimum allowed distance between sampled locations at global phase}	
 	 \item{\code{weights}:}{ vector of \eqn{\code{weights}>0} for global sampling}
   \item{\code{nsample}:}{ sampling size of candidate locations at the global phase}
-  \item{\code{NmaxRel}:}{ maximum number of consecutive iterates for `\code{xtol_rel}`}
-  \item{\code{NmaxCV}:}{ maximum number of consecutive iterates for `\code{C_max}`}
-  \item{\code{NmaxSample}:}{ maximum number of consecutive iterates for `\code{sampleTol}`}
-  \item{\code{NmaxLam}:}{ maximum number of consecutive iterates for `\code{local.opts$lam_max}` }
-  \item{\code{Nmaxftol}:}{ maximum number of consecutive iterates for `\code{local.opts$ftol_rel}`}
+  \item{\code{NmaxRel}:}{ maximum number of consecutive iterates until stopping according to `\code{xtol_rel}`}
+  \item{\code{NmaxCV}:}{ maximum number of consecutive iterates until stopping according to `\code{C_max}`}
+  \item{\code{NmaxSample}:}{ maximum number of consecutive iterations until stopping according to `\code{sampleTol}`}
+  \item{\code{NmaxLam}:}{ maximum number of consecutive iterations until stopping for which the generalized eigenvalue of the variance
+		 of the quasi-score vector within the kriging approximation model and its total variance measured by the quasi-information matrix
+      at some estimated parameter drops below the upper bound `\code{local.opts$lam_max}` }
+  \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
+     and predicted error of an approximate root drops below `\code{perr_tol}`}
+  \item{\code{Nmaxftol}:}{ maximum number of consecutive iterations until stopping for which the relative change in the values
+   of the criterion function drops below `\code{local.opts$ftol_rel}`}
  }
 }
 \examples{

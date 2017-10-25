@@ -34,7 +34,8 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 }
 \value{
 Numeric vector of QD values or a list as follows:
-\item{val}{ quasi-deviance value}
+\item{value}{ quasi-deviance value}
+\item{par}{ parameter estimate}
 \item{I}{ quasi-information matrix}
 \item{score}{ quasi-score vector}
 \item{jac}{ Jacobian of sample average statistics}

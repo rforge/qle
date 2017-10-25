@@ -1,11 +1,11 @@
-###############################################################################
-# Author:  M. Baaske
-# Date:	   29.06.2016	
-# File:    qle-package.R: 
+# Copyright (C) 2017 Markus Baaske. All Rights Reserved.
+# This code is published under the GPL (>=3).
+#
+# File: 	qle-package.R
+# Date:  	20.10.2017
+# Author: 	Markus Baaske
 # 
-# Comment: General description of the package
-# 
-###############################################################################
+# General description of the package and data sets
 
 #'  Simulated Quasi-likelihood Estimation Method
 #' 

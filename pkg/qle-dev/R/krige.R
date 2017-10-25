@@ -2,11 +2,12 @@
 # This code is published under the L-GPL.
 #
 # File: 	krige.R
-# Date:  	12.04.2017
+# Date:  	2011 -- 2017
 # Author: 	Markus Baaske
 #
 # Define kriging prediction, variance interpolation,
-# quasi-deviance and Mahalanobis distance (for GMM)
+# quasi-deviance and Mahalanobis distance for use of
+# a simulated version of GMM
 
 #' @name estim
 #'
@@ -490,7 +491,8 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
 #' @return Numeric vector of QD values or a list as follows:
-#' \item{val}{ quasi-deviance value}
+#' \item{value}{ quasi-deviance value}
+#' \item{par}{ parameter estimate}
 #' \item{I}{ quasi-information matrix}
 #' \item{score}{ quasi-score vector}
 #' \item{jac}{ Jacobian of sample average statistics}
@@ -587,7 +589,9 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 
 		# somehow complicated but this is a load ballancing 
 		# (for a cluster) parallized version of quasiDeviance
-		if(length(points) > 1999 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
+		
+		ret <-
+		  if(length(points) > 1999 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
 				m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)		
 				M <- .splitList(points, m)
 				names(M) <- NULL
@@ -602,11 +606,26 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
  							
 		} else {
 			.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only)
-		}		
-				
+		}
+		
+		# check for NAs
+		has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
+		if(length(has.na) == length(ret)){
+			stop("All quasi-deviance calculations produced `Na` values.")
+		}
+		if(length(has.na>0L)){		
+			warning("Removing `Na` values from results of quasi-deviance calculation.")
+			return(
+			structure(ret[-has.na],
+			  "hasNa"=has.na))
+        } else {
+		  return(ret)
+		}
+
 	}, error = function(e) {
-		message(.makeMessage("Calculation of quasi-deviance failed: ",conditionMessage(e)))
-	 	stop(e)  # rethrow error
+		message(.makeMessage("Calculation of quasi-deviance failed: ",
+				   conditionMessage(e)))
+	 	stop(e)  # re-throw error
 	})
 }
 
@@ -635,7 +654,8 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' 
 #' @return Either a vector of MD values or a list of lists, where each
 #' 		   contains the following elements:
-#' \item{val}{ Mahalanobis distance value}
+#' \item{value}{ Mahalanobis distance value}
+#' \item{par}{ parameter estimate}
 #' \item{I}{ approximate variance matrix of the parameter estimate}
 #' \item{score}{ gradient of MD (for fixed `\code{Sigma}`)}
 #' \item{jac}{ Jacobian of sample average statistics}
@@ -734,7 +754,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 			qlopts <- list("varType"=qsd$var.type,
 						   "useCV"=!is.null(cvm),
 						   "useSigma"=useSigma)  			# use as constant Sigma 
-		   MD <-
+		   ret <-
 		    if(length(points) > 1999 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
 			   m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)			   				
 			   M <- .splitList(points, m)
@@ -756,9 +776,22 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 			# or the constant Sigma passed
 			if(useSigma) {			 
 				attr(Sigma,"inverted") <- inverted
-				attr(MD,"Sigma") <- Sigma			  
+				attr(ret,"Sigma") <- Sigma			  
 	 		}
-			return( MD )				
+			# check for NAs
+			has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
+			if(length(has.na) == length(ret)){
+				stop("All  Mahalanobis distance calculations produced `Na` values.")
+			}
+			if(length(has.na>0L)){
+				warning("Removed `Na` values from results of Mahalanobis distance calculation.")
+				return(
+					structure(ret[-has.na],
+							"hasNa"=has.na))
+		    } else {
+				return(ret)
+			}
+					
 							
 		}, error = function(e) {
 			 message(.makeMessage("Calculation of Mahalanobis-distance failed: ",
