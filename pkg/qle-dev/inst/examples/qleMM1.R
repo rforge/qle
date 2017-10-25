@@ -3,8 +3,6 @@
 ## state distribution, estimate the parameter `rho` by
 ## the mean number of customers as a statistic 
 library(qle)
-options(mc.cores=8)
-
 # setting RNG and seed
 RNGkind("L'Ecuyer-CMRG")
 set.seed(1356)
@@ -39,9 +37,9 @@ tet0 <- c("rho"=0.5)
 obs <- c("N"=tet0/(1-tet0) )
 
 ## check with exact statistic
-#obs <- simQLdata(sim=simfn,X=tet0,nsim=10000,mode="mean")[[1]]
-## simulated and exact mean number of customers	
-# rbind("sim0"=mean(unlist(sim0)),obs)
+## simulated and exact mean number of customers
+# obs0 <- simQLdata(sim=simfn,X=tet0,nsim=10000,mode="mean")[[1]]
+# rbind("obs0"=mean(unlist(obs0)),obs)
 
 ## Use kriging of variance of statistic
 ## (nugget variance fixed to 0.1% of Cholesky decomposed values).
@@ -49,8 +47,8 @@ obs <- c("N"=tet0/(1-tet0) )
 ## parameter although we could choose
 ## different settings for optimization.
 qsd <- getQLmodel(sim, lb, ub, obs, var.type="kriging",
-		 nfit=1, set.var=FALSE, var.opts=list("var.sim"=0.001),
-		  verbose=TRUE)
+		 set.var=FALSE, var.sim=1e-07, as.nugget=TRUE,
+		 var.opts=list("var.sim"=0.001), verbose=TRUE)
  
 ## powexp
 #qsd <- getQLmodel(sim, lb, ub, obs, var.type="kriging",
@@ -80,15 +78,16 @@ Y <- predictKM(qsd$covT,rho,X,T,krig.type="var")
 # steady state values
 y0 <- rho/(1-rho)
 
-## ---- plotting ---------
-#pdf("mm1q.pdf",width = 50, height = 25)
 
-dev.new()
-op <-par(mfrow=c(1, 2), mar=c(5.1, 5.1, 1.1, 1.1),
-		oma=c(5,4,1,1), cex=2.2, cex.axis=2.2, cex.lab=2.2,lwd=0.5,
-		cex.main=2.2, cex.sub=2.2, xaxs='i', yaxs='i')
+## --------------------------------------------------------------------------------------------------
+## used only to generate pdf output
+# pdf("mm1q.pdf",width = 50, height = 25)
+# op <-par(mfrow=c(1, 2), mar=c(5.1, 5.1, 1.1, 1.1),
+#		oma=c(5,4,1,1), cex=2.2, cex.axis=2.2, cex.lab=2.2,lwd=0.5,
+#		cex.main=2.2, cex.sub=2.2, xaxs='i', yaxs='i')
+#----------------------------------------------------------------------------------------------------
 
-
+## kriging approximation
 plot(NULL, type="n", xlab=expression(rho),
 		ylab="T",xlim=c(0,1), ylim=c(0,10))
 
@@ -100,14 +99,11 @@ legend("topleft", c("Number of customers in the system",
 					"Kriging approximation"),
 			cex=2.2, lty=c(2,1,1),col=c("black","red","blue"))
 
-# fitted statistic
-# qsd$covT 
-
 # quasi-deviance plots
 p <- seq(lb[1],ub[1],by=0.0001)
 QD <- quasiDeviance(X,qsd,value.only=TRUE)
 qd <- quasiDeviance(as.matrix(p),qsd)
-y <- sapply(qd,"[[","val")
+y <- sapply(qd,"[[","value")
 score <- sapply(qd,"[[","score")
 
 ## plot quasi-deviance and quasi-score function
@@ -117,11 +113,12 @@ abline(h=0)
 points(X,QD,pch=3)
 lines(p,score, type='l',col="blue",lwd=1.5) 
 lines(p,y,col="black",lwd=0.8)
-legend("topleft", c("quasi-deviance","quasi-score","sample points", "solution"),
+legend("top", c("quasi-deviance","quasi-score","sample points", "solution"),
 		lty=c(1,1),lwd=c(1.5,1.5,NA,NA),pch=c(NA,NA,3,5),cex=2.2,
 		col=c("black","blue","black","magenta"))
-par(op)
-#dev.off()
+
+# par(op)
+# dev.off()
 
 # some options for quasi-scoring
 opts <- list("pl"=0, # change to > 1 for output 
@@ -139,26 +136,16 @@ points(S0$par,S0$val,col="magenta",pch=5)
 # check
 (QD <- quasiDeviance(S0$par,qsd)[[1]])
 
-# variance of score vector is already smaller
-# than estimated variance of rho
-(QD$varS < 1/QD$I)
-
 # start sampling estimation
 OPT <- qle(qsd,
 		   simfn,		     	
-		   global.opts = list("maxiter" = 20, "NmaxLam"=5,"maxeval"=25, "stopval"=0),
+		   global.opts = list("maxiter" = 20, "NmaxLam"=5,"maxeval"=25),
 		   local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,
 				             "lam_max"=1e-5,"useWeights"=FALSE,"eta"=c(0.01,0.1)),
 		   method = c("qscoring","bobyqa","direct"),
 		   plot=TRUE, pl = 100) 
 
-print(OPT,pl=3)
+print(OPT)
 
 # final criterion function results
-qd <- attr(OPT,"final")
-
-# estimated variances
-c("var.score"=qd$varS,"var.rho"=1/qd$I)
-
-# check again: final local results
-attr(OPT,"final")
+OPT$final

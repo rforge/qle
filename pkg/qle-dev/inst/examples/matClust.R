@@ -4,14 +4,14 @@
 
 library(qle)
 library(spatstat)
+data(matclust)
+OPT <- matclust$OPT
 
 # set options
 options(mc.cores=8)
 RNGkind("L'Ecuyer-CMRG")
 set.seed(297)
 
-# evaluate the statistics:
-# (estimated intensity and Ripley's K function at multiple radii)
 simStat <- function(X,cond){
  x <- Kest(X,r=cond$rr,correction="best")
  x <- x[[attr(x,"valu")]]
@@ -76,9 +76,15 @@ Nsample <- 12
 lb <- c("kappa"=20,"R"=0.01,"mu"=1)
 ub <- c("kappa"=30,"R"=0.25,"mu"=5)
 
+# general approach to initialize a (local) cluster object
+cl <- makeCluster(8)
+clusterSetRNGStream(cl)
+clusterCall(cl,fun=function(x) library("spatstat", character.only=TRUE))
+clusterExport(cl=cl,varlist=c("simStat"), envir=environment())
+
 # simulate design points and statistics
 sim <- simQLdata(sim=simClust,cond=cond,nsim=nsim,
-		method="randomLHS",lb=lb,ub=ub,N=Nsample)
+		method="randomLHS",lb=lb,ub=ub,N=Nsample,cl=cl)
 
 # generated random design
 X <- attr(sim,"X")
@@ -91,11 +97,13 @@ qsd <- getQLmodel(sim,lb,ub,obs0,criterion="qle",
 		var.type="kriging",verbose=TRUE)
 
 # cross-validation: fitting CV covariance models
-cvm <- prefitCV(qsd, type="max",
-         reduce=FALSE, verbose=TRUE)
+cvm <- prefitCV(qsd, reduce=FALSE, verbose=TRUE)
 
 # starting point for local search
-x0 <- c("kappa"=20,"R"=0.05,"mu"=3)
+x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
+
+# use the maximum of kriging and CV-based variances
+attr(cvm,"type") <- "max"
 
 # first try quasi-scoring with CV errors (type=max)
 QS0 <- qscoring(qsd,x0,
@@ -132,28 +140,33 @@ crossValTx(qsd, cvm, type = "sigK")
 # the maximum of CV errors and kriging variances
 # in order to accouont for the prediction uncertainty
 # of sample means of the statistics
+
 OPT <- qle(qsd, simClust, cond=cond,  
 		global.opts = list("maxiter"=10,
-				           "maxeval" = 20,
-				           "weights"=c(1,5,10)),
+				           "maxeval" = 15,
+				           "weights"=c(10,5,1),
+						   "NmaxQI"=3),
 		local.opts = list("lam_max"=1e-2,
+				          "nobs"=50,
 				          "nextSample"="score",
-				          "ftol_abs"=1e-2,
+				          "ftol_abs"=0.1,
 						  "weights"=c(0.55),
-						  "eta"=c(0.025,0.075)),
-		method = c("qscoring","bobyqa","direct"),pl=2,
-		errType="max")
+						  "eta"=c(0.025,0.075),
+						  "test"=TRUE),
+		method = c("qscoring","bobyqa","direct"),		
+		errType="max", iseed=297, cl=cl, pl=5)
 
-print(OPT,pl=10)
+print(OPT)
+
 
 # extract information of parameter estimation
-local <- attr(OPT,"final")
+local <- OPT$final
 info <- attr(OPT,"optInfo")
 
 # do a global search with final QL model
 # and compare with the following local results
 S0 <- searchMinimizer(OPT$par, OPT$qsd,
-			method="direct",cvm=OPT$cvm,
+			method="bobyqa",cvm=OPT$cvm,
 			verbose=TRUE)
 
 # quas-scoring again more precise results
@@ -163,22 +176,25 @@ QS <- qscoring(OPT$qsd,OPT$par,
 		cvm=OPT$cvm,pl=10)
 
 # compare the different estimates
-par <- rbind("QS"=QS$par,"OPT"=OPT$par,"S0"=S0$par)
-checkMultRoot(OPT,par=par)
+checkMultRoot(OPT,par=rbind("QS"=QS$par,"S0"=S0$par))
 
 # MC hypothesis testing 
-Stest <- qleTest(OPT,QS,sim=simClust,cond=cond,nsim=1000,
-		  method=c("qscoring","bobyqa","direct"),verbose=TRUE)
+Stest <- qleTest(OPT,sim=simClust,cond=cond,nsim=200,
+		  method=c("qscoring","bobyqa","direct"),
+		  cl=cl, verbose=TRUE)
 
 print(Stest)
 
 # show envelopes for K,G,F function
-plotGraphs(QS$par,nsim=1000)
+plotGraphs(OPT$par,nsim=1000)
 
 ## fit model by Minimum Contrast
-data(redwood)
-fitM <- kppm(redwood, ~1, "MatClust")
-fitM$modelpar
+#data(redwood)
+#fitM <- kppm(redwood, ~1, "MatClust")
+#fitM$modelpar
+
+# do not forget
+stopCluster(cl)
 
 
 # ------------------------- ONLY FOR THE VIGNETTE ---------------------------
@@ -189,7 +205,7 @@ fitM$modelpar
 
 ## plot and store envelopes
 #pdf("Kfunc.pdf",width = 8, height = 10)
-#plotGraphs(QS$par,nsim=1000)
+#plotGraphs(OPT$par,nsim=1000)
 #dev.off()
 
 }

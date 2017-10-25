@@ -1,5 +1,6 @@
-# Compare prediction variances to
-# the ones obtained from cross-validation
+# Compare prediction variances based on different covariance functions
+# and reml parameter estimations and using cross-validation
+
 library(qle)
 data(normal)
 
@@ -10,7 +11,7 @@ V <- qsd$qldata[["var.T1"]]
 # get sample means of simulated statistics
 Tstat <- qsd$qldata[grep("mean.",names(qsd$qldata))]
 
-# sirf-2 covariance model (default)
+# SIRF-2 covariance model (default)
 # 'alpha' parameter is fixed and not reml estimated below,
 # however, any parameter of the covariance model can be estimated
 # by the reml method or excluded from covariance fitting	
@@ -65,8 +66,10 @@ kvar_matern <- varKM(qsd_new$covT,p,X,Tstat)
 colMeans(kvar)
 colMeans(kvar_matern)
 
-## show prediction variances 
-## SIRF-k covariance
+## show prediction variances
+## of 2nd statistic (mean average deviation)
+
+## Prediction variances using SIRF-k covariance
 dev.new()
 z1 <- matrix(kvar[,2],ncol=length(y))
 plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
@@ -74,7 +77,7 @@ contour(x, y, z1, col = "black", lty = "solid",
 		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
 try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
-# Matern covariance
+## Prediction variances using Matern covariance function
 dev.new()
 z2 <- matrix(kvar_matern[,2],ncol=length(y))
 plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
@@ -82,7 +85,8 @@ contour(x, y, z2, col = "black", lty = "solid",
 		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
 try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
-## Cross-validation 
+## Estimation of prediction errors by cross-validation
+## using the original covariance fit with covariance function SIRF-k 
 cvm <- prefitCV(qsd)
 cv <- crossValTx(qsd, cvm, p, type = "cve")
 ## or with rmsd
@@ -90,7 +94,7 @@ cv <- crossValTx(qsd, cvm, p, type = "cve")
 colMeans(cv)
 z3 <- matrix(cv[,2],ncol=length(y))
 
-# show cross-validation based prediction errors
+# show cross-validation prediction errors
 dev.new()
 plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
 contour(x, y, z3, col = "black", lty = "solid",

@@ -49,4 +49,3 @@ print(S1)
 qsd$criterion <- "qle"
 qscoring(qsd, S1$par)
 
-

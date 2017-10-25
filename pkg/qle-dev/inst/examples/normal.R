@@ -116,7 +116,7 @@ OPT$ctls
 # which one stopped iteration
 OPT$ctls[OPT$ctls[,"stop"]>0,]
 # last local estimation results
-local <- attr(OPT,"final")
+local <- OPT$final
 info <- attr(OPT,"optInfo")
 
 # MC hypothesis test of OPT$par
@@ -130,18 +130,19 @@ print(Stest)
 ## first try to improve estimated parameter with final weighting
 ## matrix `W` at `theta` from the results of function `qle`
 ## (because of the weighted variance matrix type of approximation).
-# info <- attr(OPT,"optInfo")
-# MD <- searchMinimizer(x0,OPT$qsd,method=c("lbfgs","bobyqa"),
+#OPT$qsd$criterion <- "mahal"
+#MD <- searchMinimizer(x0,OPT$qsd,method=c("lbfgs","bobyqa"),
 #		 W=info$W,theta=info$theta,verbose=TRUE)
-# Stest.LS <- qleTest(OPT,MD,sim=simfunc,nsim=1000,		
+#
+#Stest.LS <- qleTest(OPT,MD,sim=simfunc,nsim=1000,		
 #			    verbose=TRUE)
-# print(Stest.LS)
+#print(Stest.LS)
 
 
 ###########################################################
 #	optional: contour plots of final approximation
 ###########################################################
-
+#
 # nmax <- OPT$ctls["maxeval","val"]
 # Xnew <- OPT$qsd$qldata[nrow(X):(nrow(X)+nmax),c(1,2)]
 #
@@ -156,7 +157,6 @@ print(Stest)
 # contour(x, y, z1, col = "black", lty = "solid",
 #		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
 # try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
-
 
 ## save results as data set
 #qsd$sim <- simfunc

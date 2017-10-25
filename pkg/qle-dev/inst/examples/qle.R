@@ -26,7 +26,7 @@ OPT <- qle(qsd,qsd$sim,nsim=100,
 		pl=3)
 
 # solution (with  details)
-print(OPT,pl=3)
+print(OPT)
 
 # prepare for a restart 
 qsd2 <- OPT$qsd
@@ -34,20 +34,18 @@ qsd2 <- OPT$qsd
 # and do a pure global search by `ftol_abs=0` 
 # sample additional (globally selected) points
 # for evaluation by selection criterion `var`
-GL <- qle(qsd2, qsd$sim,nsim=100,		
+GL <- qle(qsd2, qsd$sim, nsim=100,		
 		global.opts = list( "maxiter"=10, "stopval"=0),
 		local.opts = list("nextSample"="var","ftol_abs"=0),
-		pl = 3)
+		iseed=123, pl = 5)
 
 
 # Use a least squares approach 
 qsd$criterion <- "mahal"
 MA <- qle(qsd, qsd$sim, method = c("lbfgs","bobyqa","direct"), 
-		global.opts = list("maxiter" = 10, "maxeval"=25), pl = 3)
+		global.opts = list("maxiter" = 10, "maxeval"=25),
+		iseed=123,pl = 3)
 
-# results (short)
-MA	
-# use pl=1,2,3 for more information	
-print(MA,pl=3)
+print(MA)
 }
 

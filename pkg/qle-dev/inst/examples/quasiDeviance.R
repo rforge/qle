@@ -31,7 +31,7 @@ qsd$var.type <- "wcholMean"
 ## 3D plot of quasi-deviance, with kriged variance matrix
 ## and added CV prediction variances, requires package `rgl`
 ############################################################
-
+#
 #library(rgl)
 #x <- seq(qsd$lower[1],qsd$upper[1],by=0.05)
 #y <- seq(qsd$lower[2],qsd$upper[2],by=0.05)
