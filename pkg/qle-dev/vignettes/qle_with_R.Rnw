@@ -54,7 +54,7 @@ uncertainty, R}
 \Address{
   Markus Baaske\\
   Faculty of Mathematics and Computer Science\\
-  Friedrich-Schiller-University Jena\\
+  Friedrich Schiller University Jena\\
   07743 Jena, Germany\\
   Email: \email{markus.baaske@uni-jena.de}\\  
 }
@@ -636,8 +636,10 @@ conditions $Q_{max}(\theta)<\tau_0$ and $s(\theta)<s_{tol}$, where
 $s_{tol}>0$ and $\tau_0>0$ are user-specified constants. For sufficiently
 small constants $s_{tol}$, $\tau_0$ both conditions indicate an approximate
 root of the QS vector. In particular, the latter also allows for a statistical
-interpretation of the quasi-deviance (see Section \ref{subsec:testing}). Further
-conditions are listed in the \proglang{R} manual of the function \code{qle}.\par
+interpretation of the quasi-deviance as part of a Monte Carlo approach for
+testing the goodness-of-fit of the statistical model w.r.t. the estimated parameter
+$\hat{\theta}$ and provides us with another statistical stopping condition (see
+Section \ref{subsec:testing}).
 %
 \section{Extensions and modifications}\label{sec:extent}
 This section presents some extensions to the originally proposed QL approach in
@@ -664,28 +666,30 @@ local phase the algorithm randomly generates candidate points (without
 evaluating them) $\theta\in\Omega^l_n$, where $\Omega^l_n$ denotes the set of local
 candidates, according to a multivariate normal distribution with mean equal to the current
 minimizer and variance equal to the inverse information matrix in
-\eqref{QI}. Otherwise, the algorithm is in its global phase. Then, the potential
-benefit of adding some point out of all candidates is measured by the following
-\emph{local selection criterion}. Let
+\eqref{QI}. Otherwise, the algorithm is in its global phase.\par
+%
+In order to measure the potential benefit of adding some point out of all
+candidates during the local phase of the algorithm we adapt the idea proposed
+in \citet{ref:Regis2007} to our setting. Let
 \begin{equation}
-s_n(\theta) := \hat{Q}_n(\theta)^t \hat{C}_n(\theta)^{-1} \hat{Q}_n(\theta)
+\bar{s}_n(\theta) := \hat{Q}_n(\theta)^t \hat{C}_n(\theta)^{-1} \hat{Q}_n(\theta)
 \end{equation}
-denote the \emph{modified} QD, that is, the quasi-information matrix
-replaced by the error matrix of the QS vector at iteration $n$. Then
+denote a \emph{modified} version of the QD in \eqref{approxQD}, that is, the
+quasi-information matrix replaced by the error matrix of the QS vector (see
+Section \ref{qsErr}) at iteration $n$. Then
 \begin{equation}\label{stilde}
  \tilde{s}_n(\theta) = 
   \begin{cases} 
-   \frac{s_n(\theta)-s^{\textrm{min}}_n}{s^{\textrm{max}}_n-s^{\textrm{min}}_n}
-   & \textrm{if } s^{\textrm{min}}_n\neq s^{\textrm{max}}_n \\ 1 &
+   \frac{\bar{s}_n(\theta)-\bar{s}^{\textrm{min}}_n}{\bar{s}^{\textrm{max}}_n-\bar{s}^{\textrm{min}}_n}
+   & \textrm{if } \bar{s}^{\textrm{min}}_n\neq \bar{s}^{\textrm{max}}_n \\ 1 &
    \textrm{otherwise}.
   \end{cases}
 \end{equation}
-denotes its normalized value for all $\theta\in\Omega^l_n$. Following the idea
-proposed in \citet{ref:Regis2007} we compute the minimum and maximum of the
-modified QD function by
-$s^{\textrm{min}}_n=\min\{s_n(\theta)\,:\,\theta\in\Omega^l_n\}$ and, respectively,
-$s^{\textrm{max}}_n=\max\{s_n(\theta)\,:\,\theta\in\Omega^l_n\}$.
-Let
+denotes its normalized value for all $\theta\in\Omega^l_n$ where we compute the minimum and maximum
+of the modified QD by
+$\bar{s}^{\textrm{min}}_n=\min\{\bar{s}_n(\theta)\,:\,\theta\in\Omega^l_n\}$ and, respectively,
+$\bar{s}^{\textrm{max}}_n=\max\{\bar{s}_n(\theta)\,:\,\theta\in\Omega^l_n\}$.
+Also let
 \begin{equation*}
  \Delta_n(\theta)=\min_{\tilde{\theta}\in\Sample_n} ||\theta-\tilde{\theta}||_{2}  
 \end{equation*}
@@ -713,11 +717,11 @@ is added to $\Sample_n$ for evaluation, where $1\leq j\leq r$ and
 $\theta\in\Omega^l_n$. For given weights $0\leq \gamma^l_1,\ldots,\gamma^l_r\leq 1$ we refer to
 $\Gamma^l=\langle \gamma^l_1,\ldots,\gamma^l_r\rangle$ as a \emph{local weight
 pattern} of \emph{cycle length} $r$. The weights define the degree of
-global/local selection of new evaluation points. More specifically, the
-criterion results in minimizing the modified QD if $\gamma^l_r=1$ and
-otherwise, if $\gamma^l_1=0$, maximizing the minimum distance to all other sampling points
-from $\Sample_n$. Cycling through $\Gamma^l$ selects new points which have
-relatively low values of the modified QD and become more distant to previously sampled points
+global/local selection of new evaluation points. More specifically, this 
+local selection criterion results in minimizing the modified QD if
+$\gamma^l_r=1$ and otherwise, if $\gamma^l_1=0$, maximizing the minimum distance to all other sampling
+points from $\Sample_n$. Cycling through $\Gamma^l$ selects new points which
+have relatively low values of the modified QD and become more distant to previously sampled points
 for increasing weights. Based on the newly simulated statistics at the selected
 point the kriging models are updated and thus the QD approximation is further
 improved as represented in the last block at the bottom of Figure \ref{fig:alg}. The process is
@@ -795,7 +799,7 @@ a different selection criterion, is defined by
  u_n(\theta) = \exp\Big\{ -\gamma \, \tilde{s}_n(\theta) \Big\},
 \end{equation}
 where $0\leq\gamma<\infty$ denotes a weight parameter and $\tilde{s}_n$
-denotes the normalized QD in (\ref{eOP}).
+denotes the normalized QD in \eqref{stilde}.
 We select the candidate which maximizes the weighted minimum distance
 \begin{equation}\label{globsamp}
   \theta_{n+1} = \text{arg}\max_{\theta\in\Omega^{g}_n} u_n(\theta)\Delta_n(\theta)
@@ -1128,12 +1132,13 @@ estimation, corresponds to a maximum of the likelihood function. Let
   M &= \hat{I}(\hat{\theta})^{-1}\hat{Q}'(\hat{\theta}),\\
  \intertext{then we can inspect (\ref{Qid}) in terms of its numerical
  properties by:} det_M  &= |1-det(M)|,\\
-  mad_{M} &= \max\{|M-Id|\}\numberthis \label{termCond},\\ 
-  tr_{M} &= |1-tr\{M\}/q|.  
+  max_{M} &= \max_{1\leq i \leq q}\{|1-M_{ii}|\}\numberthis
+  \label{termCond},\\
+  tr_{M} &= |1-tr\{M\}/q|.
 \end{align*}
 For $\hat{\theta}$ to be a consistent root of $\hat{Q}(\hat{\theta})$ (at least
-numerically) we require to hold $det_M<\tau_1$, $mad_M<\tau_2$ or $tr_M<\tau_3$,
-where $\tau_i$ are chosen constants sufficiently small and $i=1,2,3$. In case
+numerically) we require to hold $det_M<\tau_1$, $max_M<\tau_2$ or $tr_M<\tau_3$,
+where $\tau_k$ are chosen constants sufficiently small and $k=1,2,3$. In case
 of multiple roots it is reasonable to choose the one for which (\ref{termCond})
 yields smallest values. Finally, a goodness-of-fit test (see Section
 \ref{subsec:testing}) can be applied in order to select the best root in a
@@ -1203,9 +1208,8 @@ statistic by
 \]
 as the proportion of values $s_j$, $j=1,\ldots,m$, based on the
 simulated data $X^*_j$ under the null hypothesis, exceeding the observed value of
-the test statistic, i.\,e. $s_{obs}$.
-If the observed statistics can be appropriately fitted by the statistical model,
-the value $s_{obs}$ will not be significantly different from the simulated
+the test statistic. If the observed statistics can be appropriately fitted by
+the statistical model, the value $s_{obs}$ will not be significantly different from the simulated
 values of the test statistic. Further, in our implementation, we also allow the
 test statistic to be different from the criterion function which was first used to
 estimate the model parameter.\par
@@ -1227,7 +1231,44 @@ should then change not too much compared to using additional sample points and
 simulations. Finally, since we implicitely estimate the sampling distribution of $\hat{\theta}$
 during the test, we can also calculate the standard error of the estimated
 parameter and derive further error measures based on the inverse QI matrix,
-which we call \emph{predicted standard errors} (see the \proglang{R} examples below).
+which we call \emph{predicted standard errors} (see the \proglang{R} examples
+below).\par
+%
+Optionally, this test procedure is also sequentially employed when promising local minimizers of
+the criterion function are visited during the local phase of the algorithm.
+Suppose that $\hat{\theta}$ is a local minimizer of the criterion function, then we use this test
+in order to assess the plausibility of $\hat{\theta}$
+being a potential root of the corresponding quasi-score vector given the data $X=x$.
+New observations $(x^*_1,\ldots,x^*_m)$ are simulated w.r.t.
+to $\hat{\theta}$ and the algorithm re-estimates the approximate roots
+$\hat{\theta}_j$ for each observation $x^*_j$. If 
+\begin{equation}\label{empQuantile}
+  s(\hat{\theta};x) \leq \hat{F}^{-1}_{m}(1-\alpha)     
+\end{equation}
+holds, where $\hat{F}_m$ denotes the empirical c.d.f. of $s(\hat{\theta}_1;x^*_1),\ldots,s(\hat{\theta}_m;x^*_m)$ related
+to the test statistic $S$, then $\hat{\theta}$ is accepted as an approximate
+root at significance level $\alpha$. In this case the algorithm stays in its local phase and continues sampling around the
+current root according to its asymptotic variance (measured by the inverse of
+the predicted quasi-information) and uses the additional simulation results to improve the current kriging approximations.
+Otherwise, the last evaluation point is used as a starting point
+for next local searches which mimics a random multistart type minimization
+of the criterion function over the next iterations. This approach also has the
+potential to escape regions where the criterion function value is quite low and,
+however, is not considered trustworthy with regard to the empirical
+quantile \eqref{empQuantile} of the test statistic.\par
+%
+We can also derive a statistical stopping condition (see Section
+\ref{subsec:termCond} based on the above procedure. Since the variance of the QL
+estimator is under certain conditions asymptotically equivalent to the inverse of the
+quasi-information in \eqref{qi} we use the the relative difference
+\begin{equation}\label{relDif}
+ \left|1-\frac{ \sqrt{\left[\frac{1}{m}\sum_{j=1}^m (\hat{\theta}-\hat{\theta}_j)(\hat{\theta}-\hat{\theta}_j)^{t}\right]_{ii}}}{ \sqrt{\left[\hat{I}(\hat{\theta})^{-1}\right]_{ii}} }\right|
+\end{equation} 
+for the comparison of the empirical estimation error of $\hat{\theta}\in\Rq$,
+$i=1,\ldots,q$, with its predicted error (measured by the inverse of the
+quasi-information matrix) and stop as soon as both errors deviate less than a user-defined fraction from each other for a specified number of
+consecutive iterations. Further stopping conditions can be found in the
+\proglang{R} manual of the function \code{qle}.
 %
 \section{Estimation with qle in R}\label{sec:Restim}
 The package includes functions for simulating a user-specified statistical
@@ -1326,12 +1367,11 @@ library(qle)
 RNGkind("L'Ecuyer-CMRG")
 set.seed(1356)
 @
+% simfn <- function(tet){ mean(rgeom(1000,prob=1-tet)) }
 First, we define the simulation function.
 <<>>=
 simfn <- function(tet){
-	c(tet/(1-tet) + rnorm(1,0,0.25))
-	## alternatively use 
-	# mean(rgeom(1000,prob=1-tet))
+	c(tet/(1-tet) + rnorm(1,0,0.25))	
 }
 @
 This function returns the mean number of customers of the system including a
@@ -1361,8 +1401,8 @@ approximated by kriging including a global nugget variance. We contruct the QL
 model
 <<>>=
 qsd <- getQLmodel(sim, lb, ub, obs=c("N"=1), var.type="kriging",
-		 set.var=FALSE, var.opts=list("var.sim"=0.001),
-          verbose=TRUE)
+		 set.var=FALSE, var.sim=1e-07, as.nugget=TRUE,
+           var.opts=list("var.sim"=0.001), verbose=TRUE)
 @
 and search for a first estimator of the unknown parameter by quasi-scoring
 without using further simulations of the model.
@@ -1380,54 +1420,6 @@ print(S0)
 \label{fig:mm1q}
 \end{figure}
 
-%\begin{figure}[t!]
-%\centering
-%<<fig=TRUE,echo=FALSE,width=25,height=12.5,eps=FALSE>>=
-%library(graphics)
-%op <-par(mfrow=c(1, 2),cex=1.7,
-%		cex.axis=1.7, cex.lab=1.7,lwd=0.5,
-%		cex.main=1.7, cex.sub=1.7, xaxs='i', yaxs='i')
-%rho <- as.matrix(seq(0.1,0.9,by=0.001))
-%y <- as.numeric(unlist(simQLdata(sim=simfn,nsim=nsim,X=rho,mode="mean")))
-%T <- qsd$qldata[grep("mean.",names(qsd$qldata))]
-%Y <- predictKM(qsd$covT,rho,X,T,krig.type="var")
-%# steady state values
-%y0 <- rho/(1-rho)
-%plot(NULL, type="n", xlab=expression(rho),
-%		ylab="y",xlim=c(lb,ub), ylim=c(0,10))
-%lines(as.numeric(rho),y,col="black",lt=2,lwd=0.3)
-%lines(as.numeric(rho),Y,col="blue",lwd=0.3)
-%lines(as.numeric(rho),y0,col="red",lwd=0.3)
-%legend("topleft", c("Number of customers in the system",
-%				"Expected number at steady state",
-%				"Kriging approximation"),
-%		lty=c(2,1,1),col=c("black","red","blue"),
-%		xpd=TRUE,pt.cex=1.6,cex=1.6)
-%## quasi-deviance plot
-%p <- seq(lb,ub,by=0.0001)
-%QD <- quasiDeviance(X,qsd,value.only=TRUE)
-%qd <- quasiDeviance(as.matrix(p),qsd)
-%y <- sapply(qd,"[[","val")
-%score <- sapply(qd,"[[","score")
-%## plot quasi-deviance and quasi-score function
-%plot(NULL, type="n", xlab=expression(rho),
-%		ylab="quasi-deviance",xlim=c(lb,ub), ylim=c(-10,50))
-%abline(h=0)
-%points(X,QD,pch=3,cex=1)
-%id <- which(score<32)
-%lines(p[id],score[id], type='l',col="blue",lwd=1.5) 
-%lines(p,y,col="black",lwd=0.8)
-%legend("topleft", c("quasi-deviance","quasi-score","sample points", "solution"),
-%		lty=c(1,1),lwd=c(1.5,1.5,NA,NA),pch=c(NA,NA,3,5),
-%		col=c("black","blue","black","magenta"),pt.cex=1.6,cex=1.6)
-%points(S0$par,S0$val,col="magenta",pch=5,cex=1)
-%par(op)
-%@
-%\caption{(Mean) number of customers and its kriging approximation based on the
-%initial design (left). The quasi-deviance and quasi-score function plot (right)
-%based on the same set of sample points.}
-%\label{fig:mm1q}
-%\end{figure}
 The quasi-scoring iteration successfully finished and returns an estimated root
 quite close to the ''true`` one without additional simulations of the model.
 %
@@ -1494,7 +1486,7 @@ using the default options.
 OPT <- qle(qsd,
         simfunc,		
         nsim=100,
-        global.opts=list("maxeval"=100),
+        global.opts=list("maxeval"=30),
         local.opts=list("lam_max"=1e-4,"weights"=0.5))
 print(OPT)
 @
@@ -1551,20 +1543,21 @@ using additional evaluation points (right).}
 \label{fig:qd_normal}
 \end{figure}
 %
-According to the criteria \eqref{termCond} we can assess the consistency of
-\code{OPT\$par} as an estimated parameter 
+Based on the criteria in \eqref{termCond} we can assess the
+(numerical) consistency of the estimated parameter stored in \code{OPT\$par}
 <<>>=
 checkMultRoot(OPT,verbose=TRUE)
 @
-where \code{OPT\$qsd} stores the final QL model. The above results clearly show
-the (numerical) convergence of the current run. Further, the following estimate
-of the sample variance matrix of the statistics w.r.t. the final parameter estimate
-shows a good match compared to its (weighted) sample average approximation \code{Sigma}.
+where the variable \code{OPT\$qsd} includes the final QL approximation
+model and can be used for restarts of the algorithm. The above results clearly
+show the (numerical) convergence of the current run. Further, the following estimate of the
+sample variance matrix of the statistics w.r.t. the estimated parameter
+shows a good match compared to its (weighted) sample average approximation
+by \code{Sigma}.
 <<>>=
-local <- attr(OPT,"final")
 obs0 <- simQLdata(simfunc,X=OPT$par,nsim=1000,mode="matrix")[[1]]
 var(obs0)
-attr(local,"Sigma")
+attr(OPT$final,"Sigma")
 @
 Finally, we can perform a goodness-of-fit test of the estimated parameter.
 <<>>=
@@ -1573,10 +1566,10 @@ Stest <- qleTest(OPT,method=c("qscoring","bobyqa"),
 Stest
 @
 The results not only show that the null hypothesis cannot be rejected but also
-provide predicted and empirical errors of the estimated model parameter. In
-particular, the averaged predicted error, which is based on the averaged inverse
-quasi-information matrix (over all re-estimated parameters), sufficiently relates
-to the standard error and the RMSE of the estimated parameter.
+provide us with empirical and predicted estimation errors of the parameter.
+In particular, the average predicted error, which is based on the averaged
+inverse quasi-information matrix (over all re-estimated parameters),
+also relates to the standard error and the RMSE of the estimated parameter.
 % density of test statistic S
 % den <- density(attr(Stest$test,"Sb"))
 %
@@ -1612,10 +1605,14 @@ which gives the estimated parameters
 <<>>=
 fitMat$modelpar
 @
+<<eval=false>>=
+options(mc.cores=8)
+RNGkind("L'Ecuyer-CMRG")
+set.seed(297)
+@
 To initialize the QL estimation method we proceed as before. We define the
 function which returns the summary statistics:
 <<>>=
-set.seed(297)
 simStat <- function(X,cond){
  x <- Kest(X,r=cond$rr,correction="best")
  x <- x[[attr(x,"valu")]]
@@ -1648,6 +1645,14 @@ The parameter space is defined by the following lower and upper bound vectors.
 lb <- c("kappa"=20,"R"=0.01,"mu"=1)
 ub <- c("kappa"=30,"R"=0.25,"mu"=5)	 
 @
+We initialize the workers of a local cluster (FORK) which also applies in more
+general cases of parallel environments in principle.
+<<eval=false>>=
+cl <- makeCluster(8)
+clusterSetRNGStream(cl)
+clusterCall(cl,fun=function(x) library("spatstat", character.only=TRUE))
+clusterExport(cl=cl,varlist=c("simStat"), envir=environment())
+@
 We evaluate our chosen set of summary statistics given the observed point
 pattern:
 <<eval=false>>=
@@ -1656,7 +1661,7 @@ obs0 <- simStat(redwood,cond)
 and simulate the process model for the first time at randomly generated design points.
 <<eval=false>>=
 sim <- simQLdata(sim=simClust,cond=cond,nsim=nsim,
-          method="randomLHS",lb=lb,ub=ub,N=Nsample)
+          method="randomLHS",lb=lb,ub=ub,N=Nsample,cl=cl)
 @
 Putting all together we then construct the QL model.
 <<eval=false>>=
@@ -1664,12 +1669,13 @@ qsd <- getQLmodel(sim,lb,ub,obs0,criterion="qle",
          var.type="kriging",verbose=TRUE)
 @
 Here we use the kriging approach to approximate the variance matrix estimate
-of the summary statistics. Using CV to predict the errors seems to result in
-more reliable parameter estimates by our method in case of kriging the
-estimate of the variance matrix. Therefore we recommend to analyse the
-prediction errors of the summary statistics first and, if appropriate (see below), to use
-the predicted CV errors. For this, we first re-fit the leave-one-out
-cross-validation models of the sample means of the statistics.
+of the summary statistics. In general, using the cross-validation (CV) approach
+for the evaluation of the prediction errors seems to result in more reliable
+parameter estimates by our method if we use the kriging approach to estimate
+the variance matrix. Therefore we recommend to analyse the prediction errors of
+the summary statistics first and, if appropriate, use the CV-based variances
+instead of those derived from kriging. For this, we first re-fit the
+leave-one-out cross-validation models of the sample means of the statistics.
 <<eval=false>>=
 cvm <- prefitCV(qsd, reduce=FALSE, verbose=TRUE)
 @
@@ -1689,49 +1695,52 @@ crossValTx(qsd, cvm, type = "mse")
 Again, the first one is more sensitive to left-out sample points of
 the initial design compared to the other statistics. This indicates that
 the corresponding kriging model might be less appropriate for some reasons,
-e.\,g. insufficient number of observations or available sample points,
-inaccurate estimates of the covariance parameters or because the chosen type of covariance
-models does not appropriately characterise the simulation outcome. Since the
-true reason is extremely hard to track down in practice we do not go into
-details here. However, we can compare the prediction error of the statistics,
-predicted by the corresponding kriging models, with the actual CV error.
+e.\,g. insufficient number of observations, available sample points or because
+the chosen type of covariance function does not appropriately characterise
+the simulation outcome. Since the true reason is extremely hard to track down in practice
+we do not go into details here. However, we can compare the prediction error of
+the statistics, predicted by the corresponding kriging models, with the actual
+error by the CV approach.
 <<>>=
 crossValTx(qsd, cvm, type = "ascve")
 @
-For values close to one the actual CV error would be equal on average
-to the error predicted by the corresponding kriging model. In our case the above
-values strongly vary for each statistic. We conclude that in this particular
-case the kriging variance underestimates the actual error on average (over
-all sample points) for those statistics whose values are greater than one
-according to \eqref{ASCVE}. An effective remedy is to use the maximum of both
-types of prediction errors. We set:
+For values close to one the actual error (estimated by the CV approach) would be
+equal on average to the error predicted by the corresponding kriging model. In this example the values
+above are quite close to zero for each statistic which indicates that the
+kriging variances rather overestimate the actual error on average over all
+sample points based on the initial design according to the criterion in
+\eqref{ASCVE}. However, using the the maximum of both types of prediction errors
+ensures that we account for the prediction uncertainty due to the design in a
+worst-case scenario while sampling new candidate points and searching for local minimizers.
 <<>>=
 attr(cvm,"type") <- "max"
 @
-which ensures that we sufficiently account for prediction uncertainty of the statistics
-while sampling new candidate points and searching for local minimizers.\par 
-%
-For the first shot we try to find a minimizer starting from the parameter \code{x0}:
+A first run of a global search leads to the following result.
+\code{x0}:
 <<>>=
-x0 <- c("kappa"=20,"R"=0.05,"mu"=3)
+x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
 searchMinimizer(x0,qsd,info=TRUE,
 		method="direct",cvm=cvm,verbose=TRUE)
 @
-We could also try to apply quasi-scoring:
+We could also apply the quasi-scoring iteration.
 <<>>=
 qscoring(qsd,x0,
   opts=list("ftol_rel"=1e-6,"slope_tol"=1e-4),
   cvm=cvm,verbose=TRUE)
 @
-Here both minimization routines find a solution of the QS vector.
-Surely, the scoring iteration is more efficient than the exhaustive global search by the
-method \code{direct} (see package \pkg{nloptr}) in this particular case.\par
+Here both methods find a solution to the QS vector where the latter ends up in a
+local minimizer according to the convergence code. In general, the quasi-scoring
+iteration is practically more efficient than the exhaustive global search by the
+method \code{direct} (see package \pkg{nloptr}).\par
 %
 Since the initial approximation of the QS vector results in quite
-promising (local) parameter estimates we now start the main estimation
-routine. We use the criterion in \eqref{scoreCrit} to select new candidates for
-evaluation, `\code{nextSample}`="\code{score}", a maximum of \code{maxeval} evaluations
-and the quasi-scoring iteration as the primary local minimization routine. 
+promising parameter estimates we now start the main estimation routine. We use
+the criterion in \eqref{scoreCrit} to select new candidates for evaluation, \code{nextSample}="\code{score}",
+a maximum of \code{maxeval} evaluations and the quasi-scoring iteration as the
+primary local minimization routine or root finding method respectively. In
+addition to new evaluation points, we also perform a goodness-of-fit test,
+setting \code{test}=\code{TRUE}, of every local minimizer and use
+the corresponding simulation results for improving the current kriging approximations.
 <<eval=false>>=
 OPT <- qle(qsd, simClust, cond=cond,  
 		global.opts = list("maxiter"=10,
@@ -1741,68 +1750,74 @@ OPT <- qle(qsd, simClust, cond=cond,
                           "nextSample"="score",
                           "ftol_abs"=1e-2,
                           "weights"=c(0.55),
-                          "eta"=c(0.025,0.075)),
+                          "eta"=c(0.025,0.075),
+                          "test"=TRUE),
 		method = c("qscoring","bobyqa","direct"),
-		pl=2, errType="max")
+		pl=2, errType="max", iseed=297, cl=cl)
 @
-The complete results of estimation can be shown by
+The results of the quasi-likelihood estimation are
 <<>>=
-print(OPT,pl=10)
+print(OPT)
 @
-We can also extract further optimization results
+where we also can extract further information of the optimization results by
 <<>>=
 attr(OPT,"optInfo")
 @
-where \code{W} is the quasi-information matrix at parameter \code{theta} as the
-next to the final parameter estimate. Also we can inspect the final (local)
-minimization results
+The matrix \code{W} is the quasi-information matrix at the parameter
+\code{theta} as the next to the final parameter estimate. We can also inspect
+the final minimization results
 <<>>=
-attr(OPT,"final")
+OPT$final
 @
-Based on the above results we use the final quasi-deviance approximation
-(and hence QS vector) to search for other possible minimizers.
+and, based on the above results, we use the final quasi-deviance approximation
+(and hence QS approximation) to search for other local minimizers.
 <<>>=
 S0 <- searchMinimizer(OPT$par,OPT$qsd,
-       method="direct",cvm=OPT$cvm,verbose=TRUE)
+       method="bobyqa",cvm=OPT$cvm,verbose=TRUE)
 @
-If the user is still unsatisfied with the results, we can easily restart a local
-quasi-scoring iteration without simulating the model and eventually might be
-able to improve the final parameter estimate
+If the user is unsatisfied with the estimation result, we can easily restart
+the main estimation routine \code{qle} or start with a local quasi-scoring
+iteration from the last resulting parameter without simulating the model.
 <<>>=
 QS <- qscoring(OPT$qsd,OPT$par,
        opts=list("slope_tol"=1e-4,"score_tol"=1e-3),
        cvm=OPT$cvm)
 @
-A quick check on the consistency of the estimated parameters gives
+The estimated parameters are, however, not much of an improvement
 <<>>=
-par <- rbind("QS"=QS$par,"OPT"=OPT$par,"S0"=S0$par)
+par <- rbind("QS"=QS$par,"S0"=S0$par)
 checkMultRoot(OPT,par=par)
 @
-which shows (by the first row) that the corresponding parameter
+which shows by the row with an asterisk that the corresponding parameter
 <<>>=
-QS$par
+OPT$par
 @
 is the best one according to the criteria defined in Section \ref{subsec:check}.
-Finally, we can assess the goodness-of-fit (Monte Carlo Score-test, see Section \ref{subsec:testing}) of
+We can assess the goodness-of-fit (see Section \ref{subsec:testing}) of
 the estimated parameter based on a simulated sample of size \code{nsim}.
 <<eval=false>>=
-Stest <- qleTest(OPT,QS,sim=simClust,cond=cond, 
+Stest <- qleTest(OPT,sim=simClust,cond=cond, 
   nsim=1000,method=c("qscoring","bobyqa","direct"),  
-  verbose=TRUE)
+  cl=cl,verbose=TRUE)
 @
-<<echo=false>>=
+<<>>=
 print(Stest)
 @
-which shows that the simulated data set provides not enough evidence to
-reject the null hypothesis and thus we cannot distinguish the observed
-statistics from the simulated output of the model.\par
-Further, a short error analysis of the results above reveals that the predicted
-standard error:
+and stop the cluster:
+<<eval=false>>=
+stopCluster(cl)
+@
+The results show that the simulated data set provides not enough evidence
+to reject the null hypothesis and thus we cannot distinguish the observed
+statistics from the simulated output of the model. The last column shows the
+relative difference of the empirical and predicted error at the estimated
+parameter as defined in \eqref{relDif}.\par
+%
+Finally, a short error analysis shows that the predicted standard error
 <<>>=
 diag(attr(Stest,"qi"))^0.5
 @
-of the final parameter estimate (see column \code{Estimate}) gives an
-(asymptotic) lower bound on its \code{RMSE} 
+of the final parameter (see column \code{Estimate}) and its empirical error
 <<>>=
 sqrt(diag(attr(Stest,"msem")))
 @
@@ -1811,9 +1826,7 @@ matrix} of the re-estimated parameters
 <<>>=
 attr(Stest,"msem")
 @
-Compared to parameters $R$ and $\mu$, the parameter $\kappa$ is relatively more
-difficult to be precisely estimated by the model according to its predicted and
-empirical errors.\par
+have the same order of magnitude and compare well with each other.\par
 %
 \begin{figure}[htb!]
 \centering
