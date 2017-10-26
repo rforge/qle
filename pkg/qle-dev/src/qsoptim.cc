@@ -271,7 +271,7 @@ qfs_result qfscoring(double *x,			 	/* start */
          if(slope2 < slope2_tol) {
              FREE_WORK
 			 qfs->num_iter=niter;
-             *info=(*f < qfs->ftol_stop ? QFS_CONVERGENCE : QFS_LOCAL_CONVERGENCE);
+             *info=(*f < qfs->ftol_abs ? QFS_CONVERGENCE : QFS_LOCAL_CONVERGENCE);
              status=QFS_SLOPETOL_REACHED;
              return status;
          }
@@ -285,7 +285,7 @@ qfs_result qfscoring(double *x,			 	/* start */
          if(test < qfs->score_tol) {
            FREE_WORK
 		   qfs->num_iter = niter;
-            *info=(*f < qfs->ftol_stop ? QFS_CONVERGENCE : QFS_LOCAL_CONVERGENCE);
+            *info=(*f < qfs->ftol_abs ? QFS_CONVERGENCE : QFS_LOCAL_CONVERGENCE);
            status=QFS_SCORETOL_REACHED;
            return status;
          }
@@ -303,15 +303,15 @@ qfs_result qfscoring(double *x,			 	/* start */
 			 status=QFS_LINESEARCH_FAILURE;
 
 			 for (i=0;i<n;++i) {
-				   tmp=std::fabs(gradf[i])*std::fabs(x[i])/FMAX(std::fabs(f[i]),DBL_MIN);
+				   tmp=std::fabs(gradf[i]);
 				   if(tmp > test)
 					  test=tmp;
 			 }
-			 // Rprintf("test gradient: %3.12f, %3.12f \n", test, den);
+			 // Rprintf("test gradient: %3.12f \n", test);
 			 // Rprintf("\tnorm gradf: %3.12f\n", sqrt(innerProduct(gradf,gradf,n)));
 
 			 if(test < qfs->grad_tol) {
-				  *info=(*f < qfs->ftol_stop ? QFS_CONVERGENCE : QFS_LOCAL_CONVERGENCE);
+				  *info=(*f < qfs->ftol_abs ? QFS_CONVERGENCE : QFS_LOCAL_CONVERGENCE);
 				 status=QFS_GRADTOL_REACHED;
 			 } else {
 				MEMCPY(x,xold,n);
@@ -420,7 +420,7 @@ SEXP getStatus( qfs_result status ) {
            break;
        // (= +4)
        case QFS_STOPVAL_REACHED:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_STOPVAL_REACHED: Optimization stopped because ftol_stop was reached."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_STOPVAL_REACHED: Optimization stopped because ftol_stop or ftol_abs was reached."));
            break;
        // (= +5)
        case QFS_XTOL_REACHED:

@@ -109,6 +109,7 @@
 		  "xtol_rel"  = .Machine$double.eps^(1/2),
 		  "grad_tol"  = .Machine$double.eps^0.25,
 		  "ftol_rel"  = .Machine$double.eps^(1/3),
+		  "ftol_abs"  = .Machine$double.eps^(1/2),
 		  "score_tol" = 1e-3,
 		  "slope_tol" = 1e-2,
 		  "maxiter" = 100,
@@ -2112,7 +2113,8 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' 
 #'  The following algorithmic options, which can be set by `\code{opts}`, are available:
 #'  \itemize{
-#'   	\item{\code{ftol_stop}:}{ minimum value of quasi-deviance for stopping the scoring iteration}
+#'   	\item{\code{ftol_stop}:}{ minimum value of the quasi-deviance for stopping the scoring iteration}
+#' 		\item{\code{ftol_abs}:}{ minimum value of the quasi-deviance which is used as a reference value for a local minimizer}
 #' 		\item{\code{xtol_rel}, \code{ftol_rel}:}{ see \code{\link{qle}} }
 #' 		\item{\code{grad_tol}:}{ upper bound on the quasi-score vector components,
 #' 				 testing for a local minimum of the quasi-deviance in case of a line search failure}

@@ -45,6 +45,7 @@ typedef struct qfs_options_s {
 
   double grad_tol,        /* stopping criteria */
   	     ftol_stop,
+		 ftol_abs,
 		 ftol_rel,
 		 score_tol,
 		 xtol_rel,
@@ -59,6 +60,7 @@ typedef struct qfs_options_s {
 
 	ftol_rel  = asReal(getListElement( R_options, "ftol_rel" ));
 	ftol_stop = asReal(getListElement( R_options, "ftol_stop"));
+	ftol_abs  = asReal(getListElement( R_options, "ftol_abs"));
 	score_tol = asReal(getListElement( R_options, "score_tol"));
 	xtol_rel  = asReal(getListElement( R_options, "xtol_rel" ));
 	grad_tol  = asReal(getListElement( R_options, "grad_tol" ));
