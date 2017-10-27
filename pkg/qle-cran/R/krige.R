@@ -2,7 +2,7 @@
 # This code is published under the L-GPL.
 #
 # File: 	krige.R
-# Date:  	2011 -- 2017
+# Date:  	22/10/2017
 # Author: 	Markus Baaske
 #
 # Define kriging prediction, variance interpolation,
@@ -40,7 +40,7 @@
 #' X <- as.matrix(qsd$qldata[,1:2])
 #' p <- c("mu"=2,"sd"=1)
 #' 
-#' # simulated statistics at design X
+#' # get simulated statistics at design X
 #' Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
 #' 
 #' # low level prediction, variances and weights
@@ -259,9 +259,8 @@ varLOGdecomp <- function(L) {
 #'    
 #' @examples 
 #'  data(normal)
-#'  # add prediction variances to the variance
-#'  # average approximation in `theta` and invert
-#'  covarTx(qsd,theta=c("mu"=2,"sd"=1),useVar=TRUE,doInvert=TRUE)
+#'  # average approximation of variance matrices
+#'  covarTx(qsd,theta=c("mu"=2,"sd"=1))
 #' 
 #' @author M. Baaske
 #' @rdname covarTx
@@ -543,11 +542,8 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' 
 #' @examples
 #' 
-#' data(normal)
-#' 
-#' # a random LHS sample of N points
-#' p <- multiDimLHS(N=10,qsd$lower,qsd$upper) 
-#' QD <- quasiDeviance(p, qsd)
+#' data(normal) 
+#' quasiDeviance(c(2,1), qsd)
 #'  
 #' @author M. Baaske
 #' @rdname quasiDeviance
@@ -692,18 +688,13 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #'  without using prediction variances as explained above. Note that in this case the argument `\code{Sigma}` is ignored.
 #' 
 #' @examples
-#' \dontrun{ 
-#' data(normal)
-#' 
-#' # a random LHS sample of N points
-#' p <- multiDimLHS(N=10,qsd$lower,qsd$upper) 
-#' 
-#' # (weighted) least squares (LS) criterion
-#' MD <- mahalDist(p, qsd,Sigma=diag(2))
-#' 
-#' # generalized LS (using variance average approximation) 
-#' MD2 <- mahalDist(p, qsd) 
-#' }
+#'  data(normal)
+#'  # (weighted) least squares
+#'  mahalDist(c(2,1), qsd,Sigma=diag(2))
+#'  
+#'  # generalized LS with variance average approximation 
+#' 	# here: same as quasi-deviance
+#'  mahalDist(c(2,1), qsd)  
 #'  
 #' @author M. Baaske
 #' @rdname mahalDist
@@ -802,8 +793,6 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 	
 }
 
-#SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_Vmat,	SEXP R_cm, SEXP R_qdValue
-
 #' @name multiDimLHS
 #'
 #' @title Multidimensional Latin Hypercube Sampling (LHS) generation
@@ -828,9 +817,9 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 #' @examples
 #'  
 #' data(normal)
-#' X <- multiDimLHS(N=10,qsd$lower,qsd$upper,type="matrix")
+#' X <- multiDimLHS(N=5,qsd$lower,qsd$upper,type="matrix")
 #' # augment design X 
-#' rbind(X,multiDimLHS(N=10,qsd$lower,qsd$upper,X=X,
+#' rbind(X,multiDimLHS(N=5,qsd$lower,qsd$upper,X=X,
 #' 				method="augmentLHS",type="matrix"))
 #' 
 #' 

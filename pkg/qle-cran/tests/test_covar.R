@@ -2,7 +2,7 @@
 # This code is published under the L-GPL.
 #
 # File: 	test_covar.R
-# Date:  	12.04.2017
+# Date:  	12/04/2017
 # Author: 	Markus Baaske
 # 
 # Testing REML estimation 

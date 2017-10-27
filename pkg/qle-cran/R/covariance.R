@@ -2,7 +2,7 @@
 # This code is published under the GPL (>=3).
 #
 # File: 	covariance.R
-# Date:  	12.04.2017
+# Date:  	12/04/2017
 # Author: 	Markus Baaske
 #
 # Define covariance structures: SIRF-k and Matern
@@ -198,7 +198,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' 
 #' @title 		Restricted maximum likelihood (REML)
 #' 
-#' @description Calculate the REML function value for given covariance parameters 
+#' @description Calculate the REML function value given a covariance model and (observed) data 
 #' 
 #' @param models   	 object of class \code{krige} (list of covariance models) or class
 #'					 	 \code{covModel} (a single covariance model), see \code{\link{setCovModel}}
@@ -211,7 +211,15 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' @return List of REML function values
 #' 
 #' @details Given a list of covariance models the function calculates the REML function values at
-#'   parameters `\code{pars}`.
+#'   parameter `\code{pars}`.
+#' 
+#' @examples
+#' 	data(normal)
+#'  # sample points
+#'  X <- as.matrix(qsd$qldata[1:2])
+#'  # observed statistic
+#'  T <- qsd$qldata[c("mean.T1")]
+#'  reml(covT,pars=c(1e-4,1.5,0.1),T,X)
 #' 
 #' @author M. Baaske
 #' @rdname reml
@@ -473,9 +481,9 @@ fitCov <- function(models, Xs, data, controls = list(),
 #'   make use of of kriging prediction variances by `\code{useVar}` later for approximation
 #'   of the variance matrix of statstics. If this is \code{TRUE}, then a kriging procedure calculating prediction 
 #'   variances is used. Otherwise we use the so-called \emph{dual} approach which has some computational advantage when
-#'   no prediction variances are needed.
+#'   no prediction variances are needed. For an example please see \code{\link{getQLmodel}}. 
 #' 
-#' 	 See \code{\link{getQLmodel}} for an example. 
+#' @seealso \code{\link{getQLmodel}}, \code{\link{updateCovModels}} 
 #' 
 #' @author M. Baaske
 #' @rdname QLmodel
@@ -592,19 +600,16 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' @param controls		list of control parameters passed to \code{\link[nloptr]{nloptr}} minimization function
 #' @param verbose		if \code{TRUE}, print intermediate information
 #' 
-#' @return List of fitted covariance models for kriging the 
-#'  sample means of statistics named `\code{covT}` and optionally
-#'  the variance matrix of statistics, `\code{covL}`. The object also stores
-#'  the reml optimization parameters `\code{controls}`. 
+#' @return List of fitted covariance models for kriging the sample means of statistics named `\code{covT}` and optionally
+#'  the variance matrix of statistics, `\code{covL}`. The object also stores the reml optimization parameters `\code{controls}`. 
 #' 
 #' @details The function estimates the parameters of the covariance model `\code{sirfk}` by default using REML for kriging
 #'   the statistics and kriging the variance matrix of statistics only if `\code{var.type}` does not equal "\code{const}".
 #'   We use a (self-similar) intrinsic random function of order \eqn{k} (see, e.g. [1]) with \eqn{k=1,2} for all statistics
 #'   (including a default quadratic drift term, \eqn{k=2}). The user can also define different covariance models for each statistic
 #'   separately (see \code{\link{setCovModel}}). If the user prefers to fit all statistics by other covariance models, then these
-#'   can be specified by their names in `\code{model}`. Further arguments are passed to \code{\link{setCovModel}}
-#'   by `\code{...}`.
-#'   		
+#'   can be specified by their names in `\code{model}`. 
+#'    		
 #'   The argument `\code{var.opts}` only sets the options for the covariance models for kriging the variance matrix.
 #'   The optional arguments `\code{var.sim}` and `\code{var.opts$var.sim}` set the local or global
 #'   \dfn{nugget} values for each sample point depending on `\code{set.var}`. Both arguments (passed to \code{\link{setCovModel}})
@@ -620,6 +625,13 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #'   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. Also see function
 #'   \code{\link{getQLmodel}} for an example. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.
 #'  
+#' @examples 
+#'  data(normal)
+#' 	# fit generalized covariance model to the data, see first parameter,
+#'  # and use simulation variances as local nugget variances
+#' 	mods <- fitSIRFk(qsd$qldata, verbose=TRUE)	
+#' 
+#' 
 #' @author M. Baaske
 #' @rdname fitSIRFk
 #' @export
@@ -720,7 +732,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 	 }
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)
-	 mods <- doInParallel(c(covT,covL), doREMLfit, Xs=Xs, opts = opts,
+	 mods <- doInParallel(c(covT,covL), doREMLfit, Xs=Xs, opts=opts,
 			 	cl=cl, verbose=verbose)
 		
 	 if(inherits(mods,"error")) {
@@ -867,18 +879,18 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #' # old design
 #' X <- as.matrix(qsd$qldata[c(1,2)])
 #' 
-#' # augment design
-#' Xnew <- multiDimLHS(N=10,qsd$lower,qsd$upper,X=X,
+#' # augment design with two additional points
+#' Xnew <- multiDimLHS(N=2,qsd$lower,qsd$upper,X=X,
 #'            method="augmentLHS",type="matrix")
 #' 
 #' # new simulations
-#' Xsim <- simQLdata(sim=qsd$sim,nsim=100,X=Xnew)
+#' Xsim <- simQLdata(sim=qsd$sim,nsim=10,X=Xnew)
 #' 
 #' # prepare data
 #' Xdata <- setQLdata(Xsim,Xnew,chol=TRUE)
 #' 
-#' # re-estimate covariance parameters
-#' qsd2 <- updateCovModels(qsd,Xdata,fit=TRUE) 
+#' # do not re-estimate covariance parameters
+#' qsd2 <- updateCovModels(qsd,Xdata,fit=FALSE) 
 #'  
 #' 
 #' @author M. Baaske

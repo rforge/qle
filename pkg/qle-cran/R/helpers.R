@@ -2,7 +2,7 @@
 # This code is published under the GPL (>=3).
 #
 # File: 	helpers.R
-# Date:  	12.04.2017
+# Date:  	12/08/2017
 # Author: 	Markus Baaske
 #
 # Define a set of auxiliary functions 

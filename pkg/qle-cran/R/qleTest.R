@@ -2,7 +2,7 @@
 # This code is published under the GPL (>=3).
 #
 # File: 	krige.R
-# Date:  	20.10.2017
+# Date:  	20/10/2017
 # Author: 	Markus Baaske
 #
 # Monte Carlo based testing procedure using an approximate

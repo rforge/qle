@@ -2,7 +2,7 @@
 # This code is published under the GPL (>=3).
 #
 # File: 	qsOpt.R
-# Date:  	2013 -- 2017
+# Date:  	20/10/2017
 # Author: 	Markus Baaske
 #
 # Functions for Quasi-likelihood based estimation as well as

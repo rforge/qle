@@ -2,7 +2,7 @@
 # This code is published under the L-GPL.
 #
 # File: 	test_quasiDeviance.R
-# Date:  	27.07.2017
+# Date:  	27/07/2017
 # Author: 	Markus Baaske
 # 
 # Testing quasi-deviance return values 
@@ -42,7 +42,7 @@ D$varS
 (C <- B%*%diag(D$sig2)%*%t(B))
 
 # variance matrix of statistics Var(T(X))
-S
+print(S)
 covarTx(qsd,theta=x0,useVar=TRUE)
 
 # value quasi-deviance

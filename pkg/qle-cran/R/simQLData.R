@@ -2,7 +2,7 @@
 # This code is published under the GPL (>=3).
 #
 # File: 	simQLData.R
-# Date:  	2012 -- 2017
+# Date:  	25/10/2017
 # Author: 	Markus Baaske
 #
 # Functions to collect the simulation results
