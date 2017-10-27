@@ -1,0 +1,7 @@
+SOURCES_C =  \
+	     auxil.cc \
+	     kriging.cc \
+		 covariance.cc \
+		 initError.cc \
+		 qloptr.cc \
+		 qsoptim.cc

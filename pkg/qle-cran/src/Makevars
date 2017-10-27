@@ -1,0 +1,12 @@
+PKG_LIBS =  $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CFLAGS) 
+PKG_CFLAGS  =  $(SHLIB_OPENMP_CFLAGS)
+PKG_CPPFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+
+PKG_CFLAGS=-Wall -Wextra -pedantic -O0 -ggdb 
+PKG_CPPFLAGS=-Wall -Wextra -pedantic -O0 -ggdb 
+
+include ./SOURCES_C.mkf
+OBJECTS = $(SOURCES_C:.cc=.o)
+all: $(SHLIB) cleanlibs
+cleanlibs:
+	-rm -f $(OBJECTS)
