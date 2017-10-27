@@ -2122,7 +2122,11 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' 							 iterates and further values}
 #'  } 
 #'
-#' @example  inst/examples/scoring.R
+#' @examples
+#' 
+#' data(normal)
+#' QS <- qscoring(qsd,x0=c("mu"=3.5,"sigma"=0.5),
+#'          opts=list("score_tol"=1e-7))
 #' 
 #' @author M. Baaske
 #' @rdname qscoring
