@@ -146,6 +146,13 @@
 #'  We measure this dissimilarity of both matrices evaluated at some given approximate roots `\code{par}` for which these
 #'  criteria should be neglectably small to be a plausible root. By the smallest value we extract the best root.
 #'  
+#' @examples 
+#'  data(normal)
+#'  # a dummy estimation result: no new evaluations
+#'  OPT <- qle(qsd,qsd$sim,global.opts=list("maxeval"=0))
+#'  # and just a single root 
+#'  checkMultRoot(OPT,verbose=TRUE)
+#' 
 #' @author M. Baaske
 #' @rdname checkMultRoot
 #' @export
@@ -355,7 +362,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 #'  P-value for testing, we (artifically) generate new observations from the outcome of the model replications and re-estimate the model
 #'  parameter for each realization in the same way as done before when estimating the model parameter. This includes all versions
 #'  of variance approximations (by kriging or average approximations) and types of prediction variances (by kriging or the CV-based
-#'  approach) used to construct the statistics for estimating the parameter. For an in depth example see the package vignette.
+#'  approach) used to construct the statistics for estimating the parameter. For an in-depth example please see the package vignette.
 #' 
 #' @author M. Baaske
 #' @rdname qleTest

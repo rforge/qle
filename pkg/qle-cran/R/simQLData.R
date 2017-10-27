@@ -120,20 +120,13 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 #'  each result in a separate file and makes the data reproducible while loading the data again.
 #' 
 #' @author M. Baaske 
+#' 
 #' @examples 
-#' \dontrun{
-#' 
-#' # set this option TRUE if we wish to 
-#' # cache (simulation) results
-#' options(mc.cores=4)
-#' options(qle.cache=TRUE)
-#' 
-#' # a simple lognormal model for estimation
+#' # generate design points, simulate and return the sample means
 #' sim <- simQLdata(sim=function(x) rlnorm(1,x[1],x[2]),
-#'          nsim=25,N=12, method="maximinLHS",
-#'          lb=c(-1.5,0),ub=c(2,1)) 
-#' }
-#'  
+#'          nsim=25,N=8, method="maximinLHS",
+#'          lb=c(-1.5,0),ub=c(2,1), mode="mean") 
+#'   
 #' @importFrom stats na.omit
 #' @rdname simQLdata
 #' @export
@@ -301,23 +294,19 @@ varCHOLdecomp <- function(matList) {
 #'  matrices using the decomposed Cholesky terms.
 #' 
 #' @examples 
-#' \dontrun{ 
 #' # simulate model statistics at LHS design
 #' sim <- simQLdata(sim =
 #'          function(x,cond) {
 #'            X <- rlnorm(cond$n,x[1],x[2])
 #'            c("MED"=median(X),"MAD"=mad(X))
 #'          },
-#'          cond=list("n"=100),
-#'          nsim=25, N=12, method="maximinLHS",
+#'          cond=list("n"=10),
+#'          nsim=10, N=10, method="maximinLHS",
 #'          lb=c("mu"=-1.5,"sd"=0), ub=c("mu"=2,"sd"=1))
 #' 
-#' # get data with Cholesky decomposed terms
-#' # for variance average approximation later
-#' qld <- setQLdata(sim,chol=TRUE,verbose=TRUE) 
-#' print(qld)
-#' }
-#'  
+#' # setup QL approximation mode
+#' qldata <- setQLdata(sim,chol=TRUE,verbose=TRUE) 
+#'   
 #' @author M. Baaske
 #' @rdname 	setQLdata
 #' @export

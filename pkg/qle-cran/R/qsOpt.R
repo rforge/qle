@@ -182,11 +182,8 @@
 #'  for functions \code{\link{qscoring}} and \code{\link{qle}}.
 #' 
 #' @examples
-#' \dontrun{
-#' # options for a 3D parameter estimation
-#' getDefaultOptions(3)
-#' }
-#' 
+#' getDefaultOptions(xdim=2)
+#'  
 #' @author M. Baaske
 #' @rdname getDefaultOptions
 #' @export
@@ -347,7 +344,6 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #'  equal to "\code{sigK}". 
 #'
 #' @examples
-#' \dontrun{
 #' data(normal)
 #' 
 #' # design matrix and statistics
@@ -363,7 +359,7 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #' 
 #' # and kriging standard error  
 #' sqrt(varKM(qsd$covT,theta0,X,Tstat)) 	 
-#' }
+#' 
 #' 
 #' @seealso \code{\link[parallel]{makeCluster}}
 #'
@@ -471,10 +467,12 @@ updateCV <- function(i, qsd, fit, ...) {
 #'  points deleted from the full sample set with overall \eqn{n} sample points such that \eqn{n=n_c k} (see vignette). 
 #' 
 #' @examples 
-#'  \dontrun{
 #'   data(normal)
+#'   # without re-estimation of covariance parameters
+#'   qsd$cv.fit <- FALSE
 #'   cvm <- prefitCV(qsd)
-#'  }
+#'   
+#' @seealso \code{\link{QLmodel}}
 #' 
 #' @author M. Baaske
 #' @rdname prefitCV
@@ -665,7 +663,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #'  chosen. Then `\code{x0}` is still required but ignored as a starting point since it uses the "center point" of
 #'  the (hyper)box constraints internally. In addition, if CV models `\code{cvm}` are given, the CV based prediction variances
 #'  are inherently used during consecutive iterations of all methods. This results in additional computational efforts
-#'  due to the repeated evaluations of the statistics to calculate these variances for each new iterate.  
+#'  due to the repeated evaluations of the statistics to calculate these variances during each new iteration.  
 #' }
 #' 
 #' @return A list as follows
@@ -678,11 +676,10 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' 
 #' @examples
 #' data(normal)
-#' # many iterations needed with `cobyla` 
-#' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="cobyla",verbose=TRUE)
-#' # if quasi-scoring fails, use DFO method 
-#' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,
-#'  method=c("qscoring","bobyqa"),verbose=TRUE) 
+#' # first use `bobyqa` only
+#' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="bobyqa",verbose=TRUE)
+#' # or as fallback method if quasi-scoring fails to converge 
+#' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method=c("qscoring","bobyqa"),verbose=TRUE) 
 #' 
 #' @seealso \code{\link[nloptr]{nloptr}}
 #' 			
@@ -2101,9 +2098,9 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #'  \subsection{Quasi-scoring under uncertainty}{ 
 #'  The quasi-scoring iteration covers both kinds of prediction variances, kriging-based and those by a cross-validation
 #'  approach, which account for the uncertainty induced by the quasi-score approximation model. By default kriging variances
-#'  at each iterate are included in the computation. If fitted covariance models `\code{cvm}` are supplied by the user
+#'  are included in the computation during the iterations. If fitted covariance models `\code{cvm}` are supplied by the user
 #'  in advance, the variances of prediction errors of each statistic are separately evaluated by the proposed cross-validation
-#'  approach (see vignette) at each new iterate. For the price of relatively high computational costs those prediction variances
+#'  approach (see vignette) for each new point. For the price of relatively high computational costs those prediction variances
 #'  are intended to increase the robustness against false roots due to simulation and approximation errors of the quasi-score function.
 #' 
 #'  Opposed to this, the user also has the option to carry out a "pure version" of quasi-scoring without accounting for
