@@ -7,7 +7,7 @@
 # 
 # Test the criterion function minimization
 
-library(qle)
+library(qledev)
 data(normal)
 
 # default method is quasi-scoring

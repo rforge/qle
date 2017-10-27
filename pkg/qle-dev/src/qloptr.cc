@@ -44,7 +44,7 @@ static R_CallMethodDef CallEntries[] = {
 };
 
 
-void R_init_qle(DllInfo *info)
+void R_init_qledev(DllInfo *info)
 {
   R_registerRoutines(info, CEntries, CallEntries, FEntries, NULL);
   R_useDynamicSymbols(info, FALSE);

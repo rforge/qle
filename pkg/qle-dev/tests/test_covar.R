@@ -7,7 +7,7 @@
 # 
 # Testing REML estimation 
 
-library(qle)
+library(qledev)
 data(normal)
 
 # default reml optimization controls, see nloptr

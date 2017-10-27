@@ -2,18 +2,18 @@
 # This code is published under the GPL (>=3).
 #
 # File: 	qle-package.R
-# Date:  	20.10.2017
+# Date:  	27/10/2017
 # Author: 	Markus Baaske
 # 
 # General description of the package and data sets
 
-#'  Simulated Quasi-likelihood Estimation Method
+#'  Simulation-Based Quasi-Likelihood Estimation
 #' 
-#'  We provide methods for parameter estimation of a general class of simulatable statistical models,
-#'  where standard parameter estimation methods, such as maximum likelihood, least squares or Bayesian
+#'  We provide a method for parameter estimation of parametric statistical models which can be at least
+#'  simulated and where standard methods, such as maximum likelihood, least squares or Bayesian
 #'  algorithms (including MCMC) are not applicable. We follow the basic \emph{quasi-likelihood} theory [3]
 #'  to estimate the unknown model parameter by finding a root of the so-called \dfn{quasi-score} estimating
-#'  function. A comprehensive description of the estimation algorithm is given in the vignette of this package.
+#'  function. For an overview of our method and further in-depth examples please see the vignette.
 #' 
 #'  The basic idea is to transform the general parameter estimation problem into a global (black box) optimization problem
 #'  (see [1]) with an expensive to evaluate objective function. This function can only be evaluated with a substantial random
@@ -57,18 +57,17 @@ NULL
 
 #' A normal model
 #'
-#' A pedagogic example of a statistical model using random numbers
-#' sampled from a normal distribution.
+#' A statistical model of random numbers
 #' 
-#' This is a pedagogic example of a (simulated) dataset for quasi-likelihood estimation based
-#' on normally distributed random numbers. The model outcome is a vector of summary statistics, that is,
-#' the median and mean average deviation of \code{n=10} random numbers, which is evaluated at the
+#' This is a pedagogic example of a simulated data set for quasi-likelihood estimation using
+#' normally distributed random numbers. The model outcome is a vector of summary statistics, that is,
+#' simply the median and mean average deviation of \code{n=10} random numbers, which is evaluated at the
 #' model parameter \eqn{\theta=(\mu,\sigma)} with mean \eqn{\mu} and standard deviation \eqn{\sigma} as
 #' the parameters of the normal distribution. We estimate the model parameter given a specific
-#' "observation" of those summary statistics. Clearly, the method of maximum likelihood would be the default
-#' method to use if we had a real sample of observations. However,
-#' we use a simulated quasi-likelihood estimation approach in order to demonstrate the basic workflow of how to
-#' initialize and use the package. Also we use this model as a standard example in the package documentation.   
+#' "observation" of those summary statistics. Clearly, maximum likelihood estimation would be the 
+#' method of first choice if we had a real sample of observations. However, this example is used to demonstrate
+#' the basic workflow of estimating the model parameter. We use this model as a standard example in the package
+#' documentation.   
 #' 
 #' @docType data
 #' @keywords datasets
@@ -80,17 +79,15 @@ NULL
 
 #' Matern cluster process data 
 #' 
-#' An example data set of a fitted Matern cluster point process model for the `\code{redwood}`
-#' data (see package \code{spatstat}).
-#' 
-#' The model was fitted by our quasi-likelihood estimation method. 
+#' A data set of quasi-likelihood estimation results of estimating the parameters of a Matern cluster
+#' point process model for the `\code{redwood}` data set from the package \code{spatstat}.
 #' 
 #' @docType data
 #' @keywords datasets
 #' @name matclust
 #' @usage data(matclust)
-#' @format A list named `\code{matclust}` with entries `\code{qsd0}` (final QL model after estimation),
-#'  `\code{OPT}` (results of estimation by function \code{qle}) and `\code{Stest}` (the Scoring test).
+#' @format A list named `\code{matclust}` with objects `\code{qsd}`, initial quasi-likelihood approximation model,
+#'  `\code{OPT}`, the results of estimation by \code{\link{qle}} and the score test results `\code{Stest}`.
 #' 
 #' @author M. Baaske
 NULL

@@ -7,7 +7,7 @@
 # 
 # Testing quasi Fisher-scoring iteration
 
-library(qle)
+library(qledev)
 data(normal)
 
 # starting point

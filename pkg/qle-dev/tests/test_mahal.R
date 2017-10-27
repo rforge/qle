@@ -8,7 +8,7 @@
 # 	Test Mahalanobis distance with weighting matrix  
 #	and average approximation of variance matrix
 
-library(qle)
+library(qledev)
 data(normal)
 
 # these options are usually

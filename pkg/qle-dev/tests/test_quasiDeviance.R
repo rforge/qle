@@ -7,7 +7,7 @@
 # 
 # Testing quasi-deviance return values 
 
-library(qle)
+library(qledev)
 data(normal)
 
 # design, statistics, predictions

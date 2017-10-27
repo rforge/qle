@@ -1094,7 +1094,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @author M. Baaske
 #' @rdname qle
 #' 
-#' @useDynLib qle, .registration = TRUE, .fixes = "C_"
+#' @useDynLib qledev, .registration = TRUE, .fixes = "C_"
 #' @export 
 #' 
 #' @import parallel stats
