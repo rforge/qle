@@ -73,7 +73,7 @@ NULL
 #' @keywords datasets
 #' @name qsd
 #' @usage data(normal)
-#' @format see \code{\link{QLmodel}} 
+#' @format same format as an object of class \code{\link{QLmodel}} 
 #' @author M. Baaske
 NULL
 
@@ -86,8 +86,12 @@ NULL
 #' @keywords datasets
 #' @name matclust
 #' @usage data(matclust)
-#' @format A list named `\code{matclust}` with objects `\code{qsd}`, initial quasi-likelihood approximation model,
-#'  `\code{OPT}`, the results of estimation by \code{\link{qle}} and the score test results `\code{Stest}`.
+#' @format A list object named `\code{matclust}` which consists of
+#'   \decribe{
+#' 	   \item{qsd}{ initial quasi-likelihood approximation model}
+#'     \item{OPT}{ the results of estimation by \code{\link{qle}}}
+#'     \item{Stest}{ score test results }
+#'    }
 #' 
 #' @author M. Baaske
 NULL

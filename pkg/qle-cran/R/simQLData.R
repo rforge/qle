@@ -187,9 +187,7 @@ simQLdata <-
 		split(res, cut(seq_along(res),np,labels=FALSE))
 	  else list(res)
 
-	nms <- NULL
-	mode <- match.arg(mode)		
-	
+	mode <- match.arg(mode)	
 	RES <- lapply(res,
 			function(x) {			
 				 # remove errors in results				 
@@ -225,8 +223,7 @@ simQLdata <-
 	nErr <- which(sapply(RES, function(x) !is.null(attr(x,"error"))))
 	
 	structure(RES,
-			  nsim=nsim,
-			  names=nms,
+			  nsim=nsim,			 
 			  X=.LIST2ROW(X),
 			  iseed=iseed,
 		 	  error=if(length(nErr) > 0L) nErr else NULL,

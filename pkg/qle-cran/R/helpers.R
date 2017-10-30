@@ -32,9 +32,14 @@
 }
 
 .ROW2LIST  <- function(x) {
-    if(is.vector(x))
-	  return (list(x))
-	lapply(seq_len(NROW(x)), function(i) x[i,])
+	if(is.vector(x))
+	 return (list(x))
+	else if(is.matrix(x)){
+ 		nms <- dimnames(x)[[2]]
+		lapply(seq_len(NROW(x)), function(i) structure(x[i,], names=nms))
+	} else {
+		stop("Non supported type of conversion.") 
+	}
 }
 
 .LIST2ROW <- function(x) {
@@ -45,7 +50,9 @@
 		lapply(x,function(x)
 			 unlist(x,recursive=FALSE))
     )
-  } else stop("`.LIST2ROW`: Non supported parameter type.")
+  } else {
+	  stop("Non supported type of conversion.")
+  }
 }
 
 

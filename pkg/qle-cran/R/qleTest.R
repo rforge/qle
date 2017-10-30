@@ -164,9 +164,8 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
   
    # always use estimate from est first
    if(!is.null(par)){
-	   if(!is.matrix(par))
-		 stop("`par` should be a matrix of additional parameters.")
-	   stopifnot(length(par) != length(est$par))	   
+	   par <- .LIST2ROW(par)
+	   stopifnot(NCOL(par)==length(est$par))	   
    }
    par <- rbind("par"=est$par,par) 
    info <- attr(est,"optInfo")  			   

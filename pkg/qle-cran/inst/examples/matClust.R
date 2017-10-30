@@ -4,8 +4,6 @@
 
 library(qle)
 library(spatstat)
-data(matclust)
-OPT <- matclust$OPT
 
 # set options
 options(mc.cores=8)

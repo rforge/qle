@@ -1,3 +1,4 @@
+\dontrun{
 ## 1D example of QLE:
 ## Simulate M/M/1 queue using its (noisy) steady
 ## state distribution, estimate the parameter `rho` by
@@ -5,14 +6,15 @@
 library(qle)
 # setting RNG and seed
 RNGkind("L'Ecuyer-CMRG")
+#options(mc.cores=1)
 set.seed(1356)
 
 ## steady state function
 # success parameter: 1-rho
 # equivalently use `rgeom`
 simfn <- function(tet) {
-	c(tet/(1-tet) + rnorm(1,0,0.25))
-	# mean(rgeom(100,prob=1-tet[1]))		
+	#c("N"=tet/(1-tet) + rnorm(1,0,0.25))
+	mean(rgeom(15,prob=1-tet[1]))		
 }
 
 # parameter space
@@ -46,10 +48,21 @@ obs <- c("N"=tet0/(1-tet0) )
 ## Note that we use the default `controls`
 ## parameter although we could choose
 ## different settings for optimization.
-qsd <- getQLmodel(sim, lb, ub, obs, var.type="kriging",
-		 set.var=FALSE, var.sim=1e-07, as.nugget=TRUE,
-		 var.opts=list("var.sim"=0.001), verbose=TRUE)
- 
+
+qsd <- getQLmodel(sim, lb, ub, obs,
+		var.type="logMean", verbose=TRUE)
+
+qsd <- getQLmodel(sim, lb, ub, obs,
+		var.type="kriging",
+		var.opts = list("var.sim"=1e-3,"nugget"=1e-2), verbose=TRUE)
+
+#qsd <- getQLmodel(sim, lb, ub, obs,
+#		var.type="kriging", verbose=TRUE)
+
+#qsd <- getQLmodel(sim, lb, ub, obs, var.type="kriging",
+#		 set.var=FALSE, var.sim=1e-07, as.nugget=TRUE,
+#		 var.opts=list("var.sim"=0.001), verbose=TRUE)
+# 
 ## powexp
 #qsd <- getQLmodel(sim, lb, ub, obs, var.type="kriging",
 #		 nfit=1, set.var=FALSE, model="powexp",
@@ -87,20 +100,26 @@ y0 <- rho/(1-rho)
 #		cex.main=2.2, cex.sub=2.2, xaxs='i', yaxs='i')
 #----------------------------------------------------------------------------------------------------
 
+#op <-par(mfrow=c(1, 2),
+#		cex=1.7, cex.axis=1.7, cex.lab=1.7,lwd=0.5,
+#		cex.main=1.7, cex.sub=1.7,
+#		xaxs='i', yaxs='i')
+
 ## kriging approximation
+op<-par(mfrow=c(1,2))
 plot(NULL, type="n", xlab=expression(rho),
 		ylab="T",xlim=c(0,1), ylim=c(0,10))
 
 lines(as.numeric(rho),y,col="black",lt=2)
 lines(as.numeric(rho),Y,col="blue")
 lines(as.numeric(rho),y0,col="red")
-legend("topleft", c("Number of customers in the system",
-				    "Expected number at steady state",
-					"Kriging approximation"),
-			cex=2.2, lty=c(2,1,1),col=c("black","red","blue"))
+#legend("topleft", c("Number of customers in the system",
+#				    "Expected number at steady state",
+#					"Kriging approximation"),
+#			cex=2.2, lty=c(2,1,1),col=c("black","red","blue"))
 
 # quasi-deviance plots
-p <- seq(lb[1],ub[1],by=0.0001)
+p <- seq(0,1,by=0.0001)
 QD <- quasiDeviance(X,qsd,value.only=TRUE)
 qd <- quasiDeviance(as.matrix(p),qsd)
 y <- sapply(qd,"[[","value")
@@ -108,14 +127,15 @@ score <- sapply(qd,"[[","score")
 
 ## plot quasi-deviance and quasi-score function
 plot(NULL, type="n", xlab=expression(rho),
-      ylab="quasi-deviance",xlim=c(lb,ub), ylim=c(-10,50))
+      ylab="quasi-deviance",xlim=c(0,1), ylim=c(-10,50))
 abline(h=0)
 points(X,QD,pch=3)
 lines(p,score, type='l',col="blue",lwd=1.5) 
 lines(p,y,col="black",lwd=0.8)
-legend("top", c("quasi-deviance","quasi-score","sample points", "solution"),
-		lty=c(1,1),lwd=c(1.5,1.5,NA,NA),pch=c(NA,NA,3,5),cex=2.2,
-		col=c("black","blue","black","magenta"))
+#legend("top", c("quasi-deviance","quasi-score","sample points", "solution"),
+#		lty=c(1,1),lwd=c(1.5,1.5,NA,NA),pch=c(NA,NA,3,5),cex=2.2,
+#		col=c("black","blue","black","magenta"))
+par(op)
 
 # par(op)
 # dev.off()
@@ -130,22 +150,49 @@ opts <- list("pl"=0, # change to > 1 for output
 x0 <- c("rho"=0.25)
 # qscoring(qsd,x0,opts)
 S0 <- searchMinimizer(x0, qsd, opts=opts,
-       method=c("qscoring","bobyqa"), verbose=TRUE)
+       method=c("qscoring"),verbose=TRUE)
+
 points(S0$par,S0$val,col="magenta",pch=5)
 
-# check
-(QD <- quasiDeviance(S0$par,qsd)[[1]])
-
 # start sampling estimation
+#debug(qle)
 OPT <- qle(qsd,
-		   simfn,		     	
-		   global.opts = list("maxiter" = 20, "NmaxLam"=5,"maxeval"=25),
+		   simfn, 	     	
+		   global.opts = list("maxeval"=5,"NmaxLam"=5),
 		   local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,
-				             "lam_max"=1e-5,"useWeights"=FALSE,"eta"=c(0.01,0.1)),
+				             "lam_max"=1e-5,"useWeights"=TRUE),
 		   method = c("qscoring","bobyqa","direct"),
 		   plot=TRUE, pl = 100) 
 
 print(OPT)
 
+#debug(checkMultRoot)
+checkMultRoot(OPT,par=S0$par)
+
 # final criterion function results
 OPT$final
+
+## plotting
+dev.new()
+op <-par(cex=1.7, cex.axis=1.7, cex.lab=1.7,lwd=0.5,
+		cex.main=1.7, cex.sub=1.7,
+		xaxs='i', yaxs='i')
+qd <- quasiDeviance(as.matrix(p),OPT$qsd)
+y <- sapply(qd,"[[","value")
+score <- sapply(qd,"[[","score")
+## plot quasi-deviance and quasi-score function
+plot(NULL, type="n", xlab=expression(rho),
+		ylab="quasi-deviance",xlim=c(lb,ub), ylim=c(-10,50))
+abline(h=0)
+lines(p,score, type='l',col="blue",lwd=1.5) 
+lines(p,y,col="black",lwd=0.8)
+X <- as.matrix(OPT$qsd$qldata[,1])
+QD <- quasiDeviance(X,OPT$qsd,value.only=TRUE)
+points(X,QD,pch=3,cex=1)
+points(OPT$par,OPT$val,col="magenta",pch=5)
+legend("topleft", c("quasi-deviance","quasi-score","sample points", "QL estimate"),
+		lty=c(1,1),lwd=c(1.5,1.5,NA,NA,NA),pch=c(NA,NA,3,5,8),
+		col=c("black","blue","black","magenta","green"),pt.cex=1.6,cex=1.6)
+par(op)
+
+}

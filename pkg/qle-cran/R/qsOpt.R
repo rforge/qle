@@ -728,19 +728,17 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	 } else {
 		fun.name <- "qscoring"
 		m1 <- pmatch(fun.name,method)
-		if(!is.na(m1)) {
+		if(!is.na(m1)){
 		 if(m1!=1)
 		  method <- c("qscoring",method[-m1])		
 		 tryCatch({			
 		    qscoring(qsd,x0,opts,...,check=FALSE,pl=pl,verbose=verbose)
-		   }, error = function(e) {		   
-			   e			   
-		   }
+		   }, error = function(e) {	e }
   		 )
 		} else NULL
 	}
 	
-    if(!is.null(S0) && (inherits(S0,"error") || S0$convergence <= 0L)){
+    if(!is.null(S0) && .isError(S0)){
 	   if(pl > 0L) { 
 		 cat("Minimization by `",fun.name,"` did not converge")
 		 if(!is.null(S0$status))
@@ -748,10 +746,13 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		 cat(".","\n")
 	   }
 		method <- method[-1]
-		S0 <- NULL
+		if(is.na(method[1])){
+			message("No convergence and only one method supplied")
+			return(S0)	
+		}		
     }
 	
-	if(is.null(S0)){	  	
+	if(is.null(S0) || S0$convergence <= 0L) {	  	
 	  S0 <- 
 		tryCatch({			
 			if(length(control) == 0L){
@@ -841,8 +842,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		})	
 	}
 	if(.isError(S0))
-	  return(S0)
-		
+	  return(S0)		
 	if(!is.null(nms))
  	  names(S0$par) <- nms     
  	
@@ -917,8 +917,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' 	  \item{cvm}{ CV fitted covariance models}
 #'    \item{why}{ names of stopping conditions matched}
 #'	  \item{final}{ final local minimization results of the criterion function, see \code{\link{searchMinimizer}} }
-#'	  \item{roots}{ data frame of estimated roots of the quasi-score}
-#' 	  \item{score}{ quasi-score vector or gradient of the Mahalanobis distance}
+#'	  \item{score}{ quasi-score vector or gradient of the Mahalanobis distance}
 #' 	  \item{convergence}{ logical, whether the iterates converged, see details} 	  
 #' 
 #'  Attributes: 	 
@@ -963,10 +962,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  "\code{kriging}" corresponds to continuously updating the variance matrix each time a new criterion function value is
 #'  required at any point of the parameter space. In this way the algorithm can also be seen as a simulated version of a least squares
 #'  method or even as a special case of a \emph{simulated method of moments} (see, e.g. [3]). Note that some input combinations
-#'  concerning the variance approximation types are not applicable since the criterion "\code{qle}", which exploits the
-#'  QD criterion function, does not use a constant variance at all. For this criterion the (numerical) consistency is automatically checked for all
-#'  roots found during the estimation procedure and stored in the data frame object `\code{roots}` where the best one is marked by a star `*`.
-#'  A parameter gets a second star if it has a smaller maximum component of the quasi-score among more than one equivalently rated roots.
+#'  concerning the variance approximation types are not applicable since the criterion "\code{qle}", which uses the
+#'  QD criterion function, does not support a constant variance matrix at all.
 #'  }
 #'       
 #'  \subsection{Monte Carlo (MC) hypothesis testing}{ The algorithm sequentially evaluates promising local minimizers of the criterion function during
@@ -991,8 +988,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  If one of the other termination criteria is met in conjunction with a neglectable value of the criterion function, we
 #'  say that the algorithm successfully terminated and converged to a local minimizer of the criterion function which could be an approximate root of the quasi-score
 #'  vector. We then can perform a goodness-of-fit test in order to assess its plausibility (see \code{\link{qleTest}}) and quantify the empirical and predicted
-#'  estimation error. In case of multiple local minima the data frame `\code{roots}` also gives a hint on the best root found (see \code{\link{checkMultRoot}} and the vignette).
-#'  If we wish to improve the final estimate the algorithm allows for a simple warm start strategy though not yet as an fully automated
+#'  estimation error. If we wish to improve the final estimate the algorithm allows for a simple warm start strategy though not yet as an fully automated
 #'  procedure. The algorithm can be easily restarted based on the final result of the preceeding run. We only need to extract the object
 #'  `\code{OPT$qsd}` as an input argument to function \code{\link{qle}} again. 
 #'  }
@@ -1186,7 +1182,6 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 	  )
 		
     # set default starting point
-	xnames <- NULL
 	x0 <-
 	 if(is.null(x0))
 	   (qsd$lower + qsd$upper)/2 
@@ -1323,7 +1318,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 	maxEval <- globals$maxeval	# amount of evaluation of sample locations
 		
 	## record iteration status
-	status <- list("global"=0L, "minimized"=FALSE, "reset"=TRUE) 
+	status <- list("global"=0L, "minimized"=FALSE) 
 			
 	# first time CV:
 	# this is also for testing 
@@ -1336,8 +1331,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
     # initialize	
 	xt <- x0
 	ft <- 1E+100
-	info <- TRUE
-	W <- theta <- nroots <- Stest <- NULL
+	info <- reset <- TRUE
+	W <- theta <- Stest <- NULL
 	Snext <- list("par"=rbind(xt),"value"=ft)
 	
 	# but then reset so it can be computed again
@@ -1462,26 +1457,28 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 				   Stest <-
 					 tryCatch({					    
 						newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=pl>0)
-						if(.isError(newObs)){
-							stop(paste(c("Cannot simulate data at candidate point: \n\t ",
-								  format(xt, digits=6, justify="right")),collapse = " "))				  
-						}						
-						D <- .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
-							  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
-							  theta=theta, cvm=cvm, cl=cl)	
+						if(.isError(newObs))
+						  stop(paste(c("Cannot generate data at approximate root: \n\t ",
+							    format(xt, digits=6, justify="right")),collapse = " "))				  
+					    # test for an approximate root
+	                    D <- .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
+							      qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
+							          theta=theta, cvm=cvm, cl=cl)	
 							
-					}, error = function(e) {
+					}, error = function(e){
 							msg <- .makeMessage("Testing approximate root failed: ",
 									   conditionMessage(e))
 							message(msg)
 							.qleError(message=msg,call=match.call(),error=e)
 						}		
-					)						
+					)
+					# store results in temporary list
 					tmplist <- c(tmplist,list("Stest"=Stest))
-					# status phase
+					
+					# get status phase
 					status[["global"]] <-
 					 if(.isError(Stest)){
-						msg <- paste(c("Could not test at candidate point: \n\t ",
+						msg <- paste(c("Could not test approximate root: \n\t ",
 										format(xt, digits=6, justify="right")),collapse = " ")
 						message(msg)
 						if(ft < locals$ftol_abs)
@@ -1515,7 +1512,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 							W <- I 	 		
 							# and its inverse is used as the variance
 							# of theta for sampling from MVN
-							theta <- xt	 							
+							theta <- xt	 	
+							# found approximate root
+						    							
 							# stopping conditions for
 							# relative estimation error deviation (see qleTest)
 							perr["val"] <- attr(Stest,"relED")	
@@ -1553,7 +1552,6 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 								# sampling might cause switch to global phase
 								if(status[["global"]] < 2L){		 
 									 nlocal <- nlocal + 1L
-									 nroots <- c(nroots,nglobal+nlocal)
 									 dmin <- min(dists)
 									 dmax <- max(dists)									 
 									 id <- 
@@ -1577,9 +1575,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 													 ctls["nsucc","val"] <- 0L
 													 ctls["nfail","val"] <- ctls["nfail","val"] + 1L												
 												 }
-												 if(status$reset){
-													 w <- locals$weights[1]
-													 status$reset <- FALSE
+												 if(reset){
+													 reset <- FALSE
+													 w <- locals$weights[1]													 
 												 }
 												 # update weights									
 												 if(ctls["nfail","val"] > 0L && 
@@ -1619,7 +1617,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 						} # end local sampling
 						
 						if(status[["global"]] > 1L){							
-							status$reset <- TRUE
+							reset <- TRUE
 							nglobal <- nglobal + 1L
 							# sample new candidates
 							Y <- sapply(seq_len(ncol(X)),
@@ -1668,9 +1666,11 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 						.qleError(message=msg,call=match.call(),error=e)
 					}
 				)				
-				
+				# intermedidate results
 				tracklist <- c(tracklist,
-					list(c(tmplist,"Snext"=list(Snext),"status"=list(status))))				
+								list(c(tmplist,
+								   "Snext"=list(Snext),
+								   "status"=list(status))))				
 				
 		  		if(.isError(Snext))				
 				  stop(attr(Snext,"error"))
@@ -1709,7 +1709,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 						})		 
 				if(.isError(newSim)){
 					msg <- paste(c("Cannot simulate data at candidate point: \n\t ",
-									format(Snext$par, digits=6, justify="right")),collapse = " ")				 			    
+							 format(Snext$par, digits=6, justify="right")),collapse = " ")				 			    
 					e <- attr(qsd,"error")
 					if(inherits(e,"error"))
 					  msg <-  c(msg, conditionMessage(e))
@@ -1719,7 +1719,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 
 				# ... and update
 				qsd <-
-				 if(status[["minimized"]] && locals$test) {					 
+				 if(status[["minimized"]] && locals$test && !.isError(newObs)) {					 
 					 updateQLmodel(qsd, rbind("d"=Snext$par,"x"=xt), # d (sample point), x (local minimum)
 							 structure(c(newSim,newObs),nsim=c(nsim,locals$nobs),class="simQL"),						 
 							 fit=TRUE, cl=cl, verbose=pl>0L)					 
@@ -1754,8 +1754,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 					 "qsd"=qsd,
 					 "cvm"=cvm,
 					 "why"=NULL,					 
-					 "final" = S0,
-					 "roots"= NULL,
+					 "final" = S0,					
 					 "convergence"=FALSE),				
 				tracklist = tracklist,				
 				optInfo = list("x0"=x0,
@@ -1796,11 +1795,11 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 	# remove `nfail`, `nsucc`
 	ctls <-
 	 if(.isError(S0)) {
-	   message("Last search results have errors. Please see `attr(,\"final\")`.")	   
+	   message("Last search results have errors. Please see argument `\"final\")`.")	   
 	   ctls[1:8,-3]
 	 } else {	  	
 		val <- max(abs(S0$score))
-		ctls <- rbind(ctls[1:8,-3],   # remove `tmp` column
+		ctls <- rbind(ctls[1:8,-3],   												# remove `tmp` column
 		    	as.data.frame(cbind("cond" = qscore.opts$score_tol,
 			 				        "val" = val ,
 									"stop" = as.integer(val < qscore.opts$score_tol),
@@ -1808,14 +1807,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 		   		     row.names = ifelse(qsd$criterion == "qle","score","grad"),
 	   			check.names = FALSE))							  	
 	}
-	# best root
-	roots <- 
-	 if(qsd$criterion == "qle" && length(nroots) > 0L){		
-			ctls <- rbind(ctls,perr[,-3])
-			QD <- criterionFun(X[nroots,,drop=FALSE])		
-			try(.evalRoots(QD),silent=TRUE)		 
-	 } else NULL
-	# why stopped		
+		
+    # why stopped		
 	arg.names <- row.names(ctls[which(ctls[,"stop"] >= ctls[,"count"]),])
 	
 	structure(
@@ -1825,8 +1818,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 		 	 "qsd"=qsd,
 			 "cvm"=cvm,
 			 "why"=arg.names,
-			 "final" = S0,
-			 "roots"=roots,		
+			 "final" = S0,			 	
 			 "convergence"=(status[["minimized"]] && length(arg.names) > 0L)),	 	
 		tracklist = tracklist,		
 		optInfo = list("x0"=x0,
