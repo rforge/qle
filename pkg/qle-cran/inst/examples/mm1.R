@@ -2,9 +2,6 @@
 # 
 # Author: baaske
 ###############################################################################
-
-
-\dontrun{
 	## 1D example of QLE:
 	## Simulate M/M/1 queue using its (noisy) steady
 	## state distribution, estimate the parameter `rho` by
@@ -175,18 +172,14 @@
 	checkMultRoot(OPT,par=S0$par)
 	
 	Stest <- qleTest(OPT,sim=simfn,nsim=100,
-			method=c("qscoring","bobyqa","direct"),
+			#method=c("qscoring","bobyqa","direct"),
 			iseed=1234, verbose=TRUE)
 	
 	
 # final criterion function results
 	OPT$final
 	
-	1/OPT$final$I
-	1/OPT$final$obsI
-	OPT$final$varS
-	
-# prediction of mean number of customers based on final approximation
+	# prediction of mean number of customers based on final approximation
 	QD <- quasiDeviance(OPT$par,OPT$qsd,verbose=TRUE)[[1]]
 	X <- as.matrix(OPT$qsd$qldata[,1])
 # values of statistics
@@ -229,15 +222,14 @@
 	n <- 25*100 # nur Anz. Simulation des Anfangs-Samples
 	x <- rgeom(n,prob=1-tet0)
 	y <- sum(x)
-	(tet.mle <- y/(n+y))
-	(tet.mle*(1-tet.mle)^2)/n
+	(tet.mle <- y/(n+y)) #1-1/(1+mean(x))
 	
+			
 # or
 	1-1/(1+mean(x))
 # score
-	n*(1/(1-tet.mle) - mean(x)/(tet.mle))
+	n*(1/(1-tet.mle) - mean(x)/(tet.mle))	
 	(tet.mle*(1-tet.mle)^2)/n
-	
 	
 # variance N
 	(tet/(1-tet)^2)/n
@@ -268,9 +260,11 @@
 # Vgl. estimates and Fisher QI und I (MLE)
 	
 # Fisher information/quasi-information
-	(Imle <- n/(1-tet.mle)^2*tet.mle)
-	Iobs.mle <- n*(1/(1-tet.mle)^2 + mean(x)/tet.mle^2)
-	
+	(Imle <- n/((1-tet.mle)^2*tet.mle))
+	1/Imle
+	1/OPT$final$I > 1/Imle
+	OPT$final$I < Imle
+		
 	tet
 	sqrt(1/OPT$final$I)
 	sqrt(1/QD$Iobs)
@@ -324,5 +318,13 @@
 			col=c("black","blue","black","magenta","green"),pt.cex=1.6,cex=1.6)
 	par(op)
 	
-}
-
+	
+	
+#	% TODO: Stest, MLE
+#			%	- cond no hinzufügen cond <- list("n"=25)
+#			%	-Prediction of mean number of customers based on final approximation
+#			%   -Estimated (average) variance by QLE) vs. exact variance 
+#			%   -MLE for rho! based on all nsim*N simulations of initial sample set
+#			% 	-Compare RMSE (QLE, Stest) with RMSE from simulation study for (MLE) 
+#			
+	

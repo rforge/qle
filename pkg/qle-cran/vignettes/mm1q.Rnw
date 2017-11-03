@@ -1,0 +1,256 @@
+As an introductory example we consider the following single-server queueing
+system denoted as M/M/1 \citep[see, e.\,g.][]{Beers2003}. Let $N$ represent
+the random variable ''number of customers`` in the system at steady state. Then
+$N$ is geometrically distributed with success parameter $1-\rho$ and
+\begin{equation*}
+  \bar{N}=\frac{\rho}{1-\rho}
+\end{equation*}
+is the mean number of customers as a function of $\rho<1$ which can be
+interpreted as the fraction of time the server is working. Hence the parameter
+of interest for estimation is $\theta=\rho$ and the variance of $N$ is given by
+\[
+  \var(N) = \frac{\rho}{(1-\rho)^2}.
+\]
+%
+Let $y=(y_1,\ldots,y_n)^{t}$ be the observed number of customers at $n$
+different time points where we use the sample mean $\bar{y}=\sum_{i=1}^n y_i/n$
+as the summary statistic for estimation by our method. Thus from each
+replication of the statistical model we record the average number of customers
+in the system which, following the reasoning in Section \ref{sec:SQLE}, is approximated
+by a kriging surface, see Figure \ref{fig:mm1q1}.
+<<>>=
+library(qle)
+library(graphics)
+RNGkind("L'Ecuyer-CMRG")
+set.seed(1356)
+@
+% simfn <- function(tet){ mean(rgeom(1000,prob=1-tet)) }
+First, we define the statistic model which practically leads to the
+simulation function below. For estimation of the parameter $\rho$ by our
+quasi-likelihood approach we fix the number of time points to $n=25$.
+<<>>=
+n <- 25
+simfn <- function(tet){
+	mean(rgeom(n,prob=1-tet[1]))
+}
+@
+The function returns the average the number of customers in the system at steady
+state. Next, we define the lower and upper bounds of the parameter search space,
+<<>>=
+lb <- c("rho"=0.05)
+ub <- c("rho"=0.95)
+@
+and sample the initial design points for constructing the
+approximation of the criterion function (including the summary statistic)
+where \code{nsim} simulations are used at each design point to estimate the
+sample mean of the statistic.
+<<>>=
+nsim <- 10
+X <- multiDimLHS(N=10,lb=lb,ub=ub,
+      method="maximinLHS",type="matrix")
+
+sim <- simQLdata(sim=simfn,nsim=nsim,X=X)
+@
+We set the ''real`` observation of the statistic $Y$ to \code{obs=1} which corresponds
+to $\rho=0.5$ as the ''true`` parameter of the model. The variance of $Y$ is approximated
+by the average of the matrix logarithm of the sample variance matrices at each
+design point. Then the QL approximation model is obtained by
+<<>>=
+qsd <- getQLmodel(sim, lb, ub, obs=c("N"=1),
+		var.type="wlogMean",verbose=TRUE)
+@
+and, as a first crude estimate of the unknown parameter, we apply the
+quasi-scoring iteration without using further simulations.
+<<>>=
+S0 <- qscoring(qsd,x0=c("rho"=0.8),verbose=TRUE)
+print(S0)
+@
+%
+The function already returns an estimated root quite close to the
+''true`` one. However, we can improve the current estimate by letting the main
+estimation routine sample \code{maxeval} additional points at most each using
+\code{nsim} simulations. As a selection criterion we employ the ''score`` criterion
+in \eqref{scoreCrit} where the required weights are automatically adjusted. As a
+local search, respectively, root finding method we apply the quasi-scoring
+iteration and, in case of non-convergence, switch to \code{bobyqa} or even to
+\code{direct} as a search method directly appplied to the criterion function only.
+<<>>=
+OPT <- qle(qsd,simfn, 	     	
+  global.opts = list("maxeval"=5, "NmaxLam"=5),
+  local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,
+                    "lam_max"=1e-5,"useWeights"=TRUE),
+  method = c("qscoring","bobyqa","direct"), iseed=1356) 
+@
+%
+\setkeys{Gin}{width=0.5\textwidth}
+\begin{figure}[ht!]
+<<fig=TRUE,echo=FALSE,eps=FALSE>>=
+## statistics
+op <- par(xaxs='i', yaxs='i')
+rho <- as.matrix(seq(0.1,0.9,by=0.001))
+y <- as.numeric(unlist(simQLdata(sim=simfn,nsim=nsim,X=rho,mode="mean")))
+T <- qsd$qldata[grep("mean.",names(qsd$qldata))]
+Y <- predictKM(qsd$covT,rho,X,T,krig.type="var")
+# steady state values
+y0 <- rho/(1-rho)
+plot(NULL, type="n", xlab=expression(rho),
+		ylab="y",xlim=c(0,1), ylim=c(0,10))
+lines(as.numeric(rho),y,col="black",lt=2,lwd=0.3)
+lines(as.numeric(rho),Y,col="blue",lwd=0.3)
+lines(as.numeric(rho),y0,col="red",lwd=0.3)
+legend("topleft", c("Number of customers in the system",
+	"Expected number at steady state","Kriging approximation"),
+		lty=c(2,1,1),col=c("black","red","blue"),
+		xpd=TRUE,pt.cex=1,cex=1)
+par(op)
+@
+<<fig=TRUE,echo=FALSE,eps=FALSE>>=
+op <- par(xaxs='i', yaxs='i')
+p <- seq(lb,ub,by=0.0001)
+QD <- quasiDeviance(X,qsd,value.only=TRUE)
+qd <- quasiDeviance(as.matrix(p),qsd)
+y <- sapply(qd,"[[","value")
+score <- sapply(qd,"[[","score")
+## plot quasi-deviance and quasi-score function
+plot(NULL, type="n", xlab=expression(rho),
+		ylab="",xlim=c(0,1), ylim=c(-10,30))
+abline(h=0,col="gray")
+points(X,QD,pch=3,cex=1)
+lines(p,score, type='l',col="blue",lwd=1.5) 
+lines(p,y,col="black",lwd=0.8)
+legend("topleft", c("quasi-deviance","quasi-score","sample points", "approximate root","additional samples"),
+		lty=c(1,1),lwd=c(1.5,1.5,NA,NA,NA),pch=c(NA,NA,3,5,8),
+		col=c("black","blue","black","magenta","green"),pt.cex=1,cex=1)
+points(S0$par,S0$val,col="magenta",pch=5,cex=1)
+nmax <- OPT$ctls["maxeval","val"]
+X <- as.matrix(qsd$qldata[,1])
+Xnew <- OPT$qsd$qldata[(nrow(X)+1):(nrow(X)+nmax),1]
+points(cbind(Xnew,0),pch=8,cex=2,col="green")
+par(op)
+@
+\caption{M/M/1 queue: mean number of customers (left) and
+quasi-deviance, respectively, quasi-score approximation. Both are
+based on the same set of sample points (right).}\label{fig:mm1q1}
+\end{figure}
+Only a few iterations are needed to improve the last estimate.
+<<>>=
+OPT
+@
+%
+\begin{figure}[ht!]
+\centering
+<<fig=true,echo=false,eps=FALSE>>=
+op <-par(xaxs='i', yaxs='i')
+qd <- quasiDeviance(as.matrix(p),OPT$qsd)
+y <- sapply(qd,"[[","value")
+score <- sapply(qd,"[[","score")
+## plot quasi-deviance and quasi-score function
+plot(NULL, type="n", xlab=expression(rho),
+		ylab="",xlim=c(0,1), ylim=c(-10,30))
+abline(h=0,col="gray")
+lines(p,score, type='l',col="blue",lwd=1.5) 
+lines(p,y,col="black",lwd=0.8)
+legend("top", c("quasi-deviance","quasi-score","sample points", "QL estimate"),
+		lty=c(1,1),lwd=c(1,1,NA,NA,NA),pch=c(NA,NA,3,5,8),
+		col=c("black","blue","black","magenta","green"),pt.cex=1,cex=1)
+
+X <- as.matrix(OPT$qsd$qldata[,1])
+QD <- quasiDeviance(X,OPT$qsd,value.only=TRUE)
+points(X,QD,pch=3,cex=1)
+points(OPT$par,OPT$val,col="magenta",pch=5)
+par(op)
+@
+\caption{Final quasi-deviance and quasi-score function approximations
+after adding five new sample points.}
+\label{fig:mm1q2}
+\end{figure}
+\setkeys{Gin}{width=1\textwidth} 
+%
+The results of the consistency criteria, see Section \ref{subsec:check}, given
+below
+<<>>=
+checkMultRoot(OPT,verbose = TRUE)
+@
+show a good aggreement of the both the predicted, that is, the expected quasi-information matrix
+and its (numerically evaluated) observed analogue. Additionally, we the
+quasi-score value is of magnitude $1e-4$ only and the criterion function is approximately zero.
+These results suggest a consistent root of the quasi-score and thus a plausible
+estimate of the unknown model parameter.\par
+%
+Further, the predicted value of the summary statistic, given the final design
+\code{X} and sample averages \code{Tstat} at these points, can also be computed
+by
+<<>>=
+X <- as.matrix(OPT$qsd$qldata[,1])
+Tstat <- OPT$qsd$qldata[grep("mean.",names(qsd$qldata))]   
+predictKM(OPT$qsd$covT,c("rho"=0.5),X,Tstat)
+@
+% calculate MLE
+<<echo=FALSE>>=
+digits <- 4
+nn <- n*nsim*10
+x <- rgeom(nn,prob=0.5)
+y <- sum(x)
+tet <- y/(nn+y)
+mlerr <- (tet*(1-tet)^2)/nn
+score <- 0	 
+par <- OPT$par
+qscore <- abs(OPT$final$score)
+qerr <- sqrt(1/OPT$final$I)
+@
+%
+We now empirically show the effect for estimation of the unknown parameter by
+our quasi-likelihood method if we only approximate the involved summary
+statistic by kriging the sample means opposed to the estimation by the method of
+maximum likelihood given the same observations.\par
+%
+First, we perform a MC goodness-of-fit test based on the final approximation of
+the summary statistic,
+<<>>=
+Stest <- qleTest(OPT,sim=simfn,nsim=100,iseed=1234)
+@
+which also returns the predicted error, shown in the column \code{Estimate} in
+the last line, as the square root of the inverse of the predicted
+quasi-information.
+<<>>=
+Stest
+@
+Since the (simulated) observations $y$ are from an exponential family in linear
+form, for which we can derive the \emph{maximum-likelihood estimator} (mle),
+\[
+ \hat{\rho}_{mle} = 1 - \frac{1}{1+\bar{y}}, 
+\]
+as the solution of Fisher`s \emph{score function},  
+\[
+ u(\rho)=n\left(\frac{1}{1-\rho}-\frac{\bar{y}}{\rho}\right)=0\,,
+\]
+the (exact) quasi-score and score function based on the expectation $\bar{N}$
+and summary statistic $\bar{y}$ are identical,
+\[
+Q(\rho,\bar{y})=\frac{1}{(1-\rho)}\left(\frac{\rho}{n(1-\rho)^2}\right)^{-1}\left(\bar{y}-\frac{\rho}{1-\rho}\right) = u(\rho).
+\]     
+Further, since the variance of $\hat{\rho}_{mle}$ is given by
+\[
+  \mathsf{Var}(\hat{\rho}_{mle}) = \frac{\hat{\rho}(1-\hat{\rho})^2}{n},
+\]
+the same holds for the quasi-information matrix and Fisher`s \emph{information}
+matrix,
+\[
+I(\rho)=\frac{1}{(1-\rho)^4}\left(\frac{\rho}{n(1-\rho)^2}\right)^{-1}=\frac{n}{\rho(1-\rho)^2}=\mathsf{Var}(\rho)^{-1}=I_{mle}(\rho).
+\]
+Therefore, the resulting error of the quasi-likelihood estimate $\hat{\rho}$ is
+essentially due to the approximation of $\bar{y}$ by kriging.
+% result table
+\begin{table}[t!]
+\centering
+\label{tab:err}
+\begin{tabular}{l|rrr}
+Method & $\hat{\rho}$ & $u(\hat{\rho})$ & Std. error\\
+\hline
+qle & \Sexpr{print(format(signif(par,digits=digits)))} & \Sexpr{print(format(signif(qscore,digits=digits)))} & \Sexpr{print(format(signif(qerr,digits=digits)))}\\
+mle & \Sexpr{print(format(signif(tet,digits=digits)))} & \Sexpr{print(format(signif(score,digits=digits)))}  & \Sexpr{print(format(signif(mlerr,digits=digits)))}\\
+\end{tabular}
+\caption{Results by quasi-likelihood (qle) and maximum likelihood estimation
+(mle).}
+\end{table}
+%

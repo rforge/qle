@@ -70,8 +70,8 @@ uncertainty, R}
 \newcommand{\Rp}{\mathbb{R}^{p}}
 \newcommand{\Rq}{\mathbb{R}^{q}}
 \newcommand{\Pt}{\mathbb{P}_\theta}
-\newcommand{\Et}{\mathrm{E}_{\theta}}
-\newcommand{\var}{\mathrm{Var}_{\theta}}
+\newcommand{\Et}{\mathsf{E}_{\theta}}  % \mathrm{E}_{\theta}
+\newcommand{\var}{\mathsf{Var}_{\theta}} % \mathrm{Var}_{\theta}
 \newcommand{\Ptheta}{\mathrm{P}_{\theta}}
 \newcommand{\qle}{{\code{qle}}}
 \newcommand\abs[1]{\left|#1\right|}
@@ -294,8 +294,8 @@ roots, restricting to reasonably chosen smaller subregions might also be a pragm
 solution to distinguish between them. Another approach is given in Section
 \ref{subsec:termCond}.\par
 %
-In our implementation, we define the quasi-scoring algorithm as a projected
-Newton-type iteration using the update
+In our implementation, the quasi-scoring algorithm is defined as a projected
+Newton-type iteration with the update
 \begin{equation}
 \begin{aligned}\label{qscoring}
   h & = \hat{I}(\theta)^{-1}\hat{Q}(\theta), \\
@@ -452,8 +452,8 @@ minimizer and variance equal to the inverse information matrix in
 \eqref{QI}. Otherwise, the algorithm is in its global phase.\par
 %
 In order to measure the potential benefit of adding some point out of all
-candidates during the local phase of the algorithm we adapt the idea proposed
-in \citet{ref:Regis2007} to our setting. Let
+candidates in $\Omega^l_n$ during the local phase of the algorithm we
+adapt the idea proposed in \citet{ref:Regis2007} to our setting. Let
 \begin{equation}
 \bar{s}_n(\theta) := \hat{Q}_n(\theta)^t \hat{C}_n(\theta)^{-1} \hat{Q}_n(\theta)
 \end{equation}
@@ -468,8 +468,8 @@ Section \ref{qsErr}) at iteration $n$. Then
    \textrm{otherwise}.
   \end{cases}
 \end{equation}
-denotes its normalized value for all $\theta\in\Omega^l_n$ where we compute the minimum and maximum
-of the modified QD by
+denotes its normalized value where the minimum and maximum
+of the modified QD is given as
 $\bar{s}^{\textrm{min}}_n=\min\{\bar{s}_n(\theta)\,:\,\theta\in\Omega^l_n\}$ and, respectively,
 $\bar{s}^{\textrm{max}}_n=\max\{\bar{s}_n(\theta)\,:\,\theta\in\Omega^l_n\}$.
 Also let
@@ -1062,21 +1062,21 @@ approximations and prediction variances of the kriging estimator.
 Users can choose among different (initial) sampling designs, best candidate selection
 strategies and local or global (derivative free or gradient-based) minimization methods.
 Among these, the quasi-scoring algorithm estimates the model parameter as an approximate
-root of the QS vector or by a stationary point of some criterion
-function including simple bound constraints. Finally, the estimated model (parameter) can
-be tested by a Monte Carlo hypothesis test. Depending on the model complexity
-which can be helpful also in terms of model selection and validity.\par
+root of the QS vector or by a stationary point of one of the criterion functions
+proposed including simple bound constraints. Finally, the estimated model
+parameter can be tested by a Monte Carlo approach to hypothesis testing.\par
 %
 Apart from these methods related to parameter estimation, the package also
 offers access to low level functions, such as estimating the parameters of
-particular covariance models (for kriging) or simply predicting the sample
-means of the statistics by kriging. In addition, we allow for different
-covariance models and specify how to incorporate the simulation variances of statistics
-as so-called local or global nugget variances for each corresponding covariance
-model separately. We provide functions to inspect their impact on the predictive quality mainly by
-comparing individual prediction errors/variances based on CV and kriging. This
-can be seen as a preliminary step to obtain a reasonable pilot design for parameter
-estimation.\par
+a particular covariance model (by the restricted maximum likelihood method) for
+predicting the sample means of the statistics or approximation of the variance
+of the statistics by kriging. We allow for different covariance models and
+specify how to incorporate the simulation variances of the statistics as
+so-called local or global nugget variances for each corresponding covariance model
+separately. We provide functions to inspect their impact on the predictive quality
+mainly by comparing individual prediction variances based on the CV approach and
+kriging models. This can be seen as a preliminary step to construct a reasonable
+pilot design for parameter estimation which then is sequentially improved.\par
 % 
 \subsection{Main functions}
 We start with a short overview of the main functions and exemplify

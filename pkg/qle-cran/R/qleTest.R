@@ -638,7 +638,7 @@ print.qleTest <- function(x, pl = 1, digits = 5,...) {
 	  if(!is.null(aiqm) && !.isError(aiqm) && !is.null(qi) && !.isError(qi) && !is.null(attr(x,"relED")))
 		  pse <- as.data.frame( cbind(sqrt(diag(aiqm)), sqrt(diag(qi)), attr(x,"relED") ) )
 	  	  dimnames(pse) <- list(row.names(x$param),c("Average","Estimate", "|1-RMSE/Estimate|"))
-		  cat("Predicted std. errors (asymptotic): \n\n")
+		  cat("Predicted std. errors: \n\n")
 		  print(format(pse, digits=digits),
 				  print.gap = 2, right=FALSE, quote = FALSE)			  
     }	
