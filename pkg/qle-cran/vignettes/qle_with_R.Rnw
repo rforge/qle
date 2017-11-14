@@ -1083,7 +1083,6 @@ We start with a short overview of the main functions and exemplify
 the practical workflow. Note that all examples presented in this Section are
 also available as separate \proglang{R} source files.\par
 <<echo=FALSE>>=
-options(mc.cores=2)
 options(useFancyQuotes="UTF-8")
 options(digits=4, prompt="R> ")
 @
@@ -1356,7 +1355,7 @@ tet0 <- c("rho"=0.5)
 obs0 <- simQLdata(sim=simfn,cond=cond,nsim=100,X=tet0)
 @
 and compute the empirical mean squared error (MSE) of the maximum likelihood
-estimates and the average variance.
+estimates and the average variance denoted by $\overline{Var}$.
 <<>>=
 mle <- do.call(rbind,
 		lapply(obs0[[1]],function(y,n){
@@ -1369,7 +1368,10 @@ mle.var <- c(sum(x^2)/length(x),mean(mle[,2]))
 Given the generated set of observations \code{obs0} we now estimate the
 parameter for each observed value by our quasi-likelihood approach.
 <<>>=
-OPTS <- lapply(obs0[[1]],
+cl <- makeCluster(2)
+clusterSetRNGStream(cl)
+clusterExport(cl,list("qle"))
+OPTS <- parLapplyLB(cl,obs0[[1]],
           function(obs,...) qle(...,obs=obs),
          qsd=qsd,
          sim=simfn, 
@@ -1379,6 +1381,7 @@ OPTS <- lapply(obs0[[1]],
 				"ftol_abs"=1e-4,"lam_max"=1e-5,
 				"useWeights"=TRUE),
          method = c("qscoring","bobyqa","direct"))
+stopCluster(cl)
 QLE <- do.call(rbind,lapply(OPTS,
  function(x) c("qle"=x$par,"qle.var"=1/as.numeric(x$final$I))))	
 y <- QLE[,1]-tet0
@@ -1436,6 +1439,7 @@ absolute deviation} (from the median) as our informative statistics to
 characterise the model outcome.
 <<>>=
 set.seed(123)
+options(mc.cores=2)
 simfunc <- function(pars) {	
 	x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
 	c("T1"=median(x),"T2"=mad(x))	
