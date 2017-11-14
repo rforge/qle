@@ -59,9 +59,9 @@ The function implements a step-length controlled quasi-scoring iteration with si
  \subsection{Quasi-scoring under uncertainty}{ 
  The quasi-scoring iteration covers both kinds of prediction variances, kriging-based and those by a cross-validation
  approach, which account for the uncertainty induced by the quasi-score approximation model. By default kriging variances
- at each iterate are included in the computation. If fitted covariance models `\code{cvm}` are supplied by the user
+ are included in the computation during the iterations. If fitted covariance models `\code{cvm}` are supplied by the user
  in advance, the variances of prediction errors of each statistic are separately evaluated by the proposed cross-validation
- approach (see vignette) at each new iterate. For the price of relatively high computational costs those prediction variances
+ approach (see vignette) for each new point. For the price of relatively high computational costs those prediction variances
  are intended to increase the robustness against false roots due to simulation and approximation errors of the quasi-score function.
 
  Opposed to this, the user also has the option to carry out a "pure version" of quasi-scoring without accounting for
@@ -71,7 +71,8 @@ The function implements a step-length controlled quasi-scoring iteration with si
 
  The following algorithmic options, which can be set by `\code{opts}`, are available:
  \itemize{
-  	\item{\code{ftol_stop}:}{ minimum value of quasi-deviance for stopping the scoring iteration}
+  	\item{\code{ftol_stop}:}{ minimum value of the quasi-deviance for stopping the scoring iteration}
+		\item{\code{ftol_abs}:}{ minimum value of the quasi-deviance which is used as a reference value for a local minimizer}
 		\item{\code{xtol_rel}, \code{ftol_rel}:}{ see \code{\link{qle}} }
 		\item{\code{grad_tol}:}{ upper bound on the quasi-score vector components,
 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
@@ -83,33 +84,11 @@ The function implements a step-length controlled quasi-scoring iteration with si
  }
 }
 \examples{
-\dontrun{
-# Quasi-Scoring iteration with and
-# without using Kriging variances
-library(qle)
+
 data(normal)
+QS <- qscoring(qsd,x0=c("mu"=3.5,"sigma"=0.5),
+         opts=list("score_tol"=1e-7))
 
-# starting point
-x0 <- c("mu"=3.5,"sigma"=0.5)
-opts <- list("pl"=10, "ftol_stop"=1e-9, "score_tol"=1e-6)
-	 
-## Scoring with added Kriging variances
-QSE <- qscoring(qsd, x0, opts=opts, verbose=TRUE)
-print(QSE)
-
-## Scoring with avergae variance matrix approximation
-## and without using prediction variances (dual kriging)
-# qsd$krig.type <- "dual"
-# qsd$var.type <- "cholMean"
-# QSE0 <- qscoring(qsd, x0, opts=opts, verbose=TRUE)
-
-# check results
-stopifnot(QSE$status>0 && QSE$convergence)
-
-## Check with quasi-deviance
-QDtheta <- quasiDeviance(QSE$par, qsd)[[1]]
-stopifnot(identical(QDtheta$score,QSE$score))
-}
 }
 \author{
 M. Baaske

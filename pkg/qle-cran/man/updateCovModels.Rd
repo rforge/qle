@@ -44,18 +44,18 @@ data(normal)
 # old design
 X <- as.matrix(qsd$qldata[c(1,2)])
 
-# augment design
-Xnew <- multiDimLHS(N=10,qsd$lower,qsd$upper,X=X,
+# augment design with two additional points
+Xnew <- multiDimLHS(N=2,qsd$lower,qsd$upper,X=X,
            method="augmentLHS",type="matrix")
 
 # new simulations
-Xsim <- simQLdata(sim=qsd$sim,nsim=100,X=Xnew)
+Xsim <- simQLdata(sim=qsd$sim,nsim=10,X=Xnew)
 
 # prepare data
 Xdata <- setQLdata(Xsim,Xnew,chol=TRUE)
 
-# re-estimate covariance parameters
-qsd2 <- updateCovModels(qsd,Xdata,fit=TRUE) 
+# do not re-estimate covariance parameters
+qsd2 <- updateCovModels(qsd,Xdata,fit=FALSE) 
  
 
 }

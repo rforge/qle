@@ -4,17 +4,18 @@
 \name{matclust}
 \alias{matclust}
 \title{Matern cluster process data}
-\format{A list named `\code{matclust}` with entries `\code{qsd0}` (final QL model after estimation),
- `\code{OPT}` (results of estimation by function \code{qle}) and `\code{Stest}` (the Scoring test).}
+\format{A list object named `\code{matclust}` which consists of
+  \itemize{
+	   \item{qsd}{ initial quasi-likelihood approximation model}
+    \item{OPT}{ the results of estimation by \code{\link{qle}}}
+    \item{Stest}{ score test results }
+  }}
 \usage{
 data(matclust)
 }
 \description{
-An example data set of a fitted Matern cluster point process model for the `\code{redwood}`
-data (see package \code{spatstat}).
-}
-\details{
-The model was fitted by our quasi-likelihood estimation method.
+A data set of quasi-likelihood estimation results of estimating the parameters of a Matern cluster
+point process model for the `\code{redwood}` data set from the package \code{spatstat}.
 }
 \author{
 M. Baaske

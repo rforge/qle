@@ -30,10 +30,8 @@ approximations of the variance matrix}
 \item{verbose}{if \code{TRUE}, print intermediate information}
 }
 \value{
-List of fitted covariance models for kriging the 
- sample means of statistics named `\code{covT}` and optionally
- the variance matrix of statistics, `\code{covL}`. The object also stores
- the reml optimization parameters `\code{controls}`.
+List of fitted covariance models for kriging the sample means of statistics named `\code{covT}` and optionally
+ the variance matrix of statistics, `\code{covL}`. The object also stores the reml optimization parameters `\code{controls}`.
 }
 \description{
 Fit a generalized covariance model to simulation data
@@ -44,9 +42,8 @@ The function estimates the parameters of the covariance model `\code{sirfk}` by 
   We use a (self-similar) intrinsic random function of order \eqn{k} (see, e.g. [1]) with \eqn{k=1,2} for all statistics
   (including a default quadratic drift term, \eqn{k=2}). The user can also define different covariance models for each statistic
   separately (see \code{\link{setCovModel}}). If the user prefers to fit all statistics by other covariance models, then these
-  can be specified by their names in `\code{model}`. Further arguments are passed to \code{\link{setCovModel}}
-  by `\code{...}`.
-  		
+  can be specified by their names in `\code{model}`. 
+   		
   The argument `\code{var.opts}` only sets the options for the covariance models for kriging the variance matrix.
   The optional arguments `\code{var.sim}` and `\code{var.opts$var.sim}` set the local or global
   \dfn{nugget} values for each sample point depending on `\code{set.var}`. Both arguments (passed to \code{\link{setCovModel}})
@@ -61,6 +58,14 @@ The function estimates the parameters of the covariance model `\code{sirfk}` by 
 	 Note that the returned object can also be constructed manually and passed as an input argument to
   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. Also see function
   \code{\link{getQLmodel}} for an example. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.
+}
+\examples{
+ data(normal)
+	# fit generalized covariance model to the data, see first parameter,
+ # and use simulation variances as local nugget variances
+	mods <- fitSIRFk(qsd$qldata, verbose=TRUE)	
+
+
 }
 \author{
 M. Baaske

@@ -77,7 +77,7 @@ and attributes:
  P-value for testing, we (artifically) generate new observations from the outcome of the model replications and re-estimate the model
  parameter for each realization in the same way as done before when estimating the model parameter. This includes all versions
  of variance approximations (by kriging or average approximations) and types of prediction variances (by kriging or the CV-based
- approach) used to construct the statistics for estimating the parameter. For an in depth example see the package vignette.
+ approach) used to construct the statistics for estimating the parameter. For an in-depth example please see the package vignette.
 }
 \description{
 Monte Carlo hypothesis testing

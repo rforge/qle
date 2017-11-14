@@ -52,23 +52,19 @@ The function aggregates all neccessary data for QL estimation storing the
  matrices using the decomposed Cholesky terms.
 }
 \examples{
-\dontrun{ 
 # simulate model statistics at LHS design
 sim <- simQLdata(sim =
          function(x,cond) {
            X <- rlnorm(cond$n,x[1],x[2])
            c("MED"=median(X),"MAD"=mad(X))
          },
-         cond=list("n"=100),
-         nsim=25, N=12, method="maximinLHS",
+         cond=list("n"=10),
+         nsim=10, N=10, method="maximinLHS",
          lb=c("mu"=-1.5,"sd"=0), ub=c("mu"=2,"sd"=1))
 
-# get data with Cholesky decomposed terms
-# for variance average approximation later
-qld <- setQLdata(sim,chol=TRUE,verbose=TRUE) 
-print(qld)
-}
- 
+# setup QL approximation mode
+qldata <- setQLdata(sim,chol=TRUE,verbose=TRUE) 
+  
 }
 \author{
 M. Baaske

@@ -43,11 +43,14 @@ Using the CV-based approach (see vignette) for estimating the prediction varianc
  points deleted from the full sample set with overall \eqn{n} sample points such that \eqn{n=n_c k} (see vignette).
 }
 \examples{
- \dontrun{
   data(normal)
+  # without re-estimation of covariance parameters
+  qsd$cv.fit <- FALSE
   cvm <- prefitCV(qsd)
- }
-
+  
+}
+\seealso{
+\code{\link{QLmodel}}
 }
 \author{
 M. Baaske

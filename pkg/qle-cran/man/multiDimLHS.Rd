@@ -30,9 +30,9 @@ Generate or augment a multidimensional LHS in a hyperbox
 \examples{
  
 data(normal)
-X <- multiDimLHS(N=10,qsd$lower,qsd$upper,type="matrix")
+X <- multiDimLHS(N=5,qsd$lower,qsd$upper,type="matrix")
 # augment design X 
-rbind(X,multiDimLHS(N=10,qsd$lower,qsd$upper,X=X,
+rbind(X,multiDimLHS(N=5,qsd$lower,qsd$upper,X=X,
 				method="augmentLHS",type="matrix"))
 
 

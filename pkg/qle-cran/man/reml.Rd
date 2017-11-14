@@ -23,11 +23,20 @@ single covariance model in `\code{models}`}
 List of REML function values
 }
 \description{
-Calculate the REML function value for given covariance parameters
+Calculate the REML function value given a covariance model and (observed) data
 }
 \details{
 Given a list of covariance models the function calculates the REML function values at
-  parameters `\code{pars}`.
+  parameter `\code{pars}`.
+}
+\examples{
+	data(normal)
+ # sample points
+ X <- as.matrix(qsd$qldata[1:2])
+ # observed statistic
+ T <- qsd$qldata[c("mean.T1")]
+ reml(qsd$covT[1],pars=c(1e-4,1.5,0.1),T,X)
+
 }
 \author{
 M. Baaske

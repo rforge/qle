@@ -3,13 +3,13 @@
 \docType{package}
 \name{qle-package}
 \alias{qle-package}
-\title{Simulated Quasi-likelihood Estimation Method}
+\title{Simulation-Based Quasi-Likelihood Estimation}
 \description{
-We provide methods for parameter estimation of a general class of simulatable statistical models,
- where standard parameter estimation methods, such as maximum likelihood, least squares or Bayesian
+We provide a method for parameter estimation of parametric statistical models which can be at least
+ simulated and where standard methods, such as maximum likelihood, least squares or Bayesian
  algorithms (including MCMC) are not applicable. We follow the basic \emph{quasi-likelihood} theory [3]
  to estimate the unknown model parameter by finding a root of the so-called \dfn{quasi-score} estimating
- function. A comprehensive description of the estimation algorithm is given in the vignette of this package.
+ function. For an overview of our method and further in-depth examples please see the vignette.
 }
 \details{
 The basic idea is to transform the general parameter estimation problem into a global (black box) optimization problem

@@ -90,16 +90,15 @@ The function provides an interface to local and global numerical minimization
  chosen. Then `\code{x0}` is still required but ignored as a starting point since it uses the "center point" of
  the (hyper)box constraints internally. In addition, if CV models `\code{cvm}` are given, the CV based prediction variances
  are inherently used during consecutive iterations of all methods. This results in additional computational efforts
- due to the repeated evaluations of the statistics to calculate these variances for each new iterate.  
+ due to the repeated evaluations of the statistics to calculate these variances during each new iteration.  
 }
 }
 \examples{
 data(normal)
-# many iterations needed with `cobyla` 
-searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="cobyla",verbose=TRUE)
-# if quasi-scoring fails, use DFO method 
-searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,
- method=c("qscoring","bobyqa"),verbose=TRUE) 
+# first use `bobyqa` only
+searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="bobyqa",verbose=TRUE)
+# or as fallback method if quasi-scoring fails to converge 
+searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method=c("qscoring","bobyqa"),verbose=TRUE) 
 
 }
 \seealso{

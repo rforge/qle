@@ -4,10 +4,10 @@
 \alias{qle}
 \title{Simulated quasi-likelihood parameter estimation}
 \usage{
-qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
-  local.opts = list(), method = c("qscoring", "bobyqa", "direct"),
-  qscore.opts = list(), control = list(), errType = "kv", pl = 0,
-  cl = NULL, iseed = NULL, plot = FALSE)
+qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
+  global.opts = list(), local.opts = list(), method = c("qscoring",
+  "bobyqa", "direct"), qscore.opts = list(), control = list(),
+  errType = "kv", pl = 0, cl = NULL, iseed = NULL, plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -20,6 +20,8 @@ qle(qsd, sim, ..., nsim, x0 = NULL, Sigma = NULL, global.opts = list(),
 `\code{qsd$nsim}` (default)}
 
 \item{x0}{optional, numeric vector of starting parameters}
+
+\item{obs}{optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}`}
 
 \item{Sigma}{optional, constant variance matrix estimate of statistics (see details)}
 
@@ -54,8 +56,7 @@ List of the following objects:
 	  \item{cvm}{ CV fitted covariance models}
    \item{why}{ names of stopping conditions matched}
   \item{final}{ final local minimization results of the criterion function, see \code{\link{searchMinimizer}} }
-  \item{roots}{ data frame of estimated roots of the quasi-score}
-	  \item{score}{ quasi-score vector or gradient of the Mahalanobis distance}
+  \item{score}{ quasi-score vector or gradient of the Mahalanobis distance}
 	  \item{convergence}{ logical, whether the iterates converged, see details} 	  
 
  Attributes: 	 
@@ -64,7 +65,7 @@ List of the following objects:
     criterion function evaluations (only in case of non-convergence), evaluated sample points and
 		 the status of the corresponding iteration}    
  \item{optInfo}{ a list of arguments related to the estimation procedure:}
-   \itemize{
+ \itemize{
    \item{x0:}{ starting parameter vector}
 	  \item{W:}{ final weighting matrix (equal to quasi-information matrix at \code{theta}) used for both variance
 			 average approximation, if applicable, and as the predicted variance for (local) sampling of new candidate points
@@ -103,10 +104,8 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  "\code{kriging}" corresponds to continuously updating the variance matrix each time a new criterion function value is
  required at any point of the parameter space. In this way the algorithm can also be seen as a simulated version of a least squares
  method or even as a special case of a \emph{simulated method of moments} (see, e.g. [3]). Note that some input combinations
- concerning the variance approximation types are not applicable since the criterion "\code{qle}", which exploits the
- QD criterion function, does not use a constant variance at all. For this criterion the (numerical) consistency is automatically checked for all
- roots found during the estimation procedure and stored in the data frame object `\code{roots}` where the best one is marked by a star `*`.
- A parameter gets a second star if it has a smaller maximum component of the quasi-score among more than one equivalently rated roots.
+ concerning the variance approximation types are not applicable since the criterion "\code{qle}", which uses the
+ QD criterion function, does not support a constant variance matrix at all.
  }
       
  \subsection{Monte Carlo (MC) hypothesis testing}{ The algorithm sequentially evaluates promising local minimizers of the criterion function during
@@ -131,8 +130,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  If one of the other termination criteria is met in conjunction with a neglectable value of the criterion function, we
  say that the algorithm successfully terminated and converged to a local minimizer of the criterion function which could be an approximate root of the quasi-score
  vector. We then can perform a goodness-of-fit test in order to assess its plausibility (see \code{\link{qleTest}}) and quantify the empirical and predicted
- estimation error. In case of multiple local minima the data frame `\code{roots}` also gives a hint on the best root found (see \code{\link{checkMultRoot}} and the vignette).
- If we wish to improve the final estimate the algorithm allows for a simple warm start strategy though not yet as an fully automated
+ estimation error. If we wish to improve the final estimate the algorithm allows for a simple warm start strategy though not yet as an fully automated
  procedure. The algorithm can be easily restarted based on the final result of the preceeding run. We only need to extract the object
  `\code{OPT$qsd}` as an input argument to function \code{\link{qle}} again. 
  }
@@ -224,58 +222,33 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  }
 }
 \examples{
-\dontrun{
 ## Quasi-likelihood simulation based estimation
 ##
 ## 1. use criterion `qle` for estimation
 ## 2. then `mahal` as (generalized) least squares
-library(qle)
 data(normal)
+options(mc.cores=2)
 
-options(mc.cores=8)
+## one step minimization
+## no sammpling
+# x0 <- c(2.5,1.5)
+# qscoring(qsd, x0, pl=10,verbose=TRUE)
 
-RNGkind("L'Ecuyer-CMRG")
-set.seed(1356)
+## alternatively use minimization by `nloptr`
+# searchMinimizer(x0, qsd, method = c("bobyqa"), verbose=TRUE)
 
-# one step minimization
-# no sammpling
-x0 <- c(2.5,1.5)
-qscoring(qsd, x0, pl=10,verbose=TRUE)
+# main estimation with new evaluations
+# (simulations of the statistical model)
+OPT <- qle(qsd,qsd$sim,nsim=10,
+		global.opts=list("maxeval"=2),
+		local.opts=list("test"=FALSE),pl=3)
 
-# alternatively use minimization by `nloptr`
-searchMinimizer(x0, qsd, method = c("bobyqa"), verbose=TRUE)
-
-# QLE approach:
-OPT <- qle(qsd,qsd$sim,nsim=100,
-		global.opts=list("maxeval"=50),
-		local.opts=list("lam_max"=1e-3,"weights"=0.5),
-		pl=3)
-
-# solution (with  details)
-print(OPT,pl=3)
-
-# prepare for a restart 
-qsd2 <- OPT$qsd
-
-# and do a pure global search by `ftol_abs=0` 
-# sample additional (globally selected) points
-# for evaluation by selection criterion `var`
-GL <- qle(qsd2, qsd$sim,nsim=100,		
-		global.opts = list( "maxiter"=10, "stopval"=0),
-		local.opts = list("nextSample"="var","ftol_abs"=0),
-		pl = 3)
-
-
-# Use a least squares approach 
-qsd$criterion <- "mahal"
-MA <- qle(qsd, qsd$sim, method = c("lbfgs","bobyqa","direct"), 
-		global.opts = list("maxiter" = 10, "maxeval"=25), pl = 3)
-
-# results (short)
-MA	
-# use pl=1,2,3 for more information	
-print(MA,pl=3)
-}
+# restart estimation and do a pure global search (setting `ftol_abs=0`), 
+# sample additional points for evaluation and select new candidates by criterion `var`
+GL <- qle(OPT$qsd, qsd$sim, nsim=10,		
+		global.opts = list( "maxiter"=5, "stopval"=0),
+		local.opts = list("nextSample"="var","ftol_abs"=0,test=FALSE),
+		iseed=123)
 
 }
 \seealso{

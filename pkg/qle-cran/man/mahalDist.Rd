@@ -78,18 +78,13 @@ The function computes the Mahalanobis distance of the given statistics \eqn{T(X)
  without using prediction variances as explained above. Note that in this case the argument `\code{Sigma}` is ignored.
 }
 \examples{
-\dontrun{ 
-data(normal)
-
-# a random LHS sample of N points
-p <- multiDimLHS(N=10,qsd$lower,qsd$upper) 
-
-# (weighted) least squares (LS) criterion
-MD <- mahalDist(p, qsd,Sigma=diag(2))
-
-# generalized LS (using variance average approximation) 
-MD2 <- mahalDist(p, qsd) 
-}
+ data(normal)
+ # (weighted) least squares
+ mahalDist(c(2,1), qsd,Sigma=diag(2))
+ 
+ # generalized LS with variance average approximation 
+	# here: same as quasi-deviance
+ mahalDist(c(2,1), qsd)  
  
 }
 \author{

@@ -54,7 +54,6 @@ Other than the kriging prediction variance, which solely depends on interdistanc
  equal to "\code{sigK}".
 }
 \examples{
-\dontrun{
 data(normal)
 
 # design matrix and statistics
@@ -70,7 +69,7 @@ crossValTx(qsd, cvm, theta0, type = "rmsd")
 
 # and kriging standard error  
 sqrt(varKM(qsd$covT,theta0,X,Tstat)) 	 
-}
+
 
 }
 \seealso{

@@ -4,24 +4,23 @@
 \name{qsd}
 \alias{qsd}
 \title{A normal model}
-\format{see \code{\link{QLmodel}}}
+\format{same format as an object of class \code{\link{QLmodel}}}
 \usage{
 data(normal)
 }
 \description{
-A pedagogic example of a statistical model using random numbers
-sampled from a normal distribution.
+A statistical model of random numbers
 }
 \details{
-This is a pedagogic example of a (simulated) dataset for quasi-likelihood estimation based
-on normally distributed random numbers. The model outcome is a vector of summary statistics, that is,
-the median and mean average deviation of \code{n=10} random numbers, which is evaluated at the
+This is a pedagogic example of a simulated data set for quasi-likelihood estimation using
+normally distributed random numbers. The model outcome is a vector of summary statistics, that is,
+simply the median and mean average deviation of \code{n=10} random numbers, which is evaluated at the
 model parameter \eqn{\theta=(\mu,\sigma)} with mean \eqn{\mu} and standard deviation \eqn{\sigma} as
 the parameters of the normal distribution. We estimate the model parameter given a specific
-"observation" of those summary statistics. Clearly, the method of maximum likelihood would be the default
-method to use if we had a real sample of observations. However,
-we use a simulated quasi-likelihood estimation approach in order to demonstrate the basic workflow of how to
-initialize and use the package. Also we use this model as a standard example in the package documentation.
+"observation" of those summary statistics. Clearly, maximum likelihood estimation would be the 
+method of first choice if we had a real sample of observations. However, this example is used to demonstrate
+the basic workflow of estimating the model parameter. We use this model as a standard example in the package
+documentation.
 }
 \author{
 M. Baaske

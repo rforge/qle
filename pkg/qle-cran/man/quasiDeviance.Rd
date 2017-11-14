@@ -89,11 +89,8 @@ The function calculates the QD (see [1]). It is the primary function criterion t
 }
 \examples{
 
-data(normal)
-
-# a random LHS sample of N points
-p <- multiDimLHS(N=10,qsd$lower,qsd$upper) 
-QD <- quasiDeviance(p, qsd)
+data(normal) 
+quasiDeviance(c(2,1), qsd)
  
 }
 \author{

@@ -20,11 +20,8 @@ The function returns a lists of all available options
  for functions \code{\link{qscoring}} and \code{\link{qle}}.
 }
 \examples{
-\dontrun{
-# options for a 3D parameter estimation
-getDefaultOptions(3)
-}
-
+getDefaultOptions(xdim=2)
+ 
 }
 \author{
 M. Baaske

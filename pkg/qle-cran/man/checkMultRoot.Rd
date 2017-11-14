@@ -30,6 +30,14 @@ Ony in case of the quasi-likelihood approach using the criterion function "\code
  We measure this dissimilarity of both matrices evaluated at some given approximate roots `\code{par}` for which these
  criteria should be neglectably small to be a plausible root. By the smallest value we extract the best root.
 }
+\examples{
+ data(normal)
+ # a dummy estimation result: no new evaluations
+ OPT <- qle(qsd,qsd$sim,global.opts=list("maxeval"=0))
+ # and just a single root 
+ checkMultRoot(OPT,verbose=TRUE)
+
+}
 \author{
 M. Baaske
 }

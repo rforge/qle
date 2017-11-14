@@ -48,7 +48,7 @@ data(normal)
 X <- as.matrix(qsd$qldata[,1:2])
 p <- c("mu"=2,"sd"=1)
 
-# simulated statistics at design X
+# get simulated statistics at design X
 Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
 
 # low level prediction, variances and weights

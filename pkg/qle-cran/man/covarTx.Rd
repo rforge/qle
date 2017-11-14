@@ -56,9 +56,8 @@ The function estimates the variance matrix of statistics at some (unsampled) poi
 }
 \examples{
  data(normal)
- # add prediction variances to the variance
- # average approximation in `theta` and invert
- covarTx(qsd,theta=c("mu"=2,"sd"=1),useVar=TRUE,doInvert=TRUE)
+ # average approximation of variance matrices
+ covarTx(qsd,theta=c("mu"=2,"sd"=1))
 
 }
 \author{

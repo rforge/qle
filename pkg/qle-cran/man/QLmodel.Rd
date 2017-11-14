@@ -47,9 +47,10 @@ The function aggregates all information for estimation storing the fitted
   make use of of kriging prediction variances by `\code{useVar}` later for approximation
   of the variance matrix of statstics. If this is \code{TRUE}, then a kriging procedure calculating prediction 
   variances is used. Otherwise we use the so-called \emph{dual} approach which has some computational advantage when
-  no prediction variances are needed.
-
-	 See \code{\link{getQLmodel}} for an example.
+  no prediction variances are needed. For an example please see \code{\link{getQLmodel}}.
+}
+\seealso{
+\code{\link{getQLmodel}}, \code{\link{updateCovModels}}
 }
 \author{
 M. Baaske
