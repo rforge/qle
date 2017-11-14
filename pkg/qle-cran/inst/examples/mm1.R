@@ -17,8 +17,8 @@
 # equivalently use `rgeom`
 	simfn <- function(tet) {
 		mean(rgeom(25,prob=1-tet[1]))		
-	}
-	
+	} 
+	# dummy
 # parameter space
 	lb <- c("rho"=0.05)
 	ub <- c("rho"=0.95)
