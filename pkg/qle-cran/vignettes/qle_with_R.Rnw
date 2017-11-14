@@ -1401,11 +1401,12 @@ approach and maximum likelihood method.}
 %
 Table \ref{tab:err} summarises the empirical and predicted estimation
 errors for both methods. The predicted errors $\overline{Var}$ compare well to
-the corresponding MSEs, where the resulting errors for $\hat{\rho}_{mle}$
-suggest a lower error for the quasi-likelihood estimate. This is due
-to the additional simulation variance included in the computation of the
-variance matrix approximation of the statistics (see Section
-\ref{subsec:varianceInter}) by our approach.\par
+the corresponding MSEs.\par
+%, where the resulting errors for $\hat{\rho}_{mle}$
+%suggest a lower error for the quasi-likelihood estimate. This is due
+%to the additional simulation variance included in the computation of the
+%variance matrix approximation of the statistics (see Section
+%\ref{subsec:varianceInter}) by our approach.\par
 %
 Finally, we can apply the MC goodness-of-fit test of the estimated
 parameter based on the same observations \code{obs0}.
