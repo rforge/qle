@@ -710,7 +710,7 @@ of accuracy for predicting at new points. In order to assess the validity and
 uncertainty of kriging approximations we consider the \emph{jackknife variance}
 (based on a specific CV approach tailored for simulation-based kriging) as
 proposed in \citet{Kleijnen2004a} as well as the estimation of the
-\emph{root-mean-square-error} (RMSE), see \citet{Jin2002}, including an option
+\emph{root mean squared error} (RMSE), see \citet{Jin2002}, including an option
 to control the computational effort. Note that we consider the prediction variance
 based on kriging and CV as complementary to one another and point out that the computation
 of both types does not require additional simulations of the statistical
@@ -1163,9 +1163,9 @@ First, we define the statistic model which practically leads to the
 simulation function below. For estimation of the parameter $\rho$ by our
 approach we fix the number of time points to $n=25$.
 <<>>=
-n <- 25
-simfn <- function(tet){
-	mean(rgeom(n,prob=1-tet[1]))
+cond <- list("n"=25)
+simfn <- function(tet,cond){
+	mean(rgeom(cond$n,prob=1-tet[1]))
 }
 @
 The function returns the average the number of customers in the system at steady
@@ -1183,7 +1183,7 @@ nsim <- 10
 X <- multiDimLHS(N=10,lb=lb,ub=ub,
       method="maximinLHS",type="matrix")
 
-sim <- simQLdata(sim=simfn,nsim=nsim,X=X)
+sim <- simQLdata(sim=simfn,cond=cond,nsim=nsim,X=X)
 @
 We set the ''real`` observation of the statistic $Y$ to \code{obs=1}
 corresponding to $\rho=0.5$. In this example the variance of $Y$ is approximated
@@ -1209,7 +1209,7 @@ local search, respectively, root finding method we apply the quasi-scoring
 iteration and, in case of non-convergence, switch to \code{bobyqa} or even to
 \code{direct} as a search method directly appplied to the criterion function only.
 <<>>=
-OPT <- qle(qsd,simfn, 	     	
+OPT <- qle(qsd,simfn,cond=cond,	     	
   global.opts = list("maxeval"=5, "NmaxLam"=5),
   local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,
                     "lam_max"=1e-5,"useWeights"=TRUE),
@@ -1222,7 +1222,7 @@ OPT <- qle(qsd,simfn,
 ## statistics
 op <- par(xaxs='i', yaxs='i')
 rho <- as.matrix(seq(0.1,0.9,by=0.001))
-y <- as.numeric(unlist(simQLdata(sim=simfn,nsim=nsim,X=rho,mode="mean")))
+y <- as.numeric(unlist(simQLdata(sim=simfn,cond=cond,nsim=nsim,X=rho,mode="mean")))
 T <- qsd$qldata[grep("mean.",names(qsd$qldata))]
 Y <- predictKM(qsd$covT,rho,X,T,krig.type="var")
 # steady state values
@@ -1308,16 +1308,7 @@ checkMultRoot(OPT,verbose = TRUE)
 show a good aggreement of the both the predicted, that is, the expected quasi-information matrix
 and its (numerically evaluated) observed analogue. The results suggest a
 consistent root of the quasi-score and thus a plausible estimate of the unknown
-parameter. We can also perform a MC goodness-of-fit test based on the final
-approximation of the summary statistic,
-<<>>=
-Stest <- qleTest(OPT,sim=simfn,nsim=100,iseed=1234)
-@
-which shows the predicted error in the column \code{Estimate} (in the last
-line), as the square root of the inverse of the predicted quasi-information.
-<<>>=
-Stest
-@
+parameter.\par
 %
 Further, we can also compute the predicted value of the summary statistic given
 the final design \code{X} and sample average values \code{Tstat} (at these
@@ -1328,17 +1319,17 @@ Tstat <- OPT$qsd$qldata[grep("mean.",names(qsd$qldata))]
 predictKM(OPT$qsd$covT,c("rho"=0.5),X,Tstat)
 @
 %
-Since the (simulated) observations $y$ are from an exponential family in linear
-form we can derive the \emph{maximum likelihood estimator} (mle),
-that is,
+Since the joint density function of the (simulated) observations $y$ is
+known we can derive the \emph{maximum likelihood estimator} (mle), that is,
 \[
  \hat{\rho}_{mle} = 1 - \frac{1}{1+\bar{y}}
 \]
 as the solution of Fisher`s \emph{score function},  
 \[
- u(\rho)=n\left(\frac{1}{1-\rho}-\frac{\bar{y}}{\rho}\right)=0\,.
+ u(\rho)=n\left(\frac{1}{1-\rho}-\frac{\bar{y}}{\rho}\right)=0\,,
 \]
-In this case the score function is identical to the quasi-score function,
+which belongs to the exponential family of distributions in linear form. In this
+case the score function is identical to the quasi-score function,
 \[
 Q(\rho,\bar{y})=\frac{1}{(1-\rho)}\left(\frac{\rho}{n(1-\rho)^2}\right)^{-1}\left(\bar{y}-\frac{\rho}{1-\rho}\right) = u(\rho)\,.
 \]     
@@ -1353,41 +1344,41 @@ I(\rho)=\frac{1}{(1-\rho)^4}\left(\frac{\rho}{n(1-\rho)^2}\right)^{-1}=\frac{n}{
 \]
 %
 Therefore, compared to the maximum liklihood method, the resulting
-estimation error by quasi-likelihood is due to the inherent simulation variance
-and approximation error of $\bar{y}$ by kriging. This effect can be best exemplified by
-a short simulation study.\par
+estimation error by the quasi-likelihood approach is due to the inherent
+simulation variance and approximation error of $\bar{y}$ by kriging. This effect
+can be best exemplified by a short simulation study.\par
 %
 We generate some observations at a fixed ''true`` parameter value, say
-$\rho=0.7$, using $n=25$ time points.
+$\rho=0.5$.
 % short simulation study
 <<>>=
-tet0 <- c("rho"=0.7)
-obs0 <- simQLdata(sim=simfn,nsim=100,X=tet0)
+tet0 <- c("rho"=0.5)
+obs0 <- simQLdata(sim=simfn,cond=cond,nsim=100,X=tet0)
 @
-and compute the mean squared error (MSE) of the maximum likelihood
-estimate and the average variance.
+and compute the empirical mean squared error (MSE) of the maximum likelihood
+estimates and the average variance.
 <<>>=
 mle <- do.call(rbind,
 		lapply(obs0[[1]],function(y,n){
                tet <- 1-1/(1+y[[1]])
                c("mle.rho"=tet,"mle.var"=(tet*(1-tet)^2)/n)
-            }, n=25))
+            }, n=cond$n))
 x <- mle[,1]-tet0
 mle.var <- c(sum(x^2)/length(x),mean(mle[,2]))
 @
-Now, based on the same observations, we estimate the parameter by our
-quasi-likelihood approach using the initial design.
+Given the generated set of observations \code{obs0} we now estimate the
+parameter for each observed value by our quasi-likelihood approach.
 <<>>=
 OPTS <- lapply(obs0[[1]],
           function(obs,...) qle(...,obs=obs),
          qsd=qsd,
-         sim=simfn, 	     	
+         sim=simfn, 
+         cond=cond,
          global.opts = list("maxeval"=5,"NmaxLam"=5),
          local.opts = list("nextSample"="score","weights"=0.5,
 				"ftol_abs"=1e-4,"lam_max"=1e-5,
 				"useWeights"=TRUE),
-         method = c("qscoring","bobyqa","direct"),
-         iseed=1356)
+         method = c("qscoring","bobyqa","direct"))
 QLE <- do.call(rbind,lapply(OPTS,
  function(x) c("qle"=x$par,"qle.var"=1/as.numeric(x$final$I))))	
 y <- QLE[,1]-tet0
@@ -1402,14 +1393,32 @@ Method & MSE($\hat{\rho}$) & $\overline{\mathsf{Var}}(\hat{\rho})$\\
 qle & \Sexpr{formatC(signif(qle.var[1],digits=3))} & \Sexpr{formatC(signif(qle.var[2],digits=3))}\\
 mle & \Sexpr{formatC(signif(mle.var[1],digits=3))} & \Sexpr{formatC(signif(mle.var[2],digits=3))}\\
 \end{tabular}
-\caption{Empirical mean square error (MSE) and average variance of the
-re-estimated parameters for $100$ observations by our quasi-likelihood (qle) approach and
-maximum likelihood method.}
+\caption{Empirical mean squared error (MSE) and average variance
+$\overline{Var}$ of the re-estimated parameters for $100$ observations using the quasi-likelihood 
+approach and maximum likelihood method.}
 \label{tab:err}
 \end{table}
 %
+Table \ref{tab:err} summarises the empirical and predicted estimation
+errors for both methods. The predicted errors $\overline{Var}$ compare well to
+the corresponding MSEs, where the resulting errors for $\hat{\rho}_{mle}$
+suggest a lower error for the quasi-likelihood estimate. This is due
+to the additional simulation variance included in the computation of the
+variance matrix approximation of the statistics (see Section
+\ref{subsec:varianceInter}) by our approach.\par
 %
-The results are shown in Table \ref{tab:err}.
+Finally, we can apply the MC goodness-of-fit test of the estimated
+parameter based on the same observations \code{obs0}.
+<<>>=
+Stest <- qleTest(OPT,sim=simfn,cond=cond,obs=obs0)
+Stest
+@
+which also shows a good match of the empirical and predicted error
+measures. Note that both errors resulting from the test are not the same as
+shown in Table \ref{tab:err} since the test procedure does not use new evaluation
+points during the re-estimation given the (generated) observed statistics. Thus
+the results from the test are only based on the fixed set of evaluation points
+as the result of the estimation in the object \code{OPT}.
 %
 \subsection{Estimating the parameters of a normal distribution}
 This example shows how to estimate the mean and standard deviation of a gaussian
@@ -1593,7 +1602,6 @@ which gives the estimated parameters
 fitMat$modelpar
 @
 <<eval=FALSE>>=
-#options(mc.cores=8)
 RNGkind("L'Ecuyer-CMRG")
 set.seed(297)
 @
