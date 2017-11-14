@@ -219,7 +219,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #'  X <- as.matrix(qsd$qldata[1:2])
 #'  # observed statistic
 #'  T <- qsd$qldata[c("mean.T1")]
-#'  reml(covT,pars=c(1e-4,1.5,0.1),T,X)
+#'  reml(qsd$covT[1],pars=c(1e-4,1.5,0.1),T,X)
 #' 
 #' @author M. Baaske
 #' @rdname reml

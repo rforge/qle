@@ -927,7 +927,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'     criterion function evaluations (only in case of non-convergence), evaluated sample points and
 #' 		 the status of the corresponding iteration}    
 #'  \item{optInfo}{ a list of arguments related to the estimation procedure:}
-#'    \itemize{
+#'  \itemize{
 #'    \item{x0:}{ starting parameter vector}
 #' 	  \item{W:}{ final weighting matrix (equal to quasi-information matrix at \code{theta}) used for both variance
 #' 			 average approximation, if applicable, and as the predicted variance for (local) sampling of new candidate points
@@ -1291,8 +1291,6 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 			  try(cl <- parallel::makeCluster(cores,type=type),silent=FALSE)
 		    # re-initialize in any case (see `set.seed`)		    
 			if(!is.null(cl)){
-				if(length(iseed) == 0L)
-				   message("You did not set a seed!")
 				clusterSetRNGStream(cl,iseed)			  	 
 			} else noCluster <- FALSE
 		}				

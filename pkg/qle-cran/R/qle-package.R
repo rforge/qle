@@ -87,11 +87,11 @@ NULL
 #' @name matclust
 #' @usage data(matclust)
 #' @format A list object named `\code{matclust}` which consists of
-#'   \decribe{
+#'   \itemize{
 #' 	   \item{qsd}{ initial quasi-likelihood approximation model}
 #'     \item{OPT}{ the results of estimation by \code{\link{qle}}}
 #'     \item{Stest}{ score test results }
-#'    }
+#'   }
 #' 
 #' @author M. Baaske
 NULL
