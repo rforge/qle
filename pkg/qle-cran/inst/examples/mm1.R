@@ -11,11 +11,11 @@
 	RNGkind("L'Ecuyer-CMRG")
 	set.seed(1356)
 	
+	
 	## steady state function
 # success parameter: 1-rho
 # equivalently use `rgeom`
 	simfn <- function(tet) {
-		#c("N"=tet/(1-tet) + rnorm(1,0,0.25))
 		mean(rgeom(25,prob=1-tet[1]))		
 	}
 	
@@ -223,7 +223,8 @@
 	x <- rgeom(n,prob=1-tet0)
 	y <- sum(x)
 	(tet.mle <- y/(n+y)) #1-1/(1+mean(x))
-	
+	1-1/(1+mean(x))
+	(tet.mle*(1-tet.mle)^2)/n
 			
 # or
 	1-1/(1+mean(x))
@@ -318,6 +319,60 @@
 			col=c("black","blue","black","magenta","green"),pt.cex=1.6,cex=1.6)
 	par(op)
 	
+# -----------------------------------------------------------------------------------
+	
+tet0 <- c("rho"=0.7)
+obs0 <- simQLdata(sim=simfn,nsim=100,X=tet0)
+mle <- do.call(rbind,
+		lapply(obs0[[1]],function(y,n){
+			tet <- 1-1/(1+y[[1]])
+			c("mle.rho"=tet,"mle.var"=(tet*(1-tet)^2)/n)
+		}, n=25))
+	
+cl <- makeCluster(8)
+clusterExport(cl,list("qle"))
+
+OPTS <- parLapplyLB(cl,obs0[[1]],
+		 fun=function(obs,...) qle(...,obs=obs),
+		  qsd=qsd,
+		  sim=simfn, 	     	
+		  global.opts = list("maxeval"=5,"NmaxLam"=5),
+		  local.opts = list("nextSample"="score","weights"=0.5,
+							"ftol_abs"=1e-4,"lam_max"=1e-5,
+							"useWeights"=TRUE),
+		  method = c("qscoring","bobyqa","direct"),
+		  iseed=1356)
+
+stopCluster(cl)	
+
+QLE <- do.call(rbind,lapply(OPTS,
+		  function(x) c("qle"=x$par,"qle.var"=1/as.numeric(x$final$I))))	
+	
+mle
+QLE	
+	
+## empircal error
+#x <- as.matrix(mle[,1]-matrix(rep(tet0,nrow(mle))))
+#y <- as.matrix(QLE[,1]-matrix(rep(tet0,nrow(QLE))))
+
+## standard errors
+#c(as.numeric((t(x)%*%x)/nrow(x)),mean(mle[,2]))
+#c(as.numeric((t(y)%*%y)/nrow(y)),mean(QLE[,2]))
+
+
+x <- mle[,1]-tet0
+y <- QLE[,1]-tet0
+
+c(sum(x^2)/length(x),mean(mle[,2]))
+c(sum(y^2)/length(x),mean(QLE[,2]))
+
+
+
+
+# MC testing
+
+
+# -----------------------------------------------------------------------------------	
 	
 	
 #	% TODO: Stest, MLE
