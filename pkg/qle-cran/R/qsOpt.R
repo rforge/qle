@@ -895,6 +895,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param nsim			optional, number of simulation replications at each new sample point,
 #'  					`\code{qsd$nsim}` (default)
 #' @param x0 			optional, numeric vector of starting parameters
+#' @param obs			optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}`
 #' @param Sigma			optional, constant variance matrix estimate of statistics (see details) 
 #' @param global.opts	options for global search phase
 #' @param local.opts	options for local search phase
@@ -1092,8 +1093,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' 
 #' @import parallel stats
 #' @importFrom graphics points
-qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
-				 global.opts = list(), local.opts = list(),
+qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
+		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"),
 				   qscore.opts = list(), control = list(),
 				    errType = "kv", pl = 0, 
@@ -1168,6 +1169,16 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, Sigma = NULL,
 	if(is.null(nsim) || !is.numeric(nsim))
 	  stop("Number of simulations must be given.")
     
+	 # may overwrite (observed) statistics	
+	 if(!is.null(obs)) {
+		  obs <- unlist(obs)
+		  if(anyNA(obs) | any(!is.finite(obs)))
+			  warning("`NA`, `NaN` or `Inf` values detected in argument `obs`.")
+		  if(!is.numeric(obs) || length(obs)!=length(qsd$covT))
+			  stop("Object `obs` must be a (named) numeric vector or list of length equal to the number of given statistics in `qsd`.")
+		  qsd$obs <- obs
+	} 
+  
     # wrapping simulator function
     sim <- match.fun(sim)	
 	# silently remove not required
