@@ -1352,10 +1352,10 @@ matrix, which reads
 I(\rho)=\frac{1}{(1-\rho)^4}\left(\frac{\rho}{n(1-\rho)^2}\right)^{-1}=\frac{n}{\rho(1-\rho)^2}=\mathsf{Var}(\rho)^{-1}=I_{mle}(\rho).
 \]
 %
-Therefore, compared to the maximum liklihood method, the resulting error of the
-quasi-likelihood estimate $\hat{\rho}$ is due to the inherent simulation variance
-and approximation error of $\bar{y}$ by kriging. This effect can be best
-exemplified by a short simulation study.\par
+Therefore, compared to the maximum liklihood method, the resulting
+estimation error by quasi-likelihood is due to the inherent simulation variance
+and approximation error of $\bar{y}$ by kriging. This effect can be best exemplified by
+a short simulation study.\par
 %
 We generate some observations at a fixed ''true`` parameter value, say
 $\rho=0.7$, using $n=25$ time points.
@@ -1402,8 +1402,8 @@ Method & MSE($\hat{\rho}$) & $\overline{\mathsf{Var}}(\hat{\rho})$\\
 qle & \Sexpr{formatC(signif(qle.var[1],digits=3))} & \Sexpr{formatC(signif(qle.var[2],digits=3))}\\
 mle & \Sexpr{formatC(signif(mle.var[1],digits=3))} & \Sexpr{formatC(signif(mle.var[2],digits=3))}\\
 \end{tabular}
-\caption{Mean square error (MSE) and average variance of the re-estimated
-parameters for $100$ observations by our quasi-likelihood (qle) approach and
+\caption{Empirical mean square error (MSE) and average variance of the
+re-estimated parameters for $100$ observations by our quasi-likelihood (qle) approach and
 maximum likelihood method.}
 \label{tab:err}
 \end{table}
