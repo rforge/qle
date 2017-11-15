@@ -1426,13 +1426,15 @@ measures. Note that the errors resulting from the test are not directly
 compareable with the ones shown in Table \ref{tab:err} since the test
 procedure does not use new evaluation points during the re-estimation given
 the (generated) observed statistics and is only based on the fixed design
-of evaluation points stored in \code{OPT}.
+of evaluation points stored in \code{OPT}. A comparison of the errors from
+the test and the simulation study is given below. 
 <<>>=
 rbind("Var"=c("test"=attr(Stest,"aiqm"),"study"=qle.var[2]),
 	  "MSE"=c(as.vector(Stest$param["RMSE"]^2),qle.var[1]))
 @
-Thus the variance estimation from testing is a ''pessimistic`` approximations of
-the one derived from the simulation, see Table \ref{tab:err}. 
+In general, the error estimation from testing is a rather ''pessimistic``
+approximation of the one derived from a simulation study, see Table
+\ref{tab:err}.
 %
 \subsection{Estimating the parameters of a normal distribution}
 This example shows how to estimate the mean and standard deviation of a gaussian
