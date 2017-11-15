@@ -1246,7 +1246,7 @@ y <- sapply(qd,"[[","value")
 score <- sapply(qd,"[[","score")
 ## plot quasi-deviance and quasi-score function
 plot(NULL, type="n", xlab=expression(rho),
-		ylab="",xlim=c(0,1), ylim=c(-10,30))
+		ylab="",xlim=c(0,1), ylim=c(-10,50))
 abline(h=0,col="gray")
 points(X,QD,pch=3,cex=1)
 lines(p,score, type='l',col="blue",lwd=1.5) 
@@ -1279,7 +1279,7 @@ y <- sapply(qd,"[[","value")
 score <- sapply(qd,"[[","score")
 ## plot quasi-deviance and quasi-score function
 plot(NULL, type="n", xlab=expression(rho),
-		ylab="",xlim=c(0,1), ylim=c(-10,30))
+		ylab="",xlim=c(0,1), ylim=c(-10,50))
 abline(h=0,col="gray")
 lines(p,score, type='l',col="blue",lwd=1.5) 
 lines(p,y,col="black",lwd=0.8)
@@ -1320,18 +1320,18 @@ predictKM(OPT$qsd$covT,c("rho"=0.5),X,Tstat)
 %
 Since the joint density function of the (simulated) observations $y$ is
 known we can derive the \emph{maximum likelihood estimator} (mle), that is,
-\[
+\begin{equation}\label{rhomle}
  \hat{\rho}_{mle} = 1 - \frac{1}{1+\bar{y}}
-\]
+\end{equation}
 as the solution of Fisher`s \emph{score function},  
 \[
  u(\rho)=n\left(\frac{1}{1-\rho}-\frac{\bar{y}}{\rho}\right)=0\,,
 \]
 which belongs to the exponential family of distributions in linear form. In this
 case the score function is identical to the quasi-score function,
-\[
+\begin{equation}\label{qsmm1q}
 Q(\rho,\bar{y})=\frac{1}{(1-\rho)}\left(\frac{\rho}{n(1-\rho)^2}\right)^{-1}\left(\bar{y}-\frac{\rho}{1-\rho}\right) = u(\rho)\,.
-\]     
+\end{equation}
 Further, since the variance of $\hat{\rho}_{mle}$ is given by
 \[
   \mathsf{Var}(\hat{\rho}_{mle}) = \frac{\hat{\rho}(1-\hat{\rho})^2}{n},
@@ -1403,26 +1403,36 @@ approach and maximum likelihood method.}
 \end{table}
 %
 Table \ref{tab:err} summarises the empirical and predicted estimation
-errors for both methods. The predicted errors $\overline{Var}$ compare well to
-the corresponding MSEs.\par
-%, where the resulting errors for $\hat{\rho}_{mle}$
-%suggest a lower error for the quasi-likelihood estimate. This is due
-%to the additional simulation variance included in the computation of the
-%variance matrix approximation of the statistics (see Section
-%\ref{subsec:varianceInter}) by our approach.\par
+errors. For both methods the predicted errors as shown by $\overline{Var}$
+compare well to the corresponding MSEs, where the results of the
+quasi-likelihood approach suggest a lower estimation error. This is due to
+the fact that, in this particular case, the maximum likelihood estimate
+$\hat{\rho}_{mle}$ in \eqref{rhomle} depends on the observed data only, whereas
+the quasi-likelihood estimate as the solution of \eqref{approxscore}, approximating the
+(quasi-)score function \eqref{qsmm1q}, depends on more (generated) data through
+the (kriging approximation of the) expectation function $\hat{Z}(\theta)$ in
+\eqref{approxscore} and thus uses a larger sample leading to more precise
+estimation results.\par
 %
-Finally, we can apply the MC goodness-of-fit test of the estimated
-parameter based on the same observations \code{obs0}.
+Finally, we can apply the MC goodness-of-fit test (see Section
+\ref{subsec:testing}) of the estimated parameter based on the same observations
+\code{obs0}.
 <<>>=
 Stest <- qleTest(OPT,sim=simfn,cond=cond,obs=obs0)
 Stest
 @
-which also shows a good match of the empirical and predicted error
-measures. Note that both errors resulting from the test are not the same as
-shown in Table \ref{tab:err} since the test procedure does not use new evaluation
-points during the re-estimation given the (generated) observed statistics. Thus
-the results from the test are only based on the fixed set of evaluation points
-as the result of the estimation in the object \code{OPT}.
+The results show a good match of the empirical and predicted error
+measures. Note that the errors resulting from the test are not directly
+compareable with the ones shown in Table \ref{tab:err} since the test
+procedure does not use new evaluation points during the re-estimation given
+the (generated) observed statistics and is only based on the fixed design
+of evaluation points stored in \code{OPT}.
+<<>>=
+rbind("Var"=c("test"=attr(Stest,"aiqm"),"study"=qle.var[2]),
+	  "MSE"=c(as.vector(Stest$param["RMSE"]^2),qle.var[1]))
+@
+Thus the variance estimation from testing is a ''pessimistic`` approximations of
+the one derived from the simulation, see Table \ref{tab:err}. 
 %
 \subsection{Estimating the parameters of a normal distribution}
 This example shows how to estimate the mean and standard deviation of a gaussian
@@ -1439,6 +1449,8 @@ absolute deviation} (from the median) as our informative statistics to
 characterise the model outcome.
 <<>>=
 set.seed(123)
+# setting the number of cores>1
+# uses parallel simulations and computations
 options(mc.cores=2)
 simfunc <- function(pars) {	
 	x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
@@ -1488,7 +1500,7 @@ using the default options.
 OPT <- qle(qsd,
         simfunc,		
         nsim=100,
-        global.opts=list("maxeval"=10),
+        global.opts=list("maxeval"=50),
         local.opts=list("lam_max"=1e-4,"weights"=0.5),
 		iseed=123)
 print(OPT)
