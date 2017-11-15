@@ -690,7 +690,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' @examples
 #'  data(normal)
 #'  # (weighted) least squares
-#'  mahalDist(c(2,1), qsd,Sigma=diag(2))
+#'  mahalDist(c(2,1), qsd, Sigma=diag(2))
 #'  
 #'  # generalized LS with variance average approximation 
 #' 	# here: same as quasi-deviance
@@ -815,11 +815,10 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 #' @importFrom lhs randomLHS maximinLHS augmentLHS
 #'
 #' @examples
-#'  
 #' data(normal)
 #' X <- multiDimLHS(N=5,qsd$lower,qsd$upper,type="matrix")
 #' # augment design X 
-#' rbind(X,multiDimLHS(N=5,qsd$lower,qsd$upper,X=X,
+#' rbind(X,multiDimLHS(N=1,qsd$lower,qsd$upper,X=X,
 #' 				method="augmentLHS",type="matrix"))
 #' 
 #' 

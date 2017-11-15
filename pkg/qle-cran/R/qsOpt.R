@@ -345,7 +345,7 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #'
 #' @examples
 #' data(normal)
-#' 
+#' options(mc.cores=2)
 #' # design matrix and statistics
 #' X <- as.matrix(qsd$qldata[,1:2])
 #' Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
@@ -468,6 +468,7 @@ updateCV <- function(i, qsd, fit, ...) {
 #' 
 #' @examples 
 #'   data(normal)
+#'   options(mc.cores=2)  
 #'   # without re-estimation of covariance parameters
 #'   qsd$cv.fit <- FALSE
 #'   cvm <- prefitCV(qsd)
@@ -676,9 +677,6 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' 
 #' @examples
 #' data(normal)
-#' # first use `bobyqa` only
-#' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="bobyqa",verbose=TRUE)
-#' # or as fallback method if quasi-scoring fails to converge 
 #' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method=c("qscoring","bobyqa"),verbose=TRUE) 
 #' 
 #' @seealso \code{\link[nloptr]{nloptr}}
@@ -1470,7 +1468,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 						  stop(paste(c("Cannot generate data at approximate root: \n\t ",
 							    format(xt, digits=6, justify="right")),collapse = " "))				  
 					    # test for an approximate root
-	                    D <- .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
+	                    .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 							      qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 							          theta=theta, cvm=cvm, cl=cl)	
 							
@@ -1804,7 +1802,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	# remove `nfail`, `nsucc`
 	ctls <-
 	 if(.isError(S0)) {
-	   message("Last search results have errors. Please see argument `\"final\")`.")	   
+	   message("Last search results have errors. Please see list element `\"final\")`.")	   
 	   ctls[1:8,-3]
 	 } else {	  	
 		val <- max(abs(S0$score))
@@ -2013,7 +2011,8 @@ print.QSResult <- function(x, pl = 1, digits = 5,...) {
 #' 	 and `\code{S}`, respectively, according to a (truncated) multivariate normal distribution (using
 #'   rejection sampling) to match the parameter space given by the lower and upper bound vectors. 	 
 #'
-#' 	 For an example see file "normal.R".		
+#' @examples
+#'  X <- nextLOCsample(matrix(c(1,0,0,1),nr=2), c(0,0), 10, c(-0.5,-0.5), c(0.5,0.5))
 #'  
 #' @author M. Baaske
 #' @rdname nextLOCsample
@@ -2123,11 +2122,10 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' 							 iterates and further values}
 #'  } 
 #'
-#' @examples
-#' 
+#' @examples 
 #' data(normal)
 #' QS <- qscoring(qsd,x0=c("mu"=3.5,"sigma"=0.5),
-#'          opts=list("score_tol"=1e-7))
+#'          opts=list("score_tol"=1e-4))
 #' 
 #' @author M. Baaske
 #' @rdname qscoring
@@ -2165,7 +2163,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 }
 
 
-## intern
+## intern only
 ## Conduct next simulations,
 ## and update covariance models
 updateQLmodel <- function(qsd, Xnew, newSim, fit = TRUE, cl = NULL, verbose = FALSE ){	
