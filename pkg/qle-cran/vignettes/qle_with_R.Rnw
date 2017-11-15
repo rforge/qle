@@ -1261,9 +1261,10 @@ Xnew <- OPT$qsd$qldata[(nrow(X)+1):(nrow(X)+nmax),1]
 points(cbind(Xnew,0),pch=8,cex=2,col="green")
 par(op)
 @
-\caption{M/M/1 queue: mean number of customers (left) and
-quasi-deviance, respectively, quasi-score approximation. Both are
-based on the same set of sample points (right).}\label{fig:mm1q1}
+\caption{M/M/1 queue: number of customers (left) and
+quasi-deviance, respectively, quasi-score approximation (right). All
+approximations shown are based on the same set of evaluation
+points.}\label{fig:mm1q1}
 \end{figure}
 Only a few iterations are needed to improve the last estimate.
 <<>>=
@@ -1283,7 +1284,7 @@ plot(NULL, type="n", xlab=expression(rho),
 abline(h=0,col="gray")
 lines(p,score, type='l',col="blue",lwd=1.5) 
 lines(p,y,col="black",lwd=0.8)
-legend("top", c("quasi-deviance","quasi-score","sample points", "QL estimate"),
+legend("topleft", c("quasi-deviance","quasi-score","sample points", "QL estimate"),
 		lty=c(1,1),lwd=c(1,1,NA,NA,NA),pch=c(NA,NA,3,5,8),
 		col=c("black","blue","black","magenta","green"),pt.cex=1,cex=1)
 
@@ -1293,21 +1294,21 @@ points(X,QD,pch=3,cex=1)
 points(OPT$par,OPT$val,col="magenta",pch=5)
 par(op)
 @
-\caption{Final quasi-deviance and quasi-score function approximations
-after adding five new sample points.}
+\caption{Final quasi-deviance and quasi-score function approximation
+after adding five new evaluation points.}
 \label{fig:mm1q2}
 \end{figure}
 \setkeys{Gin}{width=1\textwidth} 
 %
-The results of the consistency criteria, see Section \ref{subsec:check}, given
-below
+The results of the consistency criteria (see Section \ref{subsec:check}) are
+given below.
 <<>>=
 checkMultRoot(OPT,verbose = TRUE)
 @
-show a good aggreement of the both the predicted, that is, the expected quasi-information matrix
-and its (numerically evaluated) observed analogue. The results suggest a
-consistent root of the quasi-score and thus a plausible estimate of the unknown
-parameter.\par
+Both, the predicted, that is, the expected quasi-information matrix
+and its (numerically evaluated) observed analogue show a good aggreement.
+The results suggest a consistent root of the quasi-score and thus a plausible
+estimate of the unknown parameter.\par
 %
 Further, we can also compute the predicted value of the summary statistic given
 the final design \code{X} and sample average values \code{Tstat} (at these
