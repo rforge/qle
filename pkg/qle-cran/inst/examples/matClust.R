@@ -1,4 +1,3 @@
-\dontrun{
 ## Fit a Matern-Cluster point pattern 
 ## to the `redwood` data from package spatstat
 
@@ -205,5 +204,3 @@ stopCluster(cl)
 #pdf("Kfunc.pdf",width = 8, height = 10)
 #plotGraphs(OPT$par,nsim=1000)
 #dev.off()
-
-}

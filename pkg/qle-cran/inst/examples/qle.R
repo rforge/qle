@@ -16,13 +16,13 @@ options(mc.cores=2)
 # main estimation with new evaluations
 # (simulations of the statistical model)
 OPT <- qle(qsd,qsd$sim,nsim=10,
-		global.opts=list("maxeval"=2),
+		global.opts=list("maxeval"=1),
 		local.opts=list("test"=FALSE),pl=3)
 
 # restart estimation and do a pure global search (setting `ftol_abs=0`), 
 # sample additional points for evaluation and select new candidates by criterion `var`
 GL <- qle(OPT$qsd, qsd$sim, nsim=10,		
-		global.opts = list( "maxiter"=5, "stopval"=0),
-		local.opts = list("nextSample"="var","ftol_abs"=0,test=FALSE),
+		global.opts = list( "maxiter"=1, "stopval"=0),
+		local.opts = list("nextSample"="var","ftol_abs"=0,"test"=FALSE),
 		iseed=123)
 

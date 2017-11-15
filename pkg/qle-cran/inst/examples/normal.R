@@ -15,7 +15,7 @@ ub <- c("mu"=8.0,"sigma"=5.0)
 theta0 <- c("mu"=2,"sigma"=1)
 
 # simulate model at a minimum of required design points
-sim <- simQLdata(sim=simfunc,nsim=10,N=8,
+sim <- simQLdata(sim=simfunc,nsim=5,N=8,
     method="maximinLHS",lb=lb,ub=ub)	 
 
 # true and error-free observation
