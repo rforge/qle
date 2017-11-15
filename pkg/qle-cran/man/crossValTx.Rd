@@ -55,7 +55,7 @@ Other than the kriging prediction variance, which solely depends on interdistanc
 }
 \examples{
 data(normal)
-
+options(mc.cores=2)
 # design matrix and statistics
 X <- as.matrix(qsd$qldata[,1:2])
 Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]

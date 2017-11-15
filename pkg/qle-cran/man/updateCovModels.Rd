@@ -41,6 +41,8 @@ The function updates both, the covariance models for kriging the statistics, and
 \examples{
 
 data(normal)
+options("mc.cores"=2)
+
 # old design
 X <- as.matrix(qsd$qldata[c(1,2)])
 
@@ -52,7 +54,7 @@ Xnew <- multiDimLHS(N=2,qsd$lower,qsd$upper,X=X,
 Xsim <- simQLdata(sim=qsd$sim,nsim=10,X=Xnew)
 
 # prepare data
-Xdata <- setQLdata(Xsim,Xnew,chol=TRUE)
+Xdata <- setQLdata(Xsim,Xnew)
 
 # do not re-estimate covariance parameters
 qsd2 <- updateCovModels(qsd,Xdata,fit=FALSE) 

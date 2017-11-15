@@ -53,7 +53,7 @@ and attributes:
       the re-estimated parameters have \code{NA} values, and criterion function minimizations have errors or did not
       converge, the integer seed value `\code{iseed}`}
 }
- \details{
+\details{
  The function expects an object of class \code{\link{qle}}. Simulated statistics which are already available at the estimated
  parameter can be passed by the argument `\code{obs}`. Otherwise the function first generates those realizations using `\code{nsim}`
  model replications. The criterion functions are used as specified in the object `\code{qsd}` and will not be further improved by

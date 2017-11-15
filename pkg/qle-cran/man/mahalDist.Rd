@@ -80,7 +80,7 @@ The function computes the Mahalanobis distance of the given statistics \eqn{T(X)
 \examples{
  data(normal)
  # (weighted) least squares
- mahalDist(c(2,1), qsd,Sigma=diag(2))
+ mahalDist(c(2,1), qsd, Sigma=diag(2))
  
  # generalized LS with variance average approximation 
 	# here: same as quasi-deviance

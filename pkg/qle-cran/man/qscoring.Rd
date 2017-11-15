@@ -84,10 +84,9 @@ The function implements a step-length controlled quasi-scoring iteration with si
  }
 }
 \examples{
-
 data(normal)
 QS <- qscoring(qsd,x0=c("mu"=3.5,"sigma"=0.5),
-         opts=list("score_tol"=1e-7))
+         opts=list("score_tol"=1e-4))
 
 }
 \author{

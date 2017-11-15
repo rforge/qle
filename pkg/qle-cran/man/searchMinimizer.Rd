@@ -95,9 +95,6 @@ The function provides an interface to local and global numerical minimization
 }
 \examples{
 data(normal)
-# first use `bobyqa` only
-searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method="bobyqa",verbose=TRUE)
-# or as fallback method if quasi-scoring fails to converge 
 searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method=c("qscoring","bobyqa"),verbose=TRUE) 
 
 }

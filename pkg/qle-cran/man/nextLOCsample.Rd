@@ -30,9 +30,11 @@ Generate a random sample of points.
 \details{
 The function generates a random sample of points with mean and variance given by `\code{x}`
 	 and `\code{S}`, respectively, according to a (truncated) multivariate normal distribution (using
-  rejection sampling) to match the parameter space given by the lower and upper bound vectors. 	 
-
-	 For an example see file "normal.R".
+  rejection sampling) to match the parameter space given by the lower and upper bound vectors.
+}
+\examples{
+ X <- nextLOCsample(matrix(c(1,0,0,1),nr=2), c(0,0), 10, c(-0.5,-0.5), c(0.5,0.5))
+ 
 }
 \author{
 M. Baaske

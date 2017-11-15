@@ -44,6 +44,7 @@ Using the CV-based approach (see vignette) for estimating the prediction varianc
 }
 \examples{
   data(normal)
+  options(mc.cores=2)  
   # without re-estimation of covariance parameters
   qsd$cv.fit <- FALSE
   cvm <- prefitCV(qsd)
