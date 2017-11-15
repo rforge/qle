@@ -449,7 +449,8 @@ fitCov <- function(models, Xs, data, controls = list(),
 	}	
 	structure(mods,
 		opts = opts,
-		error = if(length(errId) > 0L) errId else NULL)
+		error = if(length(errId) > 0L) errId else NULL,
+		class = "QLFit")
 }
 
 #' @name QLmodel
@@ -508,6 +509,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 	if(!is.numeric(obs))
 	  stop("Argument `obs` must be a (named) numeric vector or list.")
   	stopifnot(!is.null(mods$covT))
+	stopifnot(class(mods)=="QLFit")
 	
 	if(length(mods$covT) != length(obs))
 	  stop("Number of covariance models `covT` and length of observations vector `obs` must equal.")
@@ -755,7 +757,8 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 			  list("covT" = mods[1:nstat],
 			  	   "var.type" = var.type),
 		     opts = opts,
-			 error = if(length(errId)>0L) errId else NULL)	
+			 error = if(length(errId)>0L) errId else NULL,
+			 class = "QLFit")	
 	 
 	if(!is.null(covL))
 	  ret$covL <- mods[(nstat+1):length(mods)]
