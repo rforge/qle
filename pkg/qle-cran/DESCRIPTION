@@ -8,7 +8,7 @@ Authors@R: c(person("Markus", "Baaske", role = c("aut", "cre", "cph"),
 			 email = "boogaart@math.tu-freiberg.de"))
 Author: Markus Baaske [aut, cre, cph], K. Gerald van den Boogaart [ths]
 Maintainer: Markus Baaske <markus.baaske@uni-jena.de>		
-Description: A simulation-based quasi-likelihood method (Baaske et al. (2014) <doi:10.5566/ias.v33.p107-119>) for parameter estimation of parametric statistical models for which closed-form representations of distributional characteristics are unavailable and can only be obtained by computationally intensive simulations of the model.
+Description: A simulation-based quasi-likelihood method (Baaske, M. (2014) <doi:10.5566/ias.v33.p107-119>) for parameter estimation of parametric statistical models for which closed-form representations of distributional characteristics are unavailable and can only be obtained by computationally intensive simulations of the model.
 Depends: R (>= 3.3.3), parallel
 Imports: nloptr, digest, expm, lhs, mvtnorm
 Suggests: rlecuyer, spatstat
