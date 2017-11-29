@@ -382,17 +382,14 @@ void matmult_trans(double *x, int nrx, int ncx, double *y, int nry, int ncy, dou
 
 int check_Lapack_error(int info, const char* name, int line, const char *file)
 {
-  if (info == 0)
+  if(info == 0)
     return NO_ERROR;
 
-  char MSG[100]="";
-  if (info < 0)
-    std::sprintf(MSG, "Argument %d to Lapack function %s is illegal. \n ", -info, name);
-  else if(info > 0)
-    std::sprintf(MSG, "Lapack function %s returned error code %d \n ", name, info);
+  char MSG[500]="";
+  if(info != 0)
+    std::sprintf(MSG, "%s: error code (%d) in %s at line %d.\n", name, info, file, line);
 
   PRINT_MSG(MSG);
-
   return LAPACK_ERROR;
 }
 
