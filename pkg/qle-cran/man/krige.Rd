@@ -40,8 +40,23 @@ For a list of fitted covariance models the function \emph{predictKM} predicts th
 	 sample means of statistics at (unsampled) points, calculates the prediction
 	 variances (if `\code{krig.type}` equals "\code{var}") at these points and extracts the results.
 	 Note that, since we aim on predicting the simulation "error free" value of the sample means,
-  we use a \emph{smoothing} kriging predictor, see [2, Sec. 3.7.1].
+  we use a \emph{smoothing} kriging predictor (see [2, Sec. 3.7.1]).
 
 The function \emph{extract} either returns the predicted values, the
  prediction variances or the kriging weights for each point.
+}
+\examples{
+data(normal)
+X <- as.matrix(qsd$qldata[,1:2])
+p <- c("mu"=2,"sd"=1)
+
+# get simulated statistics at design X
+Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
+
+# predict and extract 
+predictKM(qsd$covT,p,X,Tstat)
+
+# prediction variances
+varKM(qsd$covT,p,X,Tstat)
+
 }

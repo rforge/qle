@@ -13,9 +13,9 @@ searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{method}{names of minimization routines to be used (see details)}
+\item{method}{names of possible minimization routines (see details)}
 
-\item{opts}{list of control arguments for quasi-scoring passed to \code{\link{qscoring}}}
+\item{opts}{list of control arguments for quasi-scoring iteration, see \code{\link{qscoring}}}
 
 \item{control}{list of control arguments passed to the auxiliary routines}
 
@@ -41,29 +41,27 @@ A list as follows
 	  \item{convergence}{logical, indicates numerical convergence}
 }
 \description{
-The function finds a root of the
-  quasi-score vector or minimizes one of the criterion functions.
+The function searches for a root of the quasi-score vector or minimizes one of the criterion functions.
 }
 \details{
-The function provides an interface to local and global numerical minimization
- using the approximate quasi-deviance (QD) or Mahalanobis distance (MD) as a criterion.
+The function provides an interface to local and global numerical minimization routines
+ using the approximate quasi-deviance (QD) or Mahalanobis distance (MD) as an objective function.
  
- The function does not require additional simulations to find an approximate minimizer. The
+ The function does not require additional simulations to find an approximate minimizer or root. The
  numerical iterations always take place on the fast to evaluate criterion function approximations.
  The main purpose is to provide an entry point for minimization without the
  need of sampling new candidate points for evaluation. This is particularly useful if we search
  for a "first-shot" minimizer. 
 
  The criterion function is treated as a deterministic (non-random) function during minimization
- (or root finding) and depends on the sample points. Because of the typical nonconvex nature of the
+ (or root finding) whose surface depends on the sample points. Because of the typical nonconvex nature of the
  criterion functions one cannot expect a global minimizer by applying any local search method like,
  for example, the scoring iteration \code{\link{qscoring}}.
  Therfore, if the scoring iteration or some other available method gets stuck in a possibly local
  minimum of the criterion function showing at least some kind of numerical convergence we use such
- minimizer as it is and finish the search possibly being unlucky having not found an appropriate root
- of the quasi-score vector (or global minimum of the Mahalanobis distance). If there is no convergence
- the search is restarted by switching to the next user supplied minimization routine defined by
- `\code{method}`. 
+ minimizer as it is and finish the search, possibly being unlucky, having not found an approximate root
+ of the quasi-score vector (or minimum of the Mahalanobis distance). If there is no convergence practically,
+ the search is restarted by switching to the next user supplied minimization routine defined in `\code{method}`. 
 
  \subsection{Choice of auxiliary minimization methods}{  
  Besides the local quasi-scoring (QS) iteration, `\code{method}` equal to "\code{qscoring}", the following
@@ -72,18 +70,20 @@ The function provides an interface to local and global numerical minimization
  
 	\itemize{
 	  \item{}{ \code{\link[nloptr]{bobyqa}}, \code{\link[nloptr]{cobyla}} and \code{\link[nloptr]{neldermead}}}
-   \item{}{ \code{\link[nloptr]{direct}}, locally biased version: \code{directL}}
-	  \item{}{ \code{\link[nloptr]{lbfgs}} for minimizing the MD with constant `\code{Sigma}` only}
-	  \item{}{ \code{\link[nloptr]{nloptr}} as the general optimizer, which allows to use further methods}
+   \item{}{ \code{\link[nloptr]{direct}}, global search with a locally biased version named \code{directL}}
+	  \item{}{ \code{\link[nloptr]{lbfgs}},  for minimizing the MD with constant `\code{Sigma}` only}
+	  \item{}{ \code{\link[nloptr]{nloptr}}, as the general optimizer, which allows to use further methods}
  }
    
  Using quasi-scoring first, which is only valid for minimizing the QD function, is always a good idea since we might have done
- a good guess being in the vicinity of an approximate root. If it fails we switch to any of the above alternative methods
+ a good guess already being close to an approximate root. If it fails we switch to any of the above alternative methods
  (e.g. \code{\link[nloptr]{bobyqa}} as the default method) or eventually - in some real hard situations - to the
  method `\code{direct}` or its locally biased version `\code{directL}`. The order of processing is determined
- by the order of appearance of the names in `\code{method}`. Any method available from package `\code{nloptr}` can be
+ by the order of appearance of the names in the argument `\code{method}`. Any method available from package `\code{nloptr}` can be
  chosen. In particular, setting \code{method="nloptr"} and `\code{control}` allows to choose a multistart algorithm such
- as \code{\link[nloptr]{mlsl}}. Only if there are reasonable arguments against quasi-scoring, such as expecting a local
+ as \code{\link[nloptr]{mlsl}}.
+
+ Only if there are reasonable arguments against quasi-scoring, such as expecting a local
  minimum rather than a root first or an available limited computational budget, we can always apply
  the direct search method `\code{direct}` leading to a globally exhaustive search. Note that we must always supply a starting
  point `\code{x0}`, which could be any vector valued parameter of the parameter space unless method `\code{direct}` is
@@ -99,7 +99,7 @@ searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method=c("qscoring","bobyqa"),verbose=T
 
 }
 \seealso{
-\code{\link[nloptr]{nloptr}}
+\code{\link[nloptr]{nloptr}}, \code{\link{qscoring}}
 }
 \author{
 M. Baaske

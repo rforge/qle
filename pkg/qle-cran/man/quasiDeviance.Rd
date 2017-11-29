@@ -9,8 +9,7 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
   verbose = FALSE)
 }
 \arguments{
-\item{points}{list or matrix of points where to compute the QD
-(a numeric vector is considered to be a point)}
+\item{points}{list or matrix of points where to compute the QD; a numeric vector is considered to be a point}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
@@ -45,27 +44,27 @@ Numeric vector of QD values or a list as follows:
 
  The matix `\code{Iobs}` is called the \eqn{\emph{observed quasi-information}} (see [2, Sec. 4.3]),
  which, in our setting, can be calculated at least numerically as the Jacobian of the quasi-score vector.
- Further, `\code{varS}` denotes the approximate variance-covariance matrix of the quasi-score vector, which 
- serves as a measure of accuracy (see [1] and the vignette, Sec. 3.2) of the approximation at some point.
+ Further, `\code{varS}` denotes the approximate variance-covariance matrix of the quasi-score vector given the observed
+ statistics and serves as a measure of accuracy (see [1] and the vignette, Sec. 3.2) of the approximation at some point.
 }
 \description{
-The function computes the quasi-deviance (QD) for parameters/points of the parameter
+The function computes the quasi-deviance (QD) for parameters (called points) of the parameter
  search space including the quasi-score vector and optionally its variance.
 }
 \details{
 The function calculates the QD (see [1]). It is the primary function criterion to be minimized
-  for estimating the unknown model parameter by the function \code{\link{qle}} and involves the computation of the quasi-score
+  for estimating the unknown model parameter by \code{\link{qle}} and involves the computation of the quasi-score
   and quasi-information matrix at a particular parameter. From a statistical point of view, the QD can be seen as
   a generalization to the \emph{efficient score statistic} (see [3] and the vignette) and is used as a decision
   rule in the estimation function \code{\link{qle}} in order to hypothesize about the true model parameter. A modified value of
   the QD, using the inverse of the variance of the quasi-score vector as a weighting matrix, is stored in the result `\code{qval}`.
    
-  Quasi-deviance values which are relatively small (compared to the quantiles of its approximate chi-squared
+  Quasi-deviance values which are relatively small (compared to the empirical quantiles of its approximate chi-squared
   distribution) suggest a solution to the quasi-score equation and hence could identify the unknown model parameter
-  in some probabilistic sense. This can be further investigated by testing the hypothesis whether the estimated
-  model parameter is the true one (see \code{\link{qleTest}}).
+  in some probabilistic sense. This can be further investigated by testing the hypothesis by function \code{\link{qleTest}}
+  whether the estimated model parameter is the true.
 
-  Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}} for details),
+  Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}}),
   then the QD value is calculated rather locally w.r.t. to an estimate `\code{theta}`. Note that, opposed to the MD,
   the QD does not support a constant variance matrix. However, if supplied, then `\code{Sigma}` is used as a first estimate
   and, if `\code{qsd$krig.type}`="\code{var}", prediction variances are also added (see also \code{\link{mahalDist}}).    
@@ -76,20 +75,19 @@ The function calculates the QD (see [1]). It is the primary function criterion t
   cross-validation or kriging unless `\code{qsd$krig.type}` equals "\code{dual}". If `\code{cvm}` is not given, then
   the prediction variances are obtained by kriging. Using prediction variances the error matrix `\code{varS}` of
   the quasi-score vector is part of the return list and omitted otherwise. Besides the quasi-information matrix
-  also the observed quasi-information matrix (as a numerically derived Jacobian `\code{Iobs}` of the quasi-score vector)
+  also the observed quasi-information matrix (as a numerically derived Jacobian, given by `\code{Iobs}`, of the quasi-score vector)
   is returned. A good match between those two matrices suggests a possible root (with some probablity) if the corresponding
   QD value is relatively small. This can be further investigated by function \code{\link{checkMultRoot}}.
 
-  Alternatively, also CV-based prediction variances (with a fitted list of additional covariance models given by `\code{cvm}`)
+  Alternatively, also CV-based prediction variances (with additional covariance models given by `\code{cvm}`)
   for each single statistic can be used to produce relatively robust estimation results but for the price of
   much higher computational costs. In practice this might overcome the general tendency inherent to kriging to underestimate
-  the prediction variances. Therefore, CV is generally recommended in all situations where it is important to obtain a
-  robust estimate of the unkown model parameter.
+  the prediction variances of the sample means of the statistics and should be used if kriging the variance matrix of the statistics.
+  Further, CV is generally recommended in all situations where it is important to obtain a robust estimate of the unkown model parameter.
   }
 }
 \examples{
-
-data(normal) 
+data(normal)
 quasiDeviance(c(2,1), qsd)
  
 }

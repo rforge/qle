@@ -8,7 +8,7 @@ multiDimLHS(N, lb, ub, method = c("randomLHS", "maximinLHS", "augmentLHS"),
   X = NULL, type = c("list", "matrix"))
 }
 \arguments{
-\item{N}{number of points to randomly select or augment existing sample}
+\item{N}{number of points to randomly select or augment an existing sample set}
 
 \item{lb}{lower bounds defining the (hyper)box}
 
@@ -21,15 +21,16 @@ multiDimLHS(N, lb, ub, method = c("randomLHS", "maximinLHS", "augmentLHS"),
 \item{type}{either "\code{list}" or "\code{matrix}" as return type}
 }
 \value{
-Return either a list or a matrix of sampled vectors or newly
- generated points if an existing sample set is augmented.
+Return either a list or a matrix of sampled vectors or newly generated points if an existing sample set is augmented.
 }
 \description{
-Generate or augment a multidimensional LHS in a hyperbox
+The function generates or augments a multidimensional LHS in a hyperbox.
 }
 \examples{
 data(normal)
+# generate a design
 X <- multiDimLHS(N=5,qsd$lower,qsd$upper,type="matrix")
+
 # augment design X 
 rbind(X,multiDimLHS(N=1,qsd$lower,qsd$upper,X=X,
 				method="augmentLHS",type="matrix"))

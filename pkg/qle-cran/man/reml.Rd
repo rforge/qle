@@ -20,20 +20,22 @@ single covariance model in `\code{models}`}
 \item{verbose}{logical, if \code{TRUE}, print intermediate output}
 }
 \value{
-List of REML function values
+List of REML function values.
 }
 \description{
 Calculate the REML function value given a covariance model and (observed) data
 }
 \details{
 Given a list of covariance models the function calculates the REML function values at
-  parameter `\code{pars}`.
+  the covariance parameter `\code{pars}`.
 }
 \examples{
 	data(normal)
- # sample points
+
+ # extract the sample points (the design)
  X <- as.matrix(qsd$qldata[1:2])
- # observed statistic
+
+ # get the observed statistic
  T <- qsd$qldata[c("mean.T1")]
  reml(qsd$covT[1],pars=c(1e-4,1.5,0.1),T,X)
 

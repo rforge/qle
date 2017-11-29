@@ -25,15 +25,16 @@ A data frame with columns named corresponding to each component of the investiga
 Check out and compare estimated roots of the quasi-score vector
 }
 \details{
-Ony in case of the quasi-likelihood approach using the criterion function "\code{qle}" we can compare the
- observed quasi-information matrix with the expected one by some (scalar equivalent) criteria (see vignette).
- We measure this dissimilarity of both matrices evaluated at some given approximate roots `\code{par}` for which these
- criteria should be neglectably small to be a plausible root. By the smallest value we extract the best root.
+Only for the quasi-likelihood approach the function inspects the (numerical) consistency of the found
+ parameters in `\code{par}` by comparing each observed quasi-information matrix with the expected one.
+ The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
+ and the parameter for which these are smallest is chosen.
 }
 \examples{
  data(normal)
- # a dummy estimation result: no new evaluations
+ # a dummy estimation result
  OPT <- qle(qsd,qsd$sim,global.opts=list("maxeval"=0))
+ 
  # and just a single root 
  checkMultRoot(OPT,verbose=TRUE)
 

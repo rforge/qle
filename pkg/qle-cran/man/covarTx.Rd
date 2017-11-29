@@ -14,7 +14,7 @@ covarTx(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE,
 
 \item{theta}{parameter vector for weighted average approximation of variance matrix}
 
-\item{cvm}{list of fitted cross-validation models (see \code{\link{prefitCV}})}
+\item{cvm}{list of fitted cross-validation models, see \code{\link{prefitCV}}}
 
 \item{useVar}{logical, if \code{TRUE}, then use prediction variances (see details)}
 
@@ -34,12 +34,12 @@ Approximating the variance-covariance matrix of statistics
 The function estimates the variance matrix of statistics at some (unsampled) point by either
  averaging (the \emph{Cholesky} decomposed terms or matrix logarithms) over all simulated variance matrices
  of statistics at previously evaluated points of the parameter space or by a kriging approach which treats the Cholesky
- decomposed terms of each variance matrix as a vector for interpolation.
+ decomposed terms of each variance matrix as the data vector for kriging.
 
  In addition, a Nadaraya-Watson kernel-weighted average approximation can also be applied in order to bias the variance
- estimation towards a more locally weighted final parameter estimate, where smaller weights are assigned to points being more
- distant to the current estimate of the unknown model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
- `\code{W}` of size equal to the problem dimension \code{q}, can be freely chosen by the user. In addition, the user can select
+ estimation towards a more locally weighted estimation, where smaller weights are assigned to points being more
+ distant to an estimate of the unknown model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
+ `\code{W}` of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
  different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}"
  or "\code{kriging}" defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
  approximation. Depending on the type of kriging for the statistics, `\code{qsd$krig.type}`, prediction variances
@@ -50,7 +50,7 @@ The function estimates the variance matrix of statistics at some (unsampled) poi
  \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} 
 	where \eqn{\hat{V}} denotes one of the above variance approximation types.
  The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
- cross-validation approach (see vignette). Finally, we can switch off using prediction variances of either type by `\code{useVar}`.
+ CV approach (see vignette). Finally, we can switch off using prediction variances of either type by setting `\code{useVar}`=\code{FALSE}.
  In general, this should be avoided. However, if the estimation problem under investigation is \emph{simple enough},
  then this choice may be still appropriate.
 }

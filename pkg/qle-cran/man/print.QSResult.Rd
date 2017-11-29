@@ -7,7 +7,7 @@
 \method{print}{QSResult}(x, pl = 1, digits = 5, ...)
 }
 \arguments{
-\item{x}{object of type \code{QSResult}, obtained from \code{\link{qscoring}}}
+\item{x}{object of type \code{QSResult} from \code{\link{qscoring}}}
 
 \item{pl}{numeric positive value, the print level (higher values give more information)}
 
@@ -16,5 +16,5 @@
 \item{...}{ignored, additional arguments}
 }
 \description{
-S3 method to print the results of \code{\link{qscoring}}.
+S3 method to print the results from \code{\link{qscoring}}.
 }

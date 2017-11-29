@@ -9,13 +9,13 @@ QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
   "const"), useVar = TRUE, criterion = c("qle", "mahal"), verbose = FALSE)
 }
 \arguments{
-\item{qldata}{simulation data (see \code{\link{setQLdata}})}
+\item{qldata}{data frame of (initial) simulation results (see \code{\link{setQLdata}})}
 
 \item{lb}{numeric vector of lower bounds defining the (hyper)box}
 
 \item{ub}{numeric vector of upper bounds defining the (hyper)box}
 
-\item{obs}{numeric vector of (real data) statistics}
+\item{obs}{numeric vector of observed statistics}
 
 \item{mods}{list of (fitted) covariance models (see \code{\link{fitSIRFk}})}
 
@@ -33,21 +33,36 @@ parameters are re-estimated otherwise re-used}
 \item{verbose}{logical, \code{FALSE} (default), whether to give further output}
 }
 \value{
-Object of class \code{\link{QLmodel}} which stores the data frame of simulation results, bounds on
- the parameter space, covariance models for kriging, observations vector as well as options for kriging and fitting.
+An object of class \code{\link{QLmodel}} which stores the data frame of simulation results, bounds on
+ the parameter space, covariance models for kriging, vector of observed statistics as well as options for
+ kriging and fitting.
 }
 \description{
 Aggregate and construct the data for quasi-likelihood estimation
 }
 \details{
-The function aggregates all information for estimation storing the fitted
-  covariance models of statistics and the type of variance matrix approximation. For advanced users
-  this function explicitly offers the data structure to construct individual covariance models for
-  each statistic as defined by \code{\link{setCovModel}}. The user has the choice whether or not to
-  make use of of kriging prediction variances by `\code{useVar}` later for approximation
-  of the variance matrix of statstics. If this is \code{TRUE}, then a kriging procedure calculating prediction 
-  variances is used. Otherwise we use the so-called \emph{dual} approach which has some computational advantage when
-  no prediction variances are needed. For an example please see \code{\link{getQLmodel}}.
+The function aggregates all required information for quasi-likelihood estimation, stores the fitted
+  covariance models of the sample means of the statistics and the type of variance matrix approximation. For an advanced setup
+  of the estimation procedure and more involved statistical models this function explicitly offers the data structure to construct
+  individual covariance models for each statistic as defined by \code{\link{setCovModel}}. The user has the choice whether or not to
+  make use of of kriging prediction variances by `\code{useVar}` to account for the simulation error when constructing
+  the approximation of the variance matrix and the quasi-score function. If \code{TRUE}, then a kriging procedure calculating
+  prediction variances is automatically used. Otherwise the so-called \emph{dual} approach is employed which has some computational
+  advantage if prediction variances are not required.
+}
+\examples{
+
+data(normal)
+
+# We simply re-use the stored normal data and fit again: 
+# fit generalized covariance model to the data using
+# simulation variances as local nugget variances
+mods <- fitSIRFk(qsd$qldata, verbose=TRUE)
+
+# construct QL approximation model
+qsd <- QLmodel(qsd$qldata,qsd$lower,qsd$upper,
+			    c("T1"=2,"T2"=1),mods)
+
 }
 \seealso{
 \code{\link{getQLmodel}}, \code{\link{updateCovModels}}

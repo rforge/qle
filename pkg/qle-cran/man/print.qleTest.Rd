@@ -7,14 +7,14 @@
 \method{print}{qleTest}(x, pl = 1, digits = 5, ...)
 }
 \arguments{
-\item{x}{object of class \code{qleTest} from call to \code{\link{qleTest}}}
+\item{x}{object of class \code{qleTest} from \code{\link{qleTest}}}
 
-\item{pl}{not used yet}
+\item{pl}{ignored}
 
-\item{digits}{number of (significant) digits to display}
+\item{digits}{number of (significant) digits}
 
-\item{...}{ignored, additional arguments}
+\item{...}{ignored}
 }
 \description{
-print the results of call to \code{\link{qleTest}}
+print the results from \code{\link{qleTest}}
 }

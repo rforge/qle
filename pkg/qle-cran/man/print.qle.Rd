@@ -7,7 +7,7 @@
 \method{print}{qle}(x, pl = 2, digits = 5, ...)
 }
 \arguments{
-\item{x}{object of class \code{qle} from call to function \code{\link{qle}}}
+\item{x}{object of class \code{qle} from \code{\link{qle}}}
 
 \item{pl}{numeric (positive) value, the print level (higher values give more information)}
 
@@ -16,5 +16,5 @@
 \item{...}{ignored, additional arguments}
 }
 \description{
-S3 method to print the results of \code{\link{qle}}.
+S3 method to print the results from \code{\link{qle}}.
 }

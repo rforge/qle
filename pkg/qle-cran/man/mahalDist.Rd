@@ -29,13 +29,12 @@ used as constant variance matrix}
 
 \item{value.only}{only return the value of the MD}
 
-\item{cl}{cluster object, \code{NULL} (default), see e.g. \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
 \item{verbose}{if \code{TRUE}, then print intermediate output}
 }
 \value{
-Either a vector of MD values or a list of lists, where each
-		   contains the following elements:
+Either a vector of MD values or a list of lists, where each contains the following elements:
 \item{value}{ Mahalanobis distance value}
 \item{par}{ parameter estimate}
 \item{I}{ approximate variance matrix of the parameter estimate}
@@ -43,7 +42,7 @@ Either a vector of MD values or a list of lists, where each
 \item{jac}{ Jacobian of sample average statistics}
 \item{varS}{ estimated variance of the gradient `\code{score}`}
 
-and, if applicable, the following attached attributes:
+and, if applicable, the following attributes:
 
 \item{Sigma}{ estimate of variance matrix (if `\code{Sigma}` is computed or was set as a constant matrix)}
 \item{inverted}{ whether `\code{Sigma}` was inverted }

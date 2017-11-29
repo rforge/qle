@@ -7,7 +7,7 @@
 setQLdata(runs, X = NULL, chol = TRUE, na.rm = TRUE, verbose = FALSE)
 }
 \arguments{
-\item{runs}{list or matrix of simulation results (see \code{\link{simQLdata}})}
+\item{runs}{list or matrix of simulation results from \code{\link{simQLdata}}}
 
 \item{X}{list or matrix of model parameters}
 
@@ -36,16 +36,16 @@ An object of class \code{QLdata}  as a data frame with columns:
 	 \item{nIgnored}{ List of parameters ignored (because of failures)}
 }
 \description{
-Calculate the data for estimation
+Aggregate the data for quasi-likelihood estimation
 }
 \details{
-The function aggregates all neccessary data for QL estimation storing the
+The function aggregates all neccessary data for quasi-likelihood estimation storing the
 	sample locations and the corresponding simulation results of the statistics.
  If `\code{X}` equals \code{NULL}, then the sample points are taken from the object `\code{runs}`.
 
  The most critical part is the decomposition of variance matrices for each sample location if `\code{chol}`
  equals \code{TRUE}. The decompositions are used for average approximations of the variance matrix of statistics.
- If these fail for any reason we try to ignore, if possible, the corresponding sample point and parameter, exclude
+ If these fail for any reason we try to ignore, if possible, the corresponding sample point, exclude
  it from all following calculations with some information for the user. Unless the user preferes to supply a constant
  estimate of the variance matrix for estimation later by function \code{\link{qle}}, the default is to approximate the variance
  at any parameter by either a kriging interpolation of the \emph{Cholesky} terms or as an average over all sampled variance

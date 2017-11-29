@@ -2,20 +2,20 @@
 % Please edit documentation in R/covariance.R
 \name{fitCov}
 \alias{fitCov}
-\title{Fitting covariance models by REML}
+\title{Fitting covariance models by REML estimation}
 \usage{
 fitCov(models, Xs, data, controls = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
-\item{models}{object of class \code{krige} (list of covariance models) or
-class \code{covModel} (a single covariance model), see \code{\link{setCovModel}}}
+\item{models}{object either of class \code{krige}, a list of covariance models, or of
+class \code{covModel}, that is, a single covariance model}
 
-\item{Xs}{matrix of sample points}
+\item{Xs}{matrix of sample points, the design}
 
 \item{data}{data frame of simulated sample means of statistics
-first column corrspond to first model in list `\code{models}` and so forth}
+first column corrsponds to the first model in the list `\code{models}` and so forth}
 
-\item{controls}{list of control arguments, see \code{\link[nloptr]{nloptr}}}
+\item{controls}{list of control parameters, see \code{\link[nloptr]{nloptr}}}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
@@ -29,22 +29,24 @@ An object of class \code{reml} which consists of a list of named lists
 }
 \description{
 The function estimates the (hyper)parameters of the covariance models by
-	  the \emph{Restricted Maximum Likelihood} (REML) method .
+	  the \emph{Restricted Maximum Likelihood} (REML) method.
 }
 \details{
 The function fits a list of covariance models using the REML method. In order to avoid singularities
- of the so-called trend matrices make sure to use at least the minimum required number of sample points in
- `\code{Xs}`, which depends on the defined trend order (see \code{\link{setCovModel}} for details).
+ of the so-called trend matrices make sure to use at least the minimum required number of sample points stored in
+ `\code{Xs}` which depends on the defined trend order, see \code{\link{setCovModel}}.
 }
 \examples{
-  
-data(normal)
+data(normal)  
 
 # fit 1st statistic and get REML results
 fitCov(qsd$covT[1],
        Xs=as.matrix(qsd$qldata[1:2]),
        data=qsd$qldata["mean.T1"],verbose=TRUE)
   
+}
+\seealso{
+\code{\link{setCovModel}}
 }
 \author{
 M. Baaske

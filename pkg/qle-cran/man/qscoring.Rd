@@ -12,7 +12,7 @@ qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
 
 \item{x0}{(named) numeric vector, the starting parameter}
 
-\item{opts}{quasi-scoring options (see details)}
+\item{opts}{quasi-scoring options, see details}
 
 \item{Sigma}{a pre-specified variance matrix estimate}
 
@@ -43,8 +43,7 @@ List of results of quasi-scoring iteration.
  \item{criterion}{ equal to "\code{qle}"}
 }
 \description{
-The function solves the quasi-score equation by a 
- a root finding algorithm similar to Fisher's scoring iteration.
+The function solves the quasi-score equation by a root finding algorithm similar to Fisher's scoring iteration.
 }
 \details{
 The function implements a step-length controlled quasi-scoring iteration with simple bound
@@ -57,11 +56,11 @@ The function implements a step-length controlled quasi-scoring iteration with si
  finding algorithms and need to be addressed elsewhere. 
  
  \subsection{Quasi-scoring under uncertainty}{ 
- The quasi-scoring iteration covers both kinds of prediction variances, kriging-based and those by a cross-validation
- approach, which account for the uncertainty induced by the quasi-score approximation model. By default kriging variances
- are included in the computation during the iterations. If fitted covariance models `\code{cvm}` are supplied by the user
- in advance, the variances of prediction errors of each statistic are separately evaluated by the proposed cross-validation
- approach (see vignette) for each new point. For the price of relatively high computational costs those prediction variances
+ The quasi-scoring iteration covers both kinds of prediction variances, kriging-based and those by a CV approach, which account for
+ the uncertainty induced by the quasi-score approximation model. By default kriging variances
+ are included in the computation during all iterations. If fitted covariance models `\code{cvm}` are supplied by the user
+ in advance (see \code{\link{prefitCV}}), the variances of prediction errors of each statistic are separately evaluated by the proposed CV
+ approach for each new point. For the price of relatively high computational costs those prediction variances
  are intended to increase the robustness against false roots due to simulation and approximation errors of the quasi-score function.
 
  Opposed to this, the user also has the option to carry out a "pure version" of quasi-scoring without accounting for
@@ -88,6 +87,9 @@ data(normal)
 QS <- qscoring(qsd,x0=c("mu"=3.5,"sigma"=0.5),
          opts=list("score_tol"=1e-4))
 
+}
+\seealso{
+\code{\link{prefitCV}}
 }
 \author{
 M. Baaske

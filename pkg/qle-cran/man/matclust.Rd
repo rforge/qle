@@ -15,7 +15,8 @@ data(matclust)
 }
 \description{
 A data set of quasi-likelihood estimation results of estimating the parameters of a Matern cluster
-point process model for the `\code{redwood}` data set from the package \code{spatstat}.
+point process model. In the vignette we apply our method to the `\code{redwood}` data set from the
+package \code{spatstat}.
 }
 \author{
 M. Baaske

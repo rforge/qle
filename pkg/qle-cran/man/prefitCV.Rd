@@ -26,27 +26,25 @@ A list of certain length depending on the current sample size (number of evaluat
  (see details) left out for fitting the covariance models.
 }
 \description{
-The function constructs a list of covariance models
- of statistics in order to estimate the prediction error
+The function constructs a list of covariance models of statistics in order to estimate the prediction error
  variances by a cross-validation (CV) approach at unsampled points.
 }
 \details{
 Using the CV-based approach (see vignette) for estimating the prediction variances 
-	requires a refit of covariance parameters of each statistic based on leaving out a certain number of sample points.
- The covariance models are refitted if `\code{fit}` equals \code{TRUE} and otherwise simply updated without fitting
- saving some computational resources. The number of points left out is dynamically adjusted depending on the number
- of sample points in order to prevent the main estimation algorithm to fit as many models as there are points already
- sampled, which would surely be prohibitive in most practical situations. 
+	might require a refit of covariance parameters of each statistic based on leaving out a certain number of sample points.
+ The covariance models can be refitted if `\code{fit}` equals \code{TRUE} and otherwise are simply updated without fitting which
+ saves some computational resources. The number of points left out is dynamically adjusted depending on the number
+ of sample points in order to prevent the main estimation algorithm to fit as many models as there are points already evaluated.  
 
- For CV the number \eqn{n_c} of covariance models still to fit, that is, the number of
- partitioning sets of sample points, is limited by \eqn{n_c\leq n}, with maximum \eqn{k} sampling
- points deleted from the full sample set with overall \eqn{n} sample points such that \eqn{n=n_c k} (see vignette).
+ For CV the number \eqn{n_c} of covariance models still to fit, that is, the number of partitioning sets of sample points, is limited by
+ \eqn{n_c\leq n}, with maximum \eqn{k} sampling points deleted from the full sample set with overall \eqn{n} sample points such that
+ \eqn{n=n_c k} (see vignette for further details).
 }
 \examples{
   data(normal)
-  options(mc.cores=2)  
-  # without re-estimation of covariance parameters
-  qsd$cv.fit <- FALSE
+  
+  # without re-estimation of covariance parameters, default is TRUE
+  qsd$cv.fit <- FALSE  
   cvm <- prefitCV(qsd)
   
 }

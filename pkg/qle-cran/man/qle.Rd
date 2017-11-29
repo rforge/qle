@@ -12,7 +12,7 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{sim}{simulation function (see details)}
+\item{sim}{simulation function, see details}
 
 \item{...}{further arguments passed to the simulation function `\code{sim}`}
 
@@ -35,14 +35,13 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 
 \item{control}{list of control arguments passed to any of the routines defined in `\code{method}`}
 
-\item{errType}{type of prediction variances, choose one of "\code{kv,cv,max}" which stands for using kriging variances,
-CV errors or the maximum of both}
+\item{errType}{type of prediction variances, choose one of "\code{kv,cv,max}" (see details)}
 
-\item{pl}{print level, use \code{pl}>0 to print intermediate output}
+\item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
-\item{iseed}{integer seed, \code{NULL} (default) for no seeding of the RNG stream for each worker}
+\item{iseed}{integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster}
 
 \item{plot}{if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)}
 }
@@ -76,11 +75,11 @@ List of the following objects:
 	  \item{useCV:}{ logical, whether the CV approach was applied}
 	  \item{method:}{ name of final search method applied}
    \item{nsim:}{ number of simulation replications at each evaluation point}
-	  \item{iseed}{ the seed to initialize the random number generator}
+	  \item{iseed}{ the seed to initialize the RNG}
  }
 }
 \description{
-This is the main function using a simulated quasi-likelihood estimation (QLE) approach.
+This is the main function of the simulated quasi-likelihood estimation (QLE) approach.
 }
 \details{
 The function sequentially estimates the unknown model parameter. Basically, the user supplies a simulation function `\code{sim}`
@@ -110,9 +109,9 @@ The function sequentially estimates the unknown model parameter. Basically, the 
       
  \subsection{Monte Carlo (MC) hypothesis testing}{ The algorithm sequentially evaluates promising local minimizers of the criterion function during
  the local phase in order to assess the plausibility of being an approximate root of the corresponding quasi-score vector. We use essentially
- the same MC test procedure as in \code{\link{qleTest}} (see also the vignette). First, having found a local minimum of the test statistic, i.e. the criterion
+ the same MC test procedure as in \code{\link{qleTest}}. First, having found a local minimum of the test statistic, i.e. the criterion
  function, given the data, new observations are simulated w.r.t. to the local minimizer and the algorithm re-estimates the approximate roots for each
- observation independently. If the current minimizer is accepted as an approximate root at the significance level `\code{alpha}`, then the algorithm stays
+ observation independently. If the current minimizer is accepted as an approximate root at the significance level `\code{local.opts$alpha}`, then the algorithm stays
  in its local phase and continues sampling around the current minimizer accoring to its asymptotic variance (measured by the inverse of the
  predicted quasi-information) and uses the additional simulations to improve the current kriging approximations. Otherwise we switch to the global phase and
  do not consider the current minimizer as an approximate root.
@@ -139,7 +138,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  sampling new promising candidates for evaluation, that is, performing new simulations of the statistical model. Depending on the current value of the criterion
  function three different sampling criteria are used to select next evaluation points which aim on potentially improving the quasi-score
  or criterion function approximation. If a local minimizer of the criterion function has been accepted as an approximate root, then a local search
- tries to improve its accuracy. The next evaluation point is either selected according to a weighted minimum-distance criterion (see [2] and the vignette),
+ tries to improve its accuracy. The next evaluation point is either selected according to a weighted minimum-distance criterion (see [2] and vignette),
  for the choice `\code{nextSample}` equal to "\code{score}", or by maximizing the weighted variance of the quasi-score vector in
  case `\code{nextSample}` is equal to "\code{var}". In all other cases, for example, if identifiable roots of the QS could not be found
  or the (numerical) convergence of the local solvers failed, the global phase of the algorithm is invoked and selects new potential
@@ -222,37 +221,18 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  }
 }
 \examples{
-## Quasi-likelihood simulation based estimation
-##
-## 1. use criterion `qle` for estimation
-## 2. then `mahal` as (generalized) least squares
 data(normal)
-options(mc.cores=2)
-
-## one step minimization
-## no sammpling
-# x0 <- c(2.5,1.5)
-# qscoring(qsd, x0, pl=10,verbose=TRUE)
-
-## alternatively use minimization by `nloptr`
-# searchMinimizer(x0, qsd, method = c("bobyqa"), verbose=TRUE)
-
+ 
 # main estimation with new evaluations
 # (simulations of the statistical model)
 OPT <- qle(qsd,qsd$sim,nsim=10,
-		global.opts=list("maxeval"=1),
-		local.opts=list("test"=FALSE),pl=3)
+		    global.opts=list("maxeval"=1),
+ 		local.opts=list("test"=FALSE))
 
-# restart estimation and do a pure global search (setting `ftol_abs=0`), 
-# sample additional points for evaluation and select new candidates by criterion `var`
-GL <- qle(OPT$qsd, qsd$sim, nsim=10,		
-		global.opts = list( "maxiter"=1, "stopval"=0),
-		local.opts = list("nextSample"="var","ftol_abs"=0,"test"=FALSE),
-		iseed=123)
 
 }
 \seealso{
-\code{\link{mahalDist}}, \code{\link{quasiDeviance}}
+\code{\link{mahalDist}}, \code{\link{quasiDeviance}}, \code{\link{qleTest}}
 }
 \author{
 M. Baaske

@@ -8,13 +8,13 @@ updateCovModels(qsd, nextData, fit = TRUE, cl = NULL, controls = list(),
   verbose = FALSE)
 }
 \arguments{
-\item{qsd}{object of class \code{\link{QLmodel}} (to be updated)}
+\item{qsd}{object of class \code{\link{QLmodel}} which is to be updated}
 
-\item{nextData}{object of class \code{QLdata} with new simulation results}
+\item{nextData}{object of class \code{QLdata} which includes new simulation results}
 
 \item{fit}{logical, if \code{TRUE} (default), re-estimate covariance parameters}
 
-\item{cl}{currently ignored}
+\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 
 \item{controls}{list of control parameters passed to \code{\link[nloptr]{nloptr}}}
 
@@ -29,19 +29,18 @@ The function updates the current covariance models
 }
 \details{
 The function updates both, the covariance models for kriging the statistics, and, if applicable,
- the ones for kriging the variance matrix of statistics. In practice, the user hardly needs to call this
- function except for empirical studies of how additional sample points might influence the overall predictive
+ the ones for kriging the variance matrix of statistics based on the new data \code{nextData}. In practice, the user hardly
+ needs to call this function except for empirical studies of how additional sample points might influence the overall predictive
  quality of the quasi-score and/or criterion function approximations.
 
- If `\code{fit}` is \code{TRUE}, then the function re-estimates the covariance parameters for each statistic separately
+ If `\code{fit}` equals \code{TRUE}, then the function re-estimates the covariance parameters for each statistic separately
  each time a total of `\code{qsd$nfit}` new sample points have been added. Thus, we can choose whether to fit the updated
- covariance models each time, `\code{qsd$nfit}`=1, or after each 2nd, 3rd, and so on newly added point in order to save some
- computational time.
+ covariance models (by the REML estimation) each time, e.g. during the estimation by \code{\link{qle}} if `\code{qsd$nfit}`=1, or after
+ each 2nd, 3rd, and so on newly added point in order to limit the computational overhead.
 }
 \examples{
 
 data(normal)
-options("mc.cores"=2)
 
 # old design
 X <- as.matrix(qsd$qldata[c(1,2)])
@@ -59,7 +58,9 @@ Xdata <- setQLdata(Xsim,Xnew)
 # do not re-estimate covariance parameters
 qsd2 <- updateCovModels(qsd,Xdata,fit=FALSE) 
  
-
+}
+\seealso{
+\code{\link{setQLdata}}, \code{\link{simQLdata}}, \code{\link{QLmodel}}
 }
 \author{
 M. Baaske

@@ -25,7 +25,7 @@ nextLOCsample(S, x, n, lb, ub, pmin = 0.05, invert = FALSE)
 Matrix of sampled locations.
 }
 \description{
-Generate a random sample of points.
+Generate a random sample of points as a set of candidates for evaluation
 }
 \details{
 The function generates a random sample of points with mean and variance given by `\code{x}`

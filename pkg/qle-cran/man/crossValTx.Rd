@@ -10,7 +10,7 @@ crossValTx(qsd, cvm, theta = NULL, type = c("rmsd", "msd", "cve", "scve",
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{cvm}{list of prefitted covariance models (see \code{\link{prefitCV}})}
+\item{cvm}{list of prefitted covariance models from function \code{\link{prefitCV}}}
 
 \item{theta}{optional, default \code{NULL}, list or matrix of points where to estimate prediction variances}
 
@@ -19,26 +19,25 @@ crossValTx(qsd, cvm, theta = NULL, type = c("rmsd", "msd", "cve", "scve",
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 }
 \value{
-Matrix of estimated prediction variances for each point given by \code{theta} (as a row)
- and statistics (as columns).
+A matrix of estimated prediction variances for each point given by the argument \code{theta} (rows)
+ and for each statistic (columns).
 }
 \description{
-Estimate prediction variances based on cross-validation for
- each sample means of statistics
+The function estimates the prediction variances by a cross-validation approach (see vignette) applied to
+ each sample means of the involved statistics.
 }
 \details{
 Other than the kriging prediction variance, which solely depends on interdistances of sample points
  and estimated covariance parameters of some assumed to be known spatial covariance structure, the cross-validation
- based approach even takes into account the predicted values at `\code{theta}` and thus can be seen as a more robust
+ based approach (see [4] and the vignette) even takes into account the predicted values at `\code{theta}` and thus can be seen as a more robust
  measure of variability between different spatial locations. By default, `\code{theta}` equals the current sampling set 
  stored in the object `\code{qsd}`.
 
  If we set the error `\code{type}` equal to "\code{cve}", the impact on the level of accuracy (predicting at unsampled
- points) is measured by the \emph{delete-k jackknifed variance} of prediction errors, which then are calculated by a
- particular cross-validation approach (see [4] and the vignette). This approach does not require further simulations as a
- measure of uncertainty for predicting the sample means of statistics at new candidate points accross the parameter space.
- Note that if attribute \code{attr(cvm,"type")} equals "\code{max}", then the maximum of kriging and CV-based prediction
- variances is returned (see \code{\link{prefitCV}}) for option `\code{type}`=="\code{cve}". 
+ points) is measured by the \emph{delete-k jackknifed variance} of prediction errors. This approach does not require further
+ simulations as a measure of uncertainty for predicting the sample means of statistics at new candidate points accross the parameter space.
+ Note that if the attribute \code{attr(cvm,"type")} equals "\code{max}", then the maximum of kriging and CV-based prediction
+ variances is returned. 
 
  In addition, other measures of prediction uncertainty are available, such as the \emph{root mean square deviation}
  (\code{rmsd}) and \emph{mean square deviation} (\code{msd}) or the \emph{standardized cross-validation error}
@@ -49,31 +48,33 @@ Other than the kriging prediction variance, which solely depends on interdistanc
  \emph{average cross-validation error} (\code{acve}), the \emph{mean square error} (\code{mse}) or the
  \emph{average standardized cross-validation error} (\code{ascve}). These last measures can only be computed in case the total number
  of sample points equals the number of leave-one-out covariance models. This requires to fit each cross-validation
- covariance model (see \code{\link{prefitCV}}) using the option `\code{reduce}` equal to \code{FALSE} based on exactly
+ covariance model by \code{\link{prefitCV}} using the option `\code{reduce}`=\code{FALSE} which is then based on exactly
  one left out point. Also, we can calculate the kriging variance at the left-out sample points if we set the option `\code{type}`
  equal to "\code{sigK}".
 }
 \examples{
 data(normal)
-options(mc.cores=2)
+
 # design matrix and statistics
 X <- as.matrix(qsd$qldata[,1:2])
 Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
 
-# fit CV models
+# construct but do not re-estimate
+# covariance parameters by REML for CV models
+qsd$cv.fit <- FALSE
 cvm <- prefitCV(qsd)
 theta0 <- c("mu"=2,"sd"=1)
 
-# get RMSD by cross-validation 
-crossValTx(qsd, cvm, theta0, type = "rmsd")
+# get MSd by cross-validation at theta0 
+crossValTx(qsd, cvm, theta0, type = "msd")
 
-# and kriging standard error  
-sqrt(varKM(qsd$covT,theta0,X,Tstat)) 	 
+# and kriging variance  
+varKM(qsd$covT,theta0,X,Tstat) 	 
 
 
 }
 \seealso{
-\code{\link[parallel]{makeCluster}}
+\code{\link{prefitCV}}, \code{\link[parallel]{makeCluster}}
 }
 \author{
 M. Baaske

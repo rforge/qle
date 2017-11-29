@@ -8,7 +8,7 @@ getQLmodel(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "qle",
   ...)
 }
 \arguments{
-\item{runs}{object of class \code{simQL}, the simulation results (see \code{\link{simQLdata}})}
+\item{runs}{object of class \code{simQL} as simulation results from \code{\link{simQLdata}}}
 
 \item{lb}{lower bounds defining the (hyper)box}
 
@@ -35,31 +35,23 @@ The function is a wrapper to \code{\link{setQLdata}} and \code{\link{fitSIRFk}}
  in order to setup the data required for estimating the model parameters.
 }
 \examples{
-## Pedagogic example: a parametric statistical model
-## for normally distributed random numbers
 
-# define a statistical model bysimulation function
-simfunc <- function(pars) {	
-    x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
-    c("T1"=median(x),"T2"=mad(x))	
-}
-
-# box contraints defining the parameter space
-lb <- c("mu"=0.5,"sigma"=0.1)
-ub <- c("mu"=8.0,"sigma"=5.0)	   
-
-## the (unknown) true parameter
-theta0 <- c("mu"=2,"sigma"=1)
+data(normal)
 
 # simulate model at a minimum of required design points
-sim <- simQLdata(sim=simfunc,nsim=5,N=8,
-    method="maximinLHS",lb=lb,ub=ub)	 
-
+sim <- simQLdata(sim=qsd$sim,nsim=5,N=8,
+			 method="maximinLHS",lb=qsd$lower,ub=qsd$upper)
+	 
 # true and error-free observation
 obs <- structure(c("T1"=2,"T2"=1), class="simQL")
 
 # construct QL approximation model
-qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean")
+qsd <- getQLmodel(sim,qsd$lower,qsd$upper,obs,var.type="wcholMean")
+
+
+}
+\seealso{
+\code{\link{simQLdata}}, \code{\link{QLmodel}}, \code{\link{fitSIRFk}}
 }
 \author{
 M. Baaske
