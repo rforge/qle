@@ -2,7 +2,9 @@
 ##
 ## 1. use criterion `qle` for estimation
 ## 2. then `mahal` as (generalized) least squares
+library(qle)
 data(normal)
+
 options(mc.cores=2)
 
 ## one step minimization

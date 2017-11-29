@@ -1,6 +1,8 @@
 ## Pedagogic example: a parametric statistical model
 ## for normally distributed random numbers
 
+library(qle)
+
 # define a statistical model bysimulation function
 simfunc <- function(pars) {	
     x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
