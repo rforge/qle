@@ -7,27 +7,13 @@
  *
  */
 
-#include <R.h>
-#include <Rmath.h>
-#include <R_ext/Lapack.h>
-#include <R_ext/Linpack.h>
-
 #include "auxil.h"
 #include "error.h"
 
+#include <R_ext/Lapack.h>
+#include <R_ext/Linpack.h>
+
 int check_Lapack_error( int info, const char* name, int line, const char *file);
-
-SEXP getListElement (SEXP list, const char *str) {
-     SEXP elmt = R_NilValue;
-     SEXP names = getAttrib(list, R_NamesSymbol);
-
-     for (int i = 0; i < length(list); i++)
-         if(std::strcmp(CHAR(STRING_ELT(names, i)), str) == 0) {
-             elmt = VECTOR_ELT(list, i);
-             break;
-         }
-     return elmt;
- }
 
 /** \brief Merge cholesky decomposition into matrix
  *         V=t(L)%*%L
@@ -405,10 +391,8 @@ int check_Lapack_error(int info, const char* name, int line, const char *file)
   else if(info > 0)
     std::sprintf(MSG, "Lapack function %s returned error code %d \n ", name, info);
 
-  if(PL > 0)
-    PRINT_MSG(MSG);
+  PRINT_MSG(MSG);
 
-  setError( LAPACK_ERROR, MSG, line, file, info);
   return LAPACK_ERROR;
 }
 
@@ -451,11 +435,9 @@ qr_data qr_dgeqrf(double *a, int m, int n, int *err)
     return qr;
 
 ErrHandler:
-   qrFree(qr);
    FREE(work);
-
-   std::strcpy(ERROR_LOC, __FILE__);
-   *err=LAPACK_QR_ERROR;
+   qrFree(qr);
+   LOG_ERROR(LAPACK_QR_ERROR, " `qr_dgeqrf` failed");
    return qr;
 }
 
@@ -474,7 +456,7 @@ void qrFree(qr_data qr) {
  */
 
 void nullSpaceMat(qr_data qr, double *x, int *err) {
-    int i,j,k,info;
+    int i = 0, j = 0, k = 0,info = 0;
     int n = qr->ncol;  // cols F
     int m = qr->nrow;  // rows F
     int n_tau = qr->ntau;
@@ -510,8 +492,7 @@ void nullSpaceMat(qr_data qr, double *x, int *err) {
 ErrHandler:
   FREE(Q);
   FREE(work);
-  std::strcpy(ERROR_LOC, __FILE__);
-  *err=LAPACK_PMAT_ERROR;
+  LOG_ERROR(LAPACK_PMAT_ERROR, " `nullSpaceMat` failed");
 }
 
 
@@ -524,8 +505,7 @@ void solveLU(double *A, int nA, double *B, int nB, int *err) {
   FREE(ipiv);
 
   if((*err=check_Lapack_error(info,"LU solve failed in dgesv!",__LINE__, __FILE__)) != NO_ERROR) {
-      std::strcpy(ERROR_LOC, __FILE__);
-      *err = LAPACK_SOLVE_ERROR;
+	LOG_ERROR(LAPACK_ERROR, " `solveLU` failed");
   }
 }
 
@@ -560,8 +540,7 @@ void solveQR(double *X, int *nrx, int *ncx, double *y, int *ncy, int *err) {
 ErrHandler:
    FREE(xtmp);
    FREE(work);
-   std::strcpy(ERROR_LOC, __FILE__);
-   *err = LAPACK_SOLVE_ERROR;
+   LOG_ERROR(LAPACK_QR_ERROR, " `solveQR` failed");
 }
 
 /*! cholesky solve */
@@ -576,14 +555,13 @@ void solveCH(double *X, int nrowx, int ncolx, double *y, int ncoly, double *ans 
     F77_CALL(dposv)("U", &ncolx, &ncoly, xtmp, &ncolx, ans, &ncolx, &info);
     FREE(xtmp);
 
-    if( (*err=check_Lapack_error(info," `dposv` failed!",__LINE__, __FILE__)) != NO_ERROR) {
-       LOG_ERROR(LAPACK_SOLVE_ERROR, info, " `solveCH` failed");
+    if((*err=check_Lapack_error(info," `dposv` failed!",__LINE__, __FILE__)) != NO_ERROR) {
+       LOG_ERROR(LAPACK_SOLVE_ERROR, " `solveCH` failed");
     }
 }
 
 /*! packed storage solve */
 void solve_DSPTRS(double *A, int n, double *B, int nrhs, int *err ) {
-  *err=NO_ERROR;
   const char *uplo = "U";
 
   int nAP = n*(n+1)/2;
@@ -596,12 +574,12 @@ void solve_DSPTRS(double *A, int n, double *B, int nrhs, int *err ) {
   int info = 0;
   /* Matrix factorization */
   F77_NAME(dsptrf)(uplo,&n,AP,ipiv,&info);
-  if(check_Lapack_error(info,"First call to dsptrf in solve_DSPTRS failed!",__LINE__, __FILE__) != NO_ERROR)
+  if((*err=check_Lapack_error(info,"First call to dsptrf in solve_DSPTRS failed!",__LINE__, __FILE__)) != NO_ERROR)
     goto ErrHandler;
 
   /* Solving the linear equation */
   F77_NAME(dsptrs)(uplo,&n,&nrhs,AP,ipiv,B,&n,&info);
-  if(check_Lapack_error(info,"Second call to dsptrf in solve_DSPTRS failed!",__LINE__, __FILE__) != NO_ERROR)
+  if((*err=check_Lapack_error(info,"Second call to dsptrf in solve_DSPTRS failed!",__LINE__, __FILE__)) != NO_ERROR)
       goto ErrHandler;
 
   FREE(ipiv);
@@ -609,11 +587,9 @@ void solve_DSPTRS(double *A, int n, double *B, int nrhs, int *err ) {
   return;
 
 ErrHandler:
-    FREE(AP);
-    FREE(ipiv);
-
-  LOG_ERROR(LAPACK_SOLVE_ERROR, info,"Routine solve_DSPTRS failed");
-  *err=LAPACK_SOLVE_ERROR;
+  FREE(AP);
+  FREE(ipiv);
+  LOG_ERROR(LAPACK_SOLVE_ERROR, " `solve_DSPTRS` failed");
 }
 
 ///** \brief Factorize matrix A as A=LL^T
@@ -630,19 +606,11 @@ ErrHandler:
 void factorize_chol_L(double *A, int *nA, int *err) {
    int info = 0, n = *nA;
    const char *uplo = "L";
-   *err=NO_ERROR;
 
    /* factorize */
    F77_NAME(dpotrf)(uplo,&n,A,&n,&info);
-
-   if(check_Lapack_error(info,"call to 'dpotrf' failed!",__LINE__, __FILE__) != NO_ERROR )
-      goto ErrHandler;
-
-   return;
-
-ErrHandler:
- LOG_ERROR(LAPACK_FACTORIZE_ERROR, info,"'factorize_chol_L' failed");
- *err=LAPACK_FACTORIZE_ERROR;
+   if((*err=check_Lapack_error(info,"call to 'dpotrf' failed!",__LINE__, __FILE__)) != NO_ERROR )
+	   LOG_ERROR(LAPACK_FACTORIZE_ERROR, "'factorize_chol_L' failed");
 }
 
 /** \brief Solve AX=B with A=LL^T
@@ -657,18 +625,12 @@ ErrHandler:
 void solve_chol_factorized(double *A, int *nA, double *B, int *nB, int *err) {
   int info = 0,  n = *nA, nrhs = *nB;  // B has dimension:  n x nrhs, where nrhs= #cols
   const char *uplo = "L";
-  *err=NO_ERROR;
 
   /* solve with factorized matrix A=LL^T */
   F77_NAME(dpotrs)(uplo,&n,&nrhs,A,&n,B,&n,&info);
-  if(check_Lapack_error(info,"call to 'dpotrs' failed! ",__LINE__, __FILE__) != NO_ERROR )
-    goto ErrHandler;
+  if((*err=check_Lapack_error(info,"call to 'dpotrs' failed! ",__LINE__, __FILE__)) != NO_ERROR )
+	  LOG_ERROR(LAPACK_SOLVE_ERROR, " 'solve_chol_factorized' failed!");
 
-  return;
-
-ErrHandler:
-  LOG_ERROR(LAPACK_SOLVE_ERROR, info," 'solve_chol_factorized' failed!");
-  *err=LAPACK_SOLVE_ERROR;
 }
 
 
@@ -677,25 +639,17 @@ void solve_chol_triangular(double *A, int *nA, double *B, int *nB, int *err) {
   const char *diag = "N";
   const char *tran = "N";
   const char *uplo = "L";
-  *err=NO_ERROR;
 
   F77_NAME(dtrtrs)(uplo,tran,diag,&n,&nrhs,A,&n,B,&n,&info);
+  if((*err=check_Lapack_error(info,"call to 'dtrtrs' failed! ",__LINE__, __FILE__)) != NO_ERROR )
+	  LOG_ERROR(LAPACK_SOLVE_ERROR, " 'solve_chol_factorized' failed!");
 
-  if(check_Lapack_error(info,"call to 'dtrtrs' failed! ",__LINE__, __FILE__) != NO_ERROR )
-     goto ErrHandler;
-
-   return;
-
- ErrHandler:
-   LOG_ERROR(LAPACK_SOLVE_ERROR, info," 'solve_chol_factorized' failed!");
-   *err=LAPACK_SOLVE_ERROR;
-}
+ }
 
 
 void invMatrix(double *A,int nA, int *err) {
 	int info = 0;
 	const char *uplo = "U";
-	*err=NO_ERROR;
 
 	int nAP = nA*(nA+1)/2;
 	double *AP,*work;
@@ -709,12 +663,12 @@ void invMatrix(double *A,int nA, int *err) {
 
 	/* Matrix factorization */
 	F77_NAME(dsptrf)(uplo,&nA,AP,ipiv,&info);
-	if(check_Lapack_error(info,"Matrix factorization dsptrf failed!",__LINE__, __FILE__) != NO_ERROR )
+	if((*err=check_Lapack_error(info,"Matrix factorization dsptrf failed!",__LINE__, __FILE__)) != NO_ERROR )
 	    goto ErrHandler;
 
 	/* Inverse, possibly indefinite */
 	F77_NAME(dsptri)(uplo,&nA,AP,ipiv,work,&info);
-	if(check_Lapack_error(info,"Matrix inversion dsptri failed!", __LINE__,__FILE__) != NO_ERROR)
+	if((*err=check_Lapack_error(info,"Matrix inversion dsptri failed!", __LINE__,__FILE__)) != NO_ERROR)
 	    goto ErrHandler;
 
 	triangMat_U_back(A,nA,AP,nAP);
@@ -729,10 +683,7 @@ ErrHandler:
   FREE(ipiv);
   FREE(AP);
   FREE(work);
-
-  LOG_ERROR(LAPACK_INVERSION_ERROR, info,"Routine invMatrix failed");
-  *err=LAPACK_INVERSION_ERROR;
-
+  LOG_ERROR(LAPACK_INVERSION_ERROR, " `invMatrix` failed");
 }
 
 /**

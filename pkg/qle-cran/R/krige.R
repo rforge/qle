@@ -15,8 +15,8 @@
 #'
 #' @description 	
 #'
-#' @param models 	object of class \code{krige} (as a list of covariance models) or
-#' 	 				`\code{covModel}` (as a single covariance model), see \code{\link{setCovModel}}
+#' @param models 	object of class \code{krige} either as a list of covariance models or
+#' 	 				class `\code{covModel}` as a single covariance model, see \code{\link{setCovModel}}
 #' @param points 	matrix or list of points to predict the sample means of statistics
 #' @param Xs		matrix of sample points
 #' @param data		data frame of sample means of statistics at sampled points
@@ -24,19 +24,20 @@
 #'
 #' @return
 #'  \item{estim}{ list of predicted values of sample means of statistics (including prediction
-#' 		 variances if `\code{krig.type}` is equal to "\code{var}")}
+#' 		 variances if `\code{krig.type}` equals to "\code{var}")}
 #'  \item{jacobian}{ list of Jacobians at predicted values of sample means of statistics}  
 #'
-#' @details The function can be used to predict the sample mean of any statistic. Each covariance model
-#'  is given as an element of the list `\code{models}` including its own trend model and covariance function.
-#'  The type of kriging predictors is either set by `\code{krig.type}` equal to "\code{dual}" for \emph{dual kriging} or
-#'  kriging with calculation of prediction variances, `\code{krig.type}` equal to "\code{var}". Both types result in exactly
-#'  the same predicted values and only differ by whether or not kriging variances are calculated. The observations for each
-#'  statistic must be given as column vectors, where each row corresponds to one sample point, in the data frame `\code{data}`. 
+#' @details The function can be used to predict any values by kriging given a covariance model. In particular, we use it to predict
+#'  the sample mean of any statistic. Each covariance model is given as an element of the list `\code{models}` including its own trend
+#'  model and covariance function name. There are two types of kriging predictors available. First, the \emph{dual kriging} predictor,
+#'  set by `\code{krig.type}`="\code{dual}" or the one based on the calculation of prediction variances, if `\code{krig.type}` equals
+#'  "\code{var}". Both result in exactly the same predicted values and only differ by whether or not kriging variances are calculated.
+#'  The measurements (data), e.g. sample means for each statistic, must be given as column vectors where each row corresponds to a
+#'  sample point in the data frame `\code{data}`. 
 #'
 #' @examples 
-#'  
-#' data(normal)
+#' data(normal) 
+#' 
 #' X <- as.matrix(qsd$qldata[,1:2])
 #' p <- c("mu"=2,"sd"=1)
 #' 
@@ -45,12 +46,6 @@
 #' 
 #' # low level prediction, variances and weights
 #' estim(qsd$covT,p,X,Tstat,krig.type="var")
-#' 
-#' # predict and extract 
-#' predictKM(qsd$covT,p,X,Tstat)
-#' 
-#' # prediction variances
-#' varKM(qsd$covT,p,X,Tstat)
 #' 
 #' # Jacobian 
 #' jacobian(qsd$covT,p,X,Tstat)
@@ -144,13 +139,26 @@ jacobian.covModel <- function(models, points, Xs, data,
 #' 	 sample means of statistics at (unsampled) points, calculates the prediction
 #' 	 variances (if `\code{krig.type}` equals "\code{var}") at these points and extracts the results.
 #' 	 Note that, since we aim on predicting the simulation "error free" value of the sample means,
-#'   we use a \emph{smoothing} kriging predictor, see [2, Sec. 3.7.1].
+#'   we use a \emph{smoothing} kriging predictor (see [2, Sec. 3.7.1]).
 #'
 #' @param models   list of covariance models, see \code{\link{setCovModel}}
 #' @param ... 	   further arguments passed to function \code{\link{estim}}
 #' 
 #' @return \item{predictKM}{ list of kriging predicted values}
 #' 
+#' @examples 
+#' data(normal)
+#' X <- as.matrix(qsd$qldata[,1:2])
+#' p <- c("mu"=2,"sd"=1)
+#' 
+#' # get simulated statistics at design X
+#' Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
+#' 
+#' # predict and extract 
+#' predictKM(qsd$covT,p,X,Tstat)
+#' 
+#' # prediction variances
+#' varKM(qsd$covT,p,X,Tstat)
 #' 
 #' @rdname krige
 #' @export
@@ -222,7 +230,7 @@ varLOGdecomp <- function(L) {
 #' @param qsd		object of class \code{\link{QLmodel}}
 #' @param W			weight matrix for weighted average approximation of variance matrix
 #' @param theta	    parameter vector for weighted average approximation of variance matrix 
-#' @param cvm		list of fitted cross-validation models (see \code{\link{prefitCV}})
+#' @param cvm		list of fitted cross-validation models, see \code{\link{prefitCV}}
 #' @param useVar 	logical, if \code{TRUE}, then use prediction variances (see details)
 #' @param doInvert	if \code{TRUE}, return the inverse of the approximated variance matrix
 #'
@@ -233,16 +241,15 @@ varLOGdecomp <- function(L) {
 #'  \item{var}{ Matrix `\code{VTX}` with added variances `\code{sig2}` as diagonal terms}
 #'  \item{inv}{ if applicable, the inverse of either `\code{VTX}` or `\code{var}`}
 #'
-#' @details
-#' 	The function estimates the variance matrix of statistics at some (unsampled) point by either
+#' @details	The function estimates the variance matrix of statistics at some (unsampled) point by either
 #'  averaging (the \emph{Cholesky} decomposed terms or matrix logarithms) over all simulated variance matrices
 #'  of statistics at previously evaluated points of the parameter space or by a kriging approach which treats the Cholesky
-#'  decomposed terms of each variance matrix as a vector for interpolation.
+#'  decomposed terms of each variance matrix as the data vector for kriging.
 #' 
 #'  In addition, a Nadaraya-Watson kernel-weighted average approximation can also be applied in order to bias the variance
-#'  estimation towards a more locally weighted final parameter estimate, where smaller weights are assigned to points being more
-#'  distant to the current estimate of the unknown model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
-#'  `\code{W}` of size equal to the problem dimension \code{q}, can be freely chosen by the user. In addition, the user can select
+#'  estimation towards a more locally weighted estimation, where smaller weights are assigned to points being more
+#'  distant to an estimate of the unknown model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
+#'  `\code{W}` of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
 #'  different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}"
 #'  or "\code{kriging}" defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
 #'  approximation. Depending on the type of kriging for the statistics, `\code{qsd$krig.type}`, prediction variances
@@ -253,7 +260,7 @@ varLOGdecomp <- function(L) {
 #'  \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} 
 #' 	where \eqn{\hat{V}} denotes one of the above variance approximation types.
 #'  The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
-#'  cross-validation approach (see vignette). Finally, we can switch off using prediction variances of either type by `\code{useVar}`.
+#'  CV approach (see vignette). Finally, we can switch off using prediction variances of either type by setting `\code{useVar}`=\code{FALSE}.
 #'  In general, this should be avoided. However, if the estimation problem under investigation is \emph{simple enough},
 #'  then this choice may be still appropriate.
 #'    
@@ -274,7 +281,7 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
    	var.type <- qsd$var.type
 	krig.type <- qsd$krig.type
 	Tnames <- names(qsd$obs)
-	dataL <- qsd$qldata[(xdim+2*nstat+1L):ncol(qsd$qldata)]		
+	dataL <- qsd$qldata[(xdim+2*nstat+1L):ncol(qsd$qldata)]					# Cholesky decomposed terms
 	nc <- ncol(dataL)
 		
 	sig2 <-
@@ -355,7 +362,9 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
 			# no weighting!
 			if(is.null(qsd$covL) || is.null(theta))
 			  stop("For kriging the variance matrix argument `covL` and `theta` must be given.")			
-			L <- estim(qsd$covL,theta,Xs,dataL,krig.type="var")			
+			# Kriging variance matrix is based on Cholsky decomposed terms
+	        # TODO: try a log decomposition later
+		  	L <- estim(qsd$covL,theta,Xs,dataL,krig.type="var")			
 			Lm <- do.call(rbind,sapply(L,"[","mean"))
 			varCHOLmerge(Lm,sig2,var.type,doInvert,Tnames)
 		} else {
@@ -473,11 +482,10 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @title Quasi-deviance computation
 #'
 #' @description
-#'  The function computes the quasi-deviance (QD) for parameters/points of the parameter
+#'  The function computes the quasi-deviance (QD) for parameters (called points) of the parameter
 #'  search space including the quasi-score vector and optionally its variance.   
 #'
-#' @param points		list or matrix of points where to compute the QD
-#' 						(a numeric vector is considered to be a point)
+#' @param points		list or matrix of points where to compute the QD; a numeric vector is considered to be a point
 #' @param qsd		    object of class \code{\link{QLmodel}} 
 #' @param Sigma		    variance matrix estimate of statistics (see details)
 #' @param ...		    further arguments passed to \code{\link{covarTx}}
@@ -501,23 +509,22 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' 
 #'  The matix `\code{Iobs}` is called the \eqn{\emph{observed quasi-information}} (see [2, Sec. 4.3]),
 #'  which, in our setting, can be calculated at least numerically as the Jacobian of the quasi-score vector.
-#'  Further, `\code{varS}` denotes the approximate variance-covariance matrix of the quasi-score vector, which 
-#'  serves as a measure of accuracy (see [1] and the vignette, Sec. 3.2) of the approximation at some point.
+#'  Further, `\code{varS}` denotes the approximate variance-covariance matrix of the quasi-score vector given the observed
+#'  statistics and serves as a measure of accuracy (see [1] and the vignette, Sec. 3.2) of the approximation at some point.
 #'   
-#' @details
-#'   The function calculates the QD (see [1]). It is the primary function criterion to be minimized
-#'   for estimating the unknown model parameter by the function \code{\link{qle}} and involves the computation of the quasi-score
+#' @details The function calculates the QD (see [1]). It is the primary function criterion to be minimized
+#'   for estimating the unknown model parameter by \code{\link{qle}} and involves the computation of the quasi-score
 #'   and quasi-information matrix at a particular parameter. From a statistical point of view, the QD can be seen as
 #'   a generalization to the \emph{efficient score statistic} (see [3] and the vignette) and is used as a decision
 #'   rule in the estimation function \code{\link{qle}} in order to hypothesize about the true model parameter. A modified value of
 #'   the QD, using the inverse of the variance of the quasi-score vector as a weighting matrix, is stored in the result `\code{qval}`.
 #'    
-#'   Quasi-deviance values which are relatively small (compared to the quantiles of its approximate chi-squared
+#'   Quasi-deviance values which are relatively small (compared to the empirical quantiles of its approximate chi-squared
 #'   distribution) suggest a solution to the quasi-score equation and hence could identify the unknown model parameter
-#'   in some probabilistic sense. This can be further investigated by testing the hypothesis whether the estimated
-#'   model parameter is the true one (see \code{\link{qleTest}}).
+#'   in some probabilistic sense. This can be further investigated by testing the hypothesis by function \code{\link{qleTest}}
+#'   whether the estimated model parameter is the true.
 #' 
-#'   Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}} for details),
+#'   Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}}),
 #'   then the QD value is calculated rather locally w.r.t. to an estimate `\code{theta}`. Note that, opposed to the MD,
 #'   the QD does not support a constant variance matrix. However, if supplied, then `\code{Sigma}` is used as a first estimate
 #'   and, if `\code{qsd$krig.type}`="\code{var}", prediction variances are also added (see also \code{\link{mahalDist}}).    
@@ -528,21 +535,20 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #'   cross-validation or kriging unless `\code{qsd$krig.type}` equals "\code{dual}". If `\code{cvm}` is not given, then
 #'   the prediction variances are obtained by kriging. Using prediction variances the error matrix `\code{varS}` of
 #'   the quasi-score vector is part of the return list and omitted otherwise. Besides the quasi-information matrix
-#'   also the observed quasi-information matrix (as a numerically derived Jacobian `\code{Iobs}` of the quasi-score vector)
+#'   also the observed quasi-information matrix (as a numerically derived Jacobian, given by `\code{Iobs}`, of the quasi-score vector)
 #'   is returned. A good match between those two matrices suggests a possible root (with some probablity) if the corresponding
 #'   QD value is relatively small. This can be further investigated by function \code{\link{checkMultRoot}}.
 #' 
-#'   Alternatively, also CV-based prediction variances (with a fitted list of additional covariance models given by `\code{cvm}`)
+#'   Alternatively, also CV-based prediction variances (with additional covariance models given by `\code{cvm}`)
 #'   for each single statistic can be used to produce relatively robust estimation results but for the price of
 #'   much higher computational costs. In practice this might overcome the general tendency inherent to kriging to underestimate
-#'   the prediction variances. Therefore, CV is generally recommended in all situations where it is important to obtain a
-#'   robust estimate of the unkown model parameter.
+#'   the prediction variances of the sample means of the statistics and should be used if kriging the variance matrix of the statistics.
+#'   Further, CV is generally recommended in all situations where it is important to obtain a robust estimate of the unkown model parameter.
 #'   }
 #' 
 #' 
 #' @examples
-#' 
-#' data(normal) 
+#' data(normal)
 #' quasiDeviance(c(2,1), qsd)
 #'  
 #' @author M. Baaske
@@ -645,11 +651,10 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' 					  used as constant variance matrix
 #' @param check       logical, \code{TRUE} (default), whether to check all input arguments
 #' @param value.only  only return the value of the MD 
-#' @param cl		  cluster object, \code{NULL} (default), see e.g. \code{\link[parallel]{makeCluster}}
+#' @param cl		  cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
 #' @param verbose     if \code{TRUE}, then print intermediate output
 #' 
-#' @return Either a vector of MD values or a list of lists, where each
-#' 		   contains the following elements:
+#' @return Either a vector of MD values or a list of lists, where each contains the following elements:
 #' \item{value}{ Mahalanobis distance value}
 #' \item{par}{ parameter estimate}
 #' \item{I}{ approximate variance matrix of the parameter estimate}
@@ -657,7 +662,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' \item{jac}{ Jacobian of sample average statistics}
 #' \item{varS}{ estimated variance of the gradient `\code{score}`}
 #' 
-#' and, if applicable, the following attached attributes:
+#' and, if applicable, the following attributes:
 #' 
 #' \item{Sigma}{ estimate of variance matrix (if `\code{Sigma}` is computed or was set as a constant matrix)}
 #' \item{inverted}{ whether `\code{Sigma}` was inverted } 
@@ -797,26 +802,25 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 #'
 #' @title Multidimensional Latin Hypercube Sampling (LHS) generation
 #'
-#' @description
-#'   Generate or augment a multidimensional LHS in a hyperbox
+#' @description The function generates or augments a multidimensional LHS in a hyperbox.
 #'
-#' @param N		    number of points to randomly select or augment existing sample
+#' @param N		    number of points to randomly select or augment an existing sample set
 #' @param lb	    lower bounds defining the (hyper)box
 #' @param ub 		upper bounds defining the (hyper)box 
 #' @param method    type of sampling, `\code{randomLHS}`, `\code{maximinLHS}` or `\code{augmentLHS}` 				    
 #' @param X 		optional, matrix of existing sample points, \code{NULL} (default), for augmentation only
 #' @param type 		either "\code{list}" or "\code{matrix}" as return type
 #'
-#' @return
-#'  Return either a list or a matrix of sampled vectors or newly
-#'  generated points if an existing sample set is augmented.
+#' @return Return either a list or a matrix of sampled vectors or newly generated points if an existing sample set is augmented.
 #'
 #' @rdname multiDimLHS
 #' @importFrom lhs randomLHS maximinLHS augmentLHS
 #'
 #' @examples
 #' data(normal)
+#' # generate a design
 #' X <- multiDimLHS(N=5,qsd$lower,qsd$upper,type="matrix")
+#' 
 #' # augment design X 
 #' rbind(X,multiDimLHS(N=1,qsd$lower,qsd$upper,X=X,
 #' 				method="augmentLHS",type="matrix"))

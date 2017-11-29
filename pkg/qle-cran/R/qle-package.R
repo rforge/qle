@@ -11,14 +11,14 @@
 #' 
 #'  We provide a method for parameter estimation of parametric statistical models which can be at least
 #'  simulated and where standard methods, such as maximum likelihood, least squares or Bayesian
-#'  algorithms (including MCMC) are not applicable. We follow the basic \emph{quasi-likelihood} theory [3]
+#'  algorithms (including MCMC) are not applicable. We follow the \emph{quasi-likelihood} theory [3]
 #'  to estimate the unknown model parameter by finding a root of the so-called \dfn{quasi-score} estimating
 #'  function. For an overview of our method and further in-depth examples please see the vignette.
 #' 
 #'  The basic idea is to transform the general parameter estimation problem into a global (black box) optimization problem
-#'  (see [1]) with an expensive to evaluate objective function. This function can only be evaluated with a substantial random
-#'  error due to the Monte Carlo simulation approach of the statistical model and the interpolation error of the involved
-#'  approximating functions. The algorithm sequentially selects new evaluation points (which are the model parameters here) for
+#'  (see [1]) with an expensive to evaluate objective function. This function can only be evaluated with substantial random
+#'  errors due to the Monte Carlo simulation approach of the statistical model and the interpolation error of the involved
+#'  approximating functions. The algorithm sequentially selects new evaluation points (which are the model parameters) for
 #'  simulating the statistical model and aims on efficiently exploring the parameter space towards a root of the quasi-score
 #'  vector as an estimate of the unknown model parameter by some weighted distance space-filling selection criteria of randomly
 #'  generated candidate points.
@@ -32,7 +32,7 @@
 #' 
 #' @references  
 #'  \enumerate{
-#'   \item Baaske, M., Ballani, F., v.d. Boogaart,K.-G. (2014). A quasi-likelihood
+#'   \item Baaske, M., Ballani, F., v.d. Boogaart,K.G. (2014). A quasi-likelihood
 #'				 approach to parameter estimation for simulatable statistical models.
 #'	 			 \emph{Image Analysis & Stereology}, 33(2):107-119.  
 #' 	 \item Chiles, J. P., Delfiner, P. (1999). Geostatistics: modelling spatial uncertainty.
@@ -80,7 +80,8 @@ NULL
 #' Matern cluster process data 
 #' 
 #' A data set of quasi-likelihood estimation results of estimating the parameters of a Matern cluster
-#' point process model for the `\code{redwood}` data set from the package \code{spatstat}.
+#' point process model. In the vignette we apply our method to the `\code{redwood}` data set from the
+#' package \code{spatstat}.
 #' 
 #' @docType data
 #' @keywords datasets

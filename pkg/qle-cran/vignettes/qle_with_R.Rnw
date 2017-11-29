@@ -1138,8 +1138,8 @@ $N$ is geometrically distributed with success parameter $1-\rho$ and
 \begin{equation*}
   \mathsf{E}[N]=\frac{\rho}{1-\rho}
 \end{equation*}
-is the expectation of $N$ a function of $\rho<1$. Hence the parameter of interest for estimation
-is $\theta=\rho$, which can be interpreted as the fraction of time the server is
+is the expectation of $N$ as a function of $\rho<1$. Hence the parameter of
+interest for estimation is $\theta=\rho$, which can be interpreted as the fraction of time the server is
 working, and the variance of $N$ is given by
 \[
   \var(N) = \frac{\rho}{(1-\rho)^2}.
@@ -1158,7 +1158,7 @@ RNGkind("L'Ecuyer-CMRG")
 set.seed(1356)
 @
 % simfn <- function(tet){ mean(rgeom(1000,prob=1-tet)) }
-First, we define the statistic model which practically leads to the
+First, we define the statistical model which practically leads to the
 simulation function below. For estimation of the parameter $\rho$ by our
 approach we fix the number of time points to $n=25$.
 <<>>=
@@ -1184,7 +1184,7 @@ X <- multiDimLHS(N=10,lb=lb,ub=ub,
 
 sim <- simQLdata(sim=simfn,cond=cond,nsim=nsim,X=X)
 @
-We set the ''real`` observation of the statistic $Y$ to \code{obs=1}
+We set the ''real`` observation of the statistic $Y=y$ to \code{obs=1}
 corresponding to $\rho=0.5$. In this example the variance of $Y$ is approximated
 by the average of the matrix logarithm of the sample variance matrices at each
 design point. We obtain the QL approximation model by
@@ -1305,7 +1305,7 @@ given below.
 <<>>=
 checkMultRoot(OPT,verbose = TRUE)
 @
-Both, the predicted, that is, the expected quasi-information matrix
+Both the predicted, that is, the expected quasi-information matrix
 and its (numerically evaluated) observed analogue show a good aggreement.
 The results suggest a consistent root of the quasi-score and thus a plausible
 estimate of the unknown parameter.\par
@@ -1356,7 +1356,8 @@ tet0 <- c("rho"=0.5)
 obs0 <- simQLdata(sim=simfn,cond=cond,nsim=100,X=tet0)
 @
 and compute the empirical mean squared error (MSE) of the maximum likelihood
-estimates and the average variance denoted by $\overline{Var}$.
+estimates and the average variance over all estimated variances denoted by
+$\overline{Var}$.
 <<>>=
 mle <- do.call(rbind,
 		lapply(obs0[[1]],function(y,n){
@@ -1434,8 +1435,7 @@ rbind("Var"=c("test"=attr(Stest,"aiqm"),"study"=qle.var[2]),
 	  "MSE"=c(as.vector(Stest$param["RMSE"]^2),qle.var[1]))
 @
 In general, the error estimation from testing is a rather ''pessimistic``
-approximation of the one derived from a simulation study, see Table
-\ref{tab:err}.
+approximation of the one derived from a simulation study.
 %
 \subsection{Estimating the parameters of a normal distribution}
 This example shows how to estimate the mean and standard deviation of a gaussian

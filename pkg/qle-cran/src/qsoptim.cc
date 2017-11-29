@@ -8,9 +8,10 @@
  *
  */
 
-
-#include "error.h"
 #include "qsoptim.h"
+
+#include <R_ext/Applic.h>
+#include <R_ext/Constants.h>
 
 #define TOLFAILS 200
 
@@ -77,7 +78,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     double *start = REAL(AS_NUMERIC(R_start));
     MEMCPY(xsol,start,xdim);
 
-    ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, FALSE);
+    ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, COPY_ZERO);
 
     /*! Set optimization options*/
     qfs_options_t qfs(&qlm,R_opt);
@@ -240,11 +241,16 @@ qfs_result qfscoring(double *x,			 	/* start */
 	     MEMCPY(xold,x,n);
 	     MEMCPY(gradf,qlm->score,n);
          solveCH(qlm->qimat,n,n,gradf,1,d,info);
-         if(*info){
+         if(*info != 0){
         	 WRR("Solving for the direction failed. Try something else.")
 			 MEMCPY(d,gradf,n);
 			 solveLU(qlm->qimat,n,d,n,info);
-        	 XERR(*info,"Solving also failed by LU decomposition.");
+        	 if(*info != 0){
+        		 *info = QFS_ERROR;
+        		 status = QFS_BAD_DIRECTION;
+        		 LOG_ERROR(LAPACK_SOLVE_ERROR, "failed to compute LU decomposition.");
+        		 break;
+        	 }
          }
 
          backtr(n,xold,fold,d,x,f,&check,fnMonitor,tau,&delta,(void*) qfs);
@@ -343,10 +349,14 @@ qfs_result qfscoring(double *x,			 	/* start */
 			 }
          }
    } /*! end for */
+
+   if(niter == Nmax) {
+	   *info=QFS_NO_CONVERGENCE;
+	   status=QFS_MAXITER_REACHED;
+   }
    FREE_WORK
-   *info=status;
    qfs->num_iter=niter;
-   return QFS_MAXITER_REACHED;
+   return status;
 }
 
 #undef FREE_WORK
@@ -424,7 +434,7 @@ SEXP getStatus( qfs_result status ) {
            break;
        // (= +5)
        case QFS_XTOL_REACHED:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_XTOL_REACHED: Optimization stopped because xtol_rel or xtol_abs was reached."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_XTOL_REACHED: Optimization stopped because xtol_rel was reached."));
            break;
        // (= +6)
        case QFS_GRADTOL_REACHED:
