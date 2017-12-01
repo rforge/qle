@@ -21,82 +21,52 @@
 #define NO_ERROR 0
 #define NO_WARNING 0
 
-#define maxErrorStr 100
-#define nErrorLocations 100
-
-#define ERROR_NUM_MIN 100
-#define ERROR_NUM_MAX 500
-#define WARNING_NUM_MIN 101
-
-#define BEGIN_ERR { Rprintf("\n\n =====================  ERROR block ========================\n"); }
-#define BEGIN_WRR { Rprintf("\n\n =====================  WARNING block ======================\n"); }
-
-#define PRINT_MSG(s)  Rprintf("[%s:%u]%s\n", __FILE__, (unsigned)__LINE__, s)
-
-#define PRINT Rprintf
-#define PRINTF Rprintf
+#define PRINT_MSG(s) Rprintf("[%s: %u] %s \n", __FILE__, (unsigned)__LINE__, s)
 
 extern int  PL;
 extern char C_MSG_BUFFER[100];
-extern char R_MSG_BUFFER[100];
-extern char ERROR_LOC[nErrorLocations];
-
 
 #define LOG_ERROR(X, MSG) { \
   errorMSG(X, C_MSG_BUFFER); \
-  std::sprintf(R_MSG_BUFFER, "Error: `%s', error code %d: %s", C_MSG_BUFFER, X, MSG); \
-  PRINT(" %s ", R_MSG_BUFFER); \
+  Rprintf("%s (code=%d)\n %s", C_MSG_BUFFER, X, MSG); \
 }
 
 #define LOG_WARNING(X, MSG) { \
   warningMSG(X, C_MSG_BUFFER); \
-  std::sprintf(R_MSG_BUFFER, "Warning: `%s', warning code %d: %s", C_MSG_BUFFER, X, MSG); \
-  PRINT(" %s ", R_MSG_BUFFER); \
+  Rprintf("%s (code=%d)\n %s", C_MSG_BUFFER, X, MSG); \
 }
 
 
 /* trigger error and warnings */
-#define ERR(X) { \
-    std::sprintf(ERROR_LOC, "in `%s', at %u\n", __FILE__, (unsigned)__LINE__); \
-    std::sprintf(R_MSG_BUFFER, "%s, %s\n",ERROR_LOC, X); \
-    error(_(R_MSG_BUFFER)); \
+#define ERR(MSG) { \
+  Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+  Rf_error(_(MSG)); \
 }
 
 #define XERR(X,MSG) { \
-     BEGIN_ERR; \
      errorMSG(X, C_MSG_BUFFER); \
-     std::sprintf(ERROR_LOC, "in `%s', at %u\n", __FILE__, (unsigned)__LINE__); \
-     std::sprintf(R_MSG_BUFFER, "%s, error code %d. (%s) %s", ERROR_LOC, X, MSG, C_MSG_BUFFER); \
-     error(_(R_MSG_BUFFER)); \
+     Rprintf("%s in %s  (line=%u)\n", C_MSG_BUFFER, __FILE__, (unsigned)__LINE__); \
+     Rf_error(_(MSG)); \
   }
 
 // X is message string
-#define WRR(X) { \
-    std::sprintf(ERROR_LOC, "in `%s', at %u\n", __FILE__, (unsigned)__LINE__); \
-    std::sprintf(R_MSG_BUFFER, "%s, %s\n",ERROR_LOC, X); \
-    warning(_(R_MSG_BUFFER)); \
+#define WRR(MSG) { \
+  Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+  Rf_warning(_(MSG)); \
 }
 
 // X is integer error code
 #define XWRR(X,MSG) { \
-    BEGIN_WRR; \
     errorMSG(X, C_MSG_BUFFER); \
-    std::sprintf(ERROR_LOC, "in `%s', at %u\n", __FILE__, (unsigned)__LINE__); \
-    std::sprintf(R_MSG_BUFFER, "%s, warning code %d: (%s) %s", ERROR_LOC, X, MSG, C_MSG_BUFFER); \
-    warning(_(R_MSG_BUFFER)); \
-}
-
-
-#define PERR(X) { \
-     BEGIN_ERR; \
-     std::sprintf(R_MSG_BUFFER, "%s\n%s: %s", ERROR_LOC, param, X); error(R_MSG_BUFFER); \
+    Rprintf("%s \n %s (line=%u)\n", C_MSG_BUFFER, __FILE__, (unsigned)__LINE__); \
+    Rf_warning(_(MSG)); \
 }
 
 // memory allocation errors
 #define MEM_ERR(n, t) { \
-  std::sprintf(ERROR_LOC, "'calloc' error in `%s', at %u\n", __FILE__, (unsigned)__LINE__); \
-  std::sprintf(R_MSG_BUFFER, "%s, %s (%.0f of %u bytes) \n",ERROR_LOC, "Could not allocate memory.", (double) (n), (unsigned)sizeof(t)); \
-  error(_(R_MSG_BUFFER)); \
+  Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+  Rprintf("(%.0f of %u bytes) \n", (double) (n), (unsigned)sizeof(t)); \
+  Rf_error("Could not allocate memory."); \
 }
 
 typedef enum  {
@@ -128,7 +98,6 @@ void printArray(const char fmt[], const Type *v, int *lx) {
 /////////////////////// Error /////////////////////////////////////////////////////////////////////////////////////
 extern void errorMSG(int, char*);
 extern void warningMSG(int , char *, char* );
-extern void printMSG(int, const char *, int, const char * );
 
 void printMatrix(const char ch[], const double *mat, int *irows, int *icols);
 void printVector(const char ch[], const double *vec, int *lx);
@@ -147,7 +116,7 @@ void print_R_vector( SEXP v, const std::string& vector_name);
 	} while (0)
 
 #define DEBUG_PRINT_VECTOR_R( c , cstr ) { print_R_vector( c , cstr ); }
-#define DEBUG_DUMP_VAR(x,fmt) { PRINT("%s:%u: %s=\n" fmt, __FILE__, (unsigned)__LINE__, #x, x); }
+#define DEBUG_DUMP_VAR(x,fmt) { Rprintf("%s:%u: %s=\n" fmt, __FILE__, (unsigned)__LINE__, #x, x); }
 #define DEBUG_PRINT_MATRIX_R( C , cstr) { print_R_matrix( C , cstr); }
 
 /////////////////// Some R convenience macros ////////////////////////////////////

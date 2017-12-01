@@ -384,12 +384,7 @@ int check_Lapack_error(int info, const char* name, int line, const char *file)
 {
   if(info == 0)
     return NO_ERROR;
-
-  char MSG[500]="";
-  if(info != 0)
-    std::sprintf(MSG, "%s: error code (%d) in %s at line %d.\n", name, info, file, line);
-
-  PRINT_MSG(MSG);
+  Rprintf("error in %s (code: %d) \n %s (line %d).\n", name, info, file, line);
   return LAPACK_ERROR;
 }
 
@@ -706,7 +701,7 @@ void triangMat_U(double *A, int nA, double *AP, int nAP) {
     int n1 = nA, n2 = nAP, i, j, k;
 
     if( (n1*(n1+1)/2) != n2 )
-    	error(_("Invalid array dimension!\n"));
+     Rf_error(_("Invalid array dimension!\n"));
 
     for(k=j=0; j<n1; j++)
     	for(i=0;i<j+1; i++,k++)
@@ -716,7 +711,7 @@ void triangMat_U(double *A, int nA, double *AP, int nAP) {
 void triangMat_U_back(double *A, int nA, double *AP, int nAP) {
     int n1 = nA, n2 = nAP, i, j, k;
     if( (n1*(n1+1)/2) != n2 )
-    	error(_("Invalid array dimension!\n"));
+    	Rf_error(_("Invalid array dimension!\n"));
 
     for(k=j=0; j<n1; j++)
     	for(i=0;i<j+1; i++,k++)
@@ -734,7 +729,7 @@ void Imat(double *x, int n) {
 
 void trendfunc(double *x, int nx, int dx, double *f, int model){
 	if(!model)
-	 error(_("No trend order specified!\n"));
+	 Rf_error(_("No trend order specified!\n"));
 
 	switch (model) {
 	case 0:
@@ -790,12 +785,12 @@ void Fmatrix(double *x,double *F, int n, int d, int trend) {
 	if(trend >= 0 && trend < 3)
 	  //constant terms
 	    if(n < 2)
-	      error(_("Trend matrix is singular!\n"));
+	      Rf_error(_("Trend matrix is singular!\n"));
 	for(int i = 0; i < n; i++, pF++) *pF = 1;
 	if(trend > 0) {
 		//linear terms
 	   if(n < d+2)
-	     error(_("Trend matrix is singular!\n"));
+	     Rf_error(_("Trend matrix is singular!\n"));
 
 	   for(int j = 0; j < d; j++) //columns of x
 		   for(int k = 0; k < n; k++,pF++) // rows of F
@@ -804,7 +799,7 @@ void Fmatrix(double *x,double *F, int n, int d, int trend) {
 	if(trend > 1) {
 	 //quadratic terms
 		if( n < (d+1)*(d+2)/2+1 )
-	      error(_("Trend matrix is singular!\n"));
+	      Rf_error(_("Trend matrix is singular!\n"));
 
 		for (int k = 0; k < d; k++)
 		  for (int l = k; l < d; l++)

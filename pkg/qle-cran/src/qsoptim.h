@@ -66,9 +66,6 @@ typedef struct qfs_options_s {
 extern "C" {
 #endif
 
-SEXP emptyErrorCache();
-SEXP emptyWarningCache();
-
 // Quasi-Scoring iteration
 SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_opt);
 
