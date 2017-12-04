@@ -692,8 +692,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	 .checkArguments(qsd,x0,...)
     stopifnot(is.numeric(pl) && pl >= 0L )
 	
- 	fun.name <- ""
-	x0 <- unlist(x0)
+	x0 <- 
+	 if(is.matrix(x0))
+		structure(as.numeric(x0),names=colnames(x0))	
+	 else unlist(x0)
+ 	
+    fun.name <- ""
 	nms <- names(x0)	
 	# current sample points
 	xdim <- attr(qsd$qldata,"xdim")
@@ -738,7 +742,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	   if(pl > 0L) { 
 		 cat("Minimization by `",fun.name,"` did not converge")
 		 if(!is.null(S0$status))
-			cat(" (",S0$status,")")
+			cat(" (status=",S0$status,")")
 		 cat(".","\n")
 	   }
 	   method <- method[-1]
@@ -1345,7 +1349,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	ft <- 1E+100
 	info <- reset <- TRUE
 	W <- theta <- Stest <- NULL
-	Snext <- list("par"=rbind(xt),"value"=ft)
+	Snext <- list("par"=xt,"value"=ft)
 	
 	# but then reset so it can be computed again
 	if(qsd$var.type != "const")
@@ -1684,8 +1688,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								   "Snext"=list(Snext),
 								   "status"=list(status))))				
 				
-		  		if(.isError(Snext))				
-				  stop(attr(Snext,"error"))
+		  		if(.isError(Snext)){					
+					stop(attr(Snext,"error"))
+				}								  
 			  
 				# next sampling location				
 				# optional: plot iterates (2D) 
@@ -1714,19 +1719,14 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					tryCatch(
 						simQLdata(simFun, nsim=nsim, X=Snext$par, cl=cl, verbose=pl>0L),
 						error = function(e) {
-								msg <- .makeMessage("Simulating the model failed: ",
-										conditionMessage(e))
-								message(msg)
-								.qleError(message=msg,call=match.call(),error=e)
+							msg <- .makeMessage("Simulating the model failed: ",conditionMessage(e))
+					 		.qleError(message=msg,call=match.call(),error=e)
 						})		 
 				if(.isError(newSim)){
+					tracklist[[length(tracklist)]]$newSim <- newSim
 					msg <- paste(c("Cannot simulate data at candidate point: \n\t ",
-							 format(Snext$par, digits=6, justify="right")),collapse = " ")				 			    
-					e <- attr(qsd,"error")
-					if(inherits(e,"error"))
-					  msg <-  c(msg, conditionMessage(e))
-					message(msg)
-					return(.qleError(message=msg,error=newSim))
+									format(Snext$par, digits=6, justify="right")),collapse = " ")
+					stop(msg)					
 				}
 
 				# ... and update
