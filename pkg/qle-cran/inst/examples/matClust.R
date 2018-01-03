@@ -148,7 +148,7 @@ crossValTx(qsd, cvm, type = "sigK")
 # of sample means of the statistics
 OPT <- qle(qsd, simClust, cond=cond,  
 		global.opts = list("maxiter"=10,
-				           "maxeval" = 20,
+				           "maxeval" = 15,
 				           "weights"=c(10,5,1),
 						   "NmaxQI"=3),
 		local.opts = list("lam_max"=1e-2,
