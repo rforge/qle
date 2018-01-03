@@ -50,7 +50,7 @@ Xnew <- multiDimLHS(N=2,qsd$lower,qsd$upper,X=X,
            method="augmentLHS",type="matrix")
 
 # new simulations
-Xsim <- simQLdata(sim=qsd$sim,nsim=10,X=Xnew)
+Xsim <- simQLdata(sim=qsd$simfn,nsim=10,X=Xnew)
 
 # prepare data
 Xdata <- setQLdata(Xsim,Xnew)

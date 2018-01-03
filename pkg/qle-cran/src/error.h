@@ -20,71 +20,83 @@
 
 #define NO_ERROR 0
 #define NO_WARNING 0
-
-#define PRINT_MSG(s) Rprintf("[%s: %u] %s \n", __FILE__, (unsigned)__LINE__, s)
+#define INTERNAL_ERROR 10
 
 extern int  PL;
-extern char C_MSG_BUFFER[100];
+extern char C_MSG_BUFFER[1000];
 
-#define LOG_ERROR(X, MSG) { \
-  errorMSG(X, C_MSG_BUFFER); \
-  Rprintf("%s (code=%d)\n %s", C_MSG_BUFFER, X, MSG); \
+#define PRINT_MSG(M) { \
+  Rprintf(" %s \n %s (line=%u)\n", M,  __FILE__, (unsigned)__LINE__); \
 }
 
-#define LOG_WARNING(X, MSG) { \
-  warningMSG(X, C_MSG_BUFFER); \
-  Rprintf("%s (code=%d)\n %s", C_MSG_BUFFER, X, MSG); \
+#define LOG_ERROR(X, NAME) { \
+  errorMSG(X, NAME); \
+  if(PL > 0 ) \
+  	Rprintf("%s ", C_MSG_BUFFER); \
+}
+
+#define LOG_WARNING(X, NAME) { \
+  warningMSG(X, NAME); \
+  if(PL > 0 ) \
+   	Rprintf("%s ", C_MSG_BUFFER); \
 }
 
 
 /* trigger error and warnings */
 #define ERR(MSG) { \
-  Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+  Rprintf("error at %s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
   Rf_error(_(MSG)); \
 }
 
-#define XERR(X,MSG) { \
-     errorMSG(X, C_MSG_BUFFER); \
-     Rprintf("%s in %s  (line=%u)\n", C_MSG_BUFFER, __FILE__, (unsigned)__LINE__); \
-     Rf_error(_(MSG)); \
+#define XERR(X,NAME) { \
+     errorMSG(X, NAME); \
+     Rprintf("%s  (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+     Rf_error(_(C_MSG_BUFFER)); \
   }
 
 // X is message string
 #define WRR(MSG) { \
-  Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+  Rprintf("warning at %s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
   Rf_warning(_(MSG)); \
 }
 
 // X is integer error code
-#define XWRR(X,MSG) { \
-    errorMSG(X, C_MSG_BUFFER); \
-    Rprintf("%s \n %s (line=%u)\n", C_MSG_BUFFER, __FILE__, (unsigned)__LINE__); \
-    Rf_warning(_(MSG)); \
+#define XWRR(X,NAME) { \
+    warningMSG(X, NAME); \
+    Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+    Rf_warning(_(C_MSG_BUFFER)); \
 }
 
 // memory allocation errors
 #define MEM_ERR(n, t) { \
   Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
   Rprintf("(%.0f of %u bytes) \n", (double) (n), (unsigned)sizeof(t)); \
-  Rf_error("Could not allocate memory."); \
+  Rf_error(_("Could not allocate memory.")); \
 }
 
-typedef enum  {
+typedef enum {
         SYSTEM_ERROR = 1,
         ALLOC_ERROR = 2,
         MEMORY_ERROR = 3,
         MATH_ERROR = 4,
         NaN_ERROR = 5,
-        LAPACK_ERROR = 100,
+	    LAPACK_ERROR = 100,
         LAPACK_QR_ERROR = 101,
         LAPACK_PMAT_ERROR = 102,
         LAPACK_SOLVE_ERROR = 103,
         LAPACK_INVERSION_ERROR = 104,
         LAPACK_FACTORIZE_ERROR = 105,
-        PARAM_ERROR = 500,
         FINAL_ERRROR = 1000      /*not to be changed */
 
 } error_type;
+
+typedef enum {
+        NaN_WARNING = 1,
+		POSDEF_WARNING = 2,
+		LAPACK_WARNING = 3,
+		GENERIC_WARNING = 500,
+		FINAL_WARNING = 1000      /*not to be changed */
+} warning_type;
 
 template<class Type>
 void printArray(const char fmt[], const Type *v, int *lx) {
@@ -96,8 +108,8 @@ void printArray(const char fmt[], const Type *v, int *lx) {
 
 
 /////////////////////// Error /////////////////////////////////////////////////////////////////////////////////////
-extern void errorMSG(int, char*);
-extern void warningMSG(int , char *, char* );
+extern void errorMSG(int, const char*);
+extern void warningMSG(int , const char* );
 
 void printMatrix(const char ch[], const double *mat, int *irows, int *icols);
 void printVector(const char ch[], const double *vec, int *lx);
@@ -107,7 +119,7 @@ void print_R_vector( SEXP v, const std::string& vector_name);
 
 #define DEBUG_INFO(_x) \
 	do { \
-		fprintf(stderr, "===== BEGIN: DEBUG block =====\n" \
+		fprintf(stderr, "===== B E G I N: DEBUG block =====\n" \
 				"file: %s, line: %u\n", \
 				__FILE__, (unsigned)__LINE__); \
 				_x; \

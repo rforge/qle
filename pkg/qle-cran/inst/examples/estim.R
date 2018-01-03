@@ -1,5 +1,5 @@
 # (1) Kriging prediction of sample means of statistics
-# (2) Estimation of variance matrix by average approximation
+# (2) Estimation of variance matrix by sample average approximation
 library(qle)
 data(normal)
 
@@ -15,8 +15,8 @@ Tstat <- qsd$qldata[grep("mean.",names(qsd$qldata))]
 Lstat <- qsd$qldata[grep("L+",names(qsd$qldata))]		   
 
 # kriging prediction (low level functions)
-est.m1 <- estim(qsd$covT,p,X,Tstat,krig.type="var")
-est.m2 <- estim(qsd$covT[[1]],p,X,Tstat[1],krig.type="var")
+(est.m1 <- estim(qsd$covT,p,X,Tstat,krig.type="var"))
+(est.m2 <- estim(qsd$covT[[1]],p,X,Tstat[1],krig.type="var"))
 
 stopifnot(
   all.equal(as.numeric(extract(est.m1,type="mean")[,1]),
@@ -24,13 +24,13 @@ stopifnot(
 )
 
 # estimate derivatives
-est.d <- jacobian(qsd$covT,p,X,Tstat)
+jacobian(qsd$covT,p,X,Tstat)
 
 # average variance matrix interpolation
-VTX <- covarTx(qsd,theta=X,useVar=TRUE,doInvert=TRUE)
+covarTx(qsd,theta=X,useVar=TRUE,doInvert=TRUE)
 
 # predict and extract values 
 predictKM(qsd$covT,p,X,Tstat,krig.type="var")
 
 # calculate kriging prediction variances
-est.v <- varKM(qsd$covT,p,X,Tstat)
+varKM(qsd$covT,p,X,Tstat)

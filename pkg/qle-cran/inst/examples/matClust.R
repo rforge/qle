@@ -83,15 +83,24 @@ clusterExport(cl=cl,varlist=c("simStat"), envir=environment())
 sim <- simQLdata(sim=simClust,cond=cond,nsim=nsim,
 		method="randomLHS",lb=lb,ub=ub,N=Nsample,cl=cl)
 
+# check simulations used
+attr(sim,"nsim")
+
 # generated random design
 X <- attr(sim,"X")
+
 # observed statistics (redwood data)
 obs0 <- simStat(redwood,cond)
 
 # set up QL model with kriging approximation of
-# variance matrix estimate
-qsd <- getQLmodel(sim,lb,ub,obs0,criterion="qle",
-		var.type="kriging",verbose=TRUE)
+# covariance matrix estimate with bootstrappingg option
+qsd <- getQLmodel(sim,lb,ub,obs0,		
+		var.type="kriging",			# kriging variance matrix
+		intrinsic=TRUE, Nb = 100,	# use bootstrap option, number of bootstrap samples
+		verbose=TRUE)
+
+qsd$covT
+qsd$covL
 
 # cross-validation: fitting CV covariance models
 cvm <- prefitCV(qsd, reduce=FALSE, verbose=TRUE)
@@ -104,9 +113,9 @@ attr(cvm,"type") <- "max"
 
 # first try quasi-scoring with CV errors (type=max)
 QS0 <- qscoring(qsd,x0,
-		 opts=list("ftol_rel"=1e-6,"slope_tol"=1e-4),
+		 opts=list("ftol_rel"=1e-6,"slope_tol"=1e-3),
 		 cvm=cvm,pl=10,verbose=TRUE)
-
+ 
 ## inspect CV errors vs. kriging variances
 # no significant bias in predicting the statistics 
 crossValTx(qsd, cvm, type = "acve")
@@ -137,19 +146,18 @@ crossValTx(qsd, cvm, type = "sigK")
 # the maximum of CV errors and kriging variances
 # in order to accouont for the prediction uncertainty
 # of sample means of the statistics
-
 OPT <- qle(qsd, simClust, cond=cond,  
 		global.opts = list("maxiter"=10,
-				           "maxeval" = 15,
+				           "maxeval" = 20,
 				           "weights"=c(10,5,1),
 						   "NmaxQI"=3),
 		local.opts = list("lam_max"=1e-2,
-				          "nobs"=50,
-				          "nextSample"="score",
-				          "ftol_abs"=0.1,
-						  "weights"=c(0.55),
-						  "eta"=c(0.025,0.075),
-						  "test"=TRUE),
+				          "nobs"=50,				# number of (bootstrap) generated observations for testing local minimizer
+				          "nextSample"="score",		# sample criterion
+				          "ftol_abs"=0.1,			# upper bound on 
+						  "weights"=c(0.55),		# constant weight factor
+						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
+						  "test"=TRUE),				# testing is enabled
 		method = c("qscoring","bobyqa","direct"),		
 		errType="max", iseed=297, cl=cl, pl=5)
 
@@ -176,7 +184,7 @@ QS <- qscoring(OPT$qsd,OPT$par,
 checkMultRoot(OPT,par=rbind("QS"=QS$par,"S0"=S0$par))
 
 # MC hypothesis testing 
-Stest <- qleTest(OPT,sim=simClust,cond=cond,nsim=200,
+Stest <- qleTest(OPT,QS,sim=simClust,cond=cond,nsim=200,
 		  method=c("qscoring","bobyqa","direct"),
 		  cl=cl, verbose=TRUE)
 
@@ -186,9 +194,11 @@ print(Stest)
 plotGraphs(OPT$par,nsim=1000)
 
 ## fit model by Minimum Contrast
+## and compare with QLE
 #data(redwood)
 #fitM <- kppm(redwood, ~1, "MatClust")
 #fitM$modelpar
+#QS$par
 
 # do not forget
 stopCluster(cl)

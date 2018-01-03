@@ -119,7 +119,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  This procedure also allows for a stopping condition derived from the reults of the MC test. We can compare the estimated mean squared error (MSE) with the
  predicted error of the approximate root by its relative difference and terminate in case this value drops below a user-defined bound `\code{perr_tol}`
  (either as a scalar value or numeric vector of length equal to the dimension of the unknown parameter). A value close to zero suggests a good match of both
- error measures. The testing procedure can be disabled by the option `\code{local.opts$test=FALSE}`. A value of the criterion function smaller
+ error measures. The testing procedure is disabled by default. Use `\code{local.opts$test=TRUE}` for testing approximate roots. A value of the criterion function smaller
  than `\code{local.opts$ftol_abs}` indicates that the corresponding minimizer could be an approximate root. Otherwise the last evaluation point is used as
  a starting point for next local searches which mimics a random multistart type minimization over the next iterations of the algorithm. This behaviour is
  also implemented for results of the above MC test when the local minimizer is not accepted as an approximate root. Note that this approach has the
@@ -225,7 +225,7 @@ data(normal)
  
 # main estimation with new evaluations
 # (simulations of the statistical model)
-OPT <- qle(qsd,qsd$sim,nsim=10,
+OPT <- qle(qsd,qsd$simfn,nsim=10,
 		    global.opts=list("maxeval"=1),
  		local.opts=list("test"=FALSE))
 

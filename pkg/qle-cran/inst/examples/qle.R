@@ -5,7 +5,8 @@
 library(qle)
 data(normal)
 
-options(mc.cores=2)
+# setting number of local cores
+options(mc.cores=6)
 
 ## one step minimization
 ## no sammpling
@@ -17,14 +18,14 @@ options(mc.cores=2)
 
 # main estimation with new evaluations
 # (simulations of the statistical model)
-OPT <- qle(qsd,qsd$sim,nsim=10,
-		global.opts=list("maxeval"=1),
-		local.opts=list("test"=FALSE),pl=3)
+OPT <- qle(qsd,qsd$simfn,nsim=10,
+		global.opts=list("maxeval"=10),
+		pl=10)
 
 # restart estimation and do a pure global search (setting `ftol_abs=0`), 
-# sample additional points for evaluation and select new candidates by criterion `var`
-GL <- qle(OPT$qsd, qsd$sim, nsim=10,		
-		global.opts = list( "maxiter"=1, "stopval"=0),
-		local.opts = list("nextSample"="var","ftol_abs"=0,"test"=FALSE),
-		iseed=123)
-
+# sample additional points for evaluation and select new candidates by
+# criterion `var`
+GL <- qle(OPT$qsd, qsd$simfn, nsim=10,		
+		global.opts = list("maxiter"=10, "stopval"=0),
+		local.opts = list("nextSample"="var","ftol_abs"=0),
+		pl=10, iseed=1234)

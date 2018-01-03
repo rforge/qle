@@ -25,7 +25,11 @@ first column corrsponds to the first model in the list `\code{models}` and so fo
 An object of class \code{reml} which consists of a list of named lists
  (`\code{model}`, `\code{convergence}`) each storing a fitted covariance model itself
  together with the optimization results from \code{\link[nloptr]{nloptr}} as an attribute
- named `\code{optres}`. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.
+ named `\code{optres}`. The default method for estimating the covariance parameters is
+ \code{\link[nloptr]{mlsl}} which uses random starting points and thus could produce different results if
+ it is run multiple times. If the results strongly vary, then the corresponding REML function might have many
+ local minima which precludes the use of this default algorithm and another one, e.g. `\code{NLOPT_GN_DIRECT}`
+ (see \code{\link[nloptr]{nloptr.print.options}}), might lead to better results.
 }
 \description{
 The function estimates the (hyper)parameters of the covariance models by

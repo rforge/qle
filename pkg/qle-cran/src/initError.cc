@@ -10,32 +10,43 @@
 
 #include "error.h"
 
+/*
+ * PL = 1   : show warnings
+ * PL <= 10 : do not show warnings from `gsiSolve` and `gsiInv` except NA warnings
+ */
 int PL = 1;
-char C_MSG_BUFFER[100]="";
+
+char C_MSG_BUFFER[1000] = "";
 
 /* get error message from id*/
-void errorMSG(int errId, char* m) {
-  if (PL > 0)
-   Rprintf("\n\n #### C ERROR MSG block #### code=%d\n", errId);
+void errorMSG(int errId, const char *name) {
+    char msg[100] = "";
 
-  switch (errId) {
+	switch (errId) {
       case NO_ERROR : return;
-      case NaN_ERROR: std::strcpy(m,"NaNs produced."); break;
-      case LAPACK_ERROR: std::strcpy(m,"Generic Lapack function error."); break;
-      case LAPACK_QR_ERROR: std::strcpy(m,"Lapack QR decomposition failed."); break;
-      case LAPACK_PMAT_ERROR: std::strcpy(m,"Error constructing kernel (null-space) matrix."); break;
-      case LAPACK_FACTORIZE_ERROR:  std::strcpy(m,"Lapack error in factorization."); break;
-      case LAPACK_SOLVE_ERROR:  std::strcpy(m,"Lapack error in solving linear sequations."); break;
-      case LAPACK_INVERSION_ERROR:  std::strcpy(m,"Lapack error in inverting matrix."); break;
-      default: std::strcpy(m,"Unknown error code: "); break;
+      case NaN_ERROR: std::strcpy(msg,"NaNs detected."); break;
+      case LAPACK_ERROR: std::strcpy(msg,"Generic Lapack function error."); break;
+      case LAPACK_QR_ERROR: std::strcpy(msg,"Lapack QR decomposition failed."); break;
+      case LAPACK_PMAT_ERROR: std::strcpy(msg,"Error constructing kernel (null-space) matrix."); break;
+      case LAPACK_FACTORIZE_ERROR:  std::strcpy(msg,"Lapack error in factorization."); break;
+      case LAPACK_SOLVE_ERROR:  std::strcpy(msg,"Lapack error solving linear system of equations."); break;
+      case LAPACK_INVERSION_ERROR:  std::strcpy(msg,"Lapack error in inverting matrix."); break;
+      default: std::strcpy(msg,"Unknown error code: "); break;
   }
+  std::sprintf(C_MSG_BUFFER,"error in function `%s` (code=%d): %s.\n", name, errId, msg);
 }
 
-void warningMSG(int wrr, char* m) {
-  switch(wrr) {
-   case NO_WARNING: return;
-   default: std::strcpy(m,"generic warning code: ");  break;
-  }
+void warningMSG(int wrrId, const char *name) {
+	 char msg[100] = "";
+
+	 switch(wrrId) {
+	   case NO_WARNING: return;
+	   case NaN_WARNING: std::strcpy(msg,"NaNs detected."); break;
+	   case LAPACK_WARNING: std::strcpy(msg,"Lapack error in factorization."); break;
+	   case POSDEF_WARNING: std::strcpy(msg,"Matrix probably not (semi)positive definite."); break;
+	   default: std::strcpy(msg,"generic warning code: ");  break;
+	  }
+	 std::sprintf(C_MSG_BUFFER,"warning in function `%s` (code=%d): %s.\n", name, wrrId, msg);
 }
 
 void printMatrix(const char ch[], const double *mat, int *irows, int *icols) {

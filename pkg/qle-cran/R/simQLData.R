@@ -241,6 +241,21 @@ varCHOLdecomp <- function(matList) {
 	lapply(1:length(matList),doIt,x=matList)
 }
 
+
+.resampleCov <- function(T,num){
+	n <- nrow(T)
+	apply(
+	  sapply(1:num,
+		function(i){
+			TS <- apply(T,2,sample,replace=TRUE)
+			stopifnot(NROW(TS)==n)
+			m <- var(TS,na.rm=TRUE)
+			m[col(m)>=row(m)]
+		}
+	  ),1,var)
+}
+
+
 #' @name 	setQLdata
 #'
 #' @title	Set quasi-likelihood (QL) data
@@ -249,7 +264,10 @@ varCHOLdecomp <- function(matList) {
 #'
 #' @param runs		list or matrix of simulation results from \code{\link{simQLdata}}
 #' @param X			list or matrix of model parameters
-#' @param chol		logical, \code{TRUE} (default), whether to decompose variance matrices
+#' @param var.type	character, "\code{chol}" (default), whether to Cholesky decompose variance
+#' 					matrices either for sample average variance approximation or kriging variance matrices
+#' @param Nb		numeric, number of bootstrap samples for kriging the variance matrix,
+#' 				    only if `\code{var.type}`=`\code{kriging}`, default is zero which uses no bootstrapping
 #' @param na.rm 	if \code{TRUE} (default), remove `NA` values from simulation results
 #' @param verbose	if \code{TRUE}, print intermediate output
 #'
@@ -264,7 +282,7 @@ varCHOLdecomp <- function(matList) {
 #' 
 #' 	The following items are stored as attributes:
 #' 
-#'   \item{chol}{ see above}
+#'   \item{type}{ see above}
 #' 	 \item{nsim}{ number of simulations at each point }
 #' 	 \item{xdim}{ parameter dimension}
 #' 	 \item{nWarnings}{ Number of warnings during simulations}
@@ -301,7 +319,8 @@ varCHOLdecomp <- function(matList) {
 #' @author M. Baaske
 #' @rdname 	setQLdata
 #' @export
-setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) {		
+setQLdata <- function(runs, X = NULL, var.type="cholMean",
+						Nb = 0, na.rm = TRUE, verbose = FALSE) {		
 	nErrors <- 0
 	nWarnings <- 0	
 	nsim <- attr(runs,"nsim")
@@ -328,7 +347,7 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 
 		V <- try( var(dataT, na.rm=na.rm),silent=TRUE)
 	    if (is.na(V) || !is.numeric(V) || inherits(V,"try-error") ) {
-			msg <- paste0("Failed to get variance of statistics.","\n")
+			msg <- paste0("Failed to get variance matrix of statistics.","\n")
 			message(msg)
 	        return(.qleError(message=msg,call=match.call(),error=V))
 	    }	
@@ -336,17 +355,24 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 		if(is.pos != 0L) {
 		  warning("Covariance matrix not positive definite!")
 	  	}
-		vmat <- as.matrix(V)
-		structure(list("V" = vmat,
-					   "mstat" = colMeans(dataT),
-					   "vars" = diag(vmat),
-					   "is.pos" = is.pos)
-		)
+		vmat <- as.matrix(V)		
+		ret <- list("V" = vmat,
+					"mstat" = colMeans(dataT),
+					"vars" = diag(vmat),					  
+					"is.pos" = is.pos)
+		
+		if(Nb > 0 && var.type == "kriging"){
+		  ret$Lb <- try(.resampleCov(dataT,Nb),silent=TRUE)
+		  if(inherits(ret$Lb,"try-error"))
+			attr(ret,"error") <- TRUE			  
+		} 
+		ret
 	}
 
 	res <- tryCatch(
 			  lapply(runs,.extract),
 			error = function(e) e)
+	
 	if(.isError(res)){
 		msg <- .makeMessage("Extracting values of statistics failed.")
 		message(msg)
@@ -362,7 +388,7 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 			 } else {
 				ok <- (x$is.pos == 0L)
 				if(!ok)
-				 nWarnings <<- nWarnings+1
+				 nWarnings <<- nWarnings+1			   
 			 }
 			 ok
 	})) 
@@ -393,7 +419,6 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 		  .qleError(message=msg,
 				    call=match.call(),
 			 	    xdim=ncol(X), 
-					chol=chol,
 					nsim=nsim,
 					nWarnings=nWarnings,
 				    nErrors=nErrors,
@@ -403,7 +428,7 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
   	}
 	# Cholesky decompositions	
 	cvmats <- 
-	 if(chol){
+	 if(var.type != "const") {
 		# covariance decompositions	
 	    if(verbose)
 		 cat("Cholesky decompositon of covariance matrices...\n")
@@ -415,16 +440,29 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 			message(msg)
 			stop(.qleError(message=msg,call=match.call(),error=L))
 		}
-		ok <- which(sapply(L,function(x) !.isError(x)))
-		if(length(ok) == 0L){
+		ok2 <- which(sapply(L,function(x) !.isError(x)))
+		if(length(ok2) == 0L){
 			msg <- paste0("All Cholesky decompositions failed: ","\n")
 			message(msg)
 			return(.qleError(message=msg,call=match.call(),error=L))
-	 	} else if(length(ok) < length(L))
-		   warning(paste0("A total of ",length(L)-length(ok), " Cholesky decomposition(s) failed."))
-	 	# resulting cholesky decomposed terms
-		do.call(rbind, L[ok] )			
-	 } else NULL
+	 	} else if(length(ok2) < length(L))
+		   warning(paste0("A total of ",length(L)-length(ok2), " Cholesky decomposition(s) failed."))
+	    
+	    cvmats <- as.data.frame(do.call(rbind, L[ok2]))
+	    colnames(cvmats) <- paste("L", rep(1:NCOL(cvmats)),sep="")
+	   
+		# bootstrap variances of covariances 
+		# a local nugget variances
+		if(Nb > 0 && var.type == "kriging"){
+			Lb <- lapply(res[ok],"[[","Lb")			
+			Lbmats <- as.data.frame(do.call(rbind,Lb[ok2]))
+			colnames(Lbmats) <- paste("Lb", rep(1:NCOL(Lbmats)),sep="")
+			cvmats <- cbind(cvmats,Lbmats)
+		}
+		if(length(ok) != length(ok2))
+		  ok <- ok2
+	    cvmats		
+	} else NULL
 	
 	X <- X[ok,,drop=FALSE]
 	mstats <- do.call(rbind,lapply(res[ok],"[[","mstat"))
@@ -443,15 +481,13 @@ setQLdata <- function(runs, X = NULL, chol=TRUE, na.rm = TRUE, verbose = FALSE) 
 	 }			
 	colnames(qld) <- nms			  
 	if(!is.null(cvmats)){
-     df.cvmat <- data.frame(cvmats)
-	 colnames(df.cvmat) <- paste("L", rep(1:NCOL(cvmats)),sep="")
-	 qld <- cbind(qld,df.cvmat)	 
-	}
+   	 qld <- cbind(qld,data.frame(cvmats))
+ 	}
 
 	structure(qld,
-			  chol=chol,
 			  xdim=ncol(X),
 			  nsim=nsim,
+			  Nb=if(var.type != "kriging") 0 else Nb,
 			  nWarnings=nWarnings,
 			  nErrors=nErrors,
 			  nIgnored=nIgnored,

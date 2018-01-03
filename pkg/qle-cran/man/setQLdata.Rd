@@ -4,14 +4,19 @@
 \alias{setQLdata}
 \title{Set quasi-likelihood (QL) data}
 \usage{
-setQLdata(runs, X = NULL, chol = TRUE, na.rm = TRUE, verbose = FALSE)
+setQLdata(runs, X = NULL, var.type = "cholMean", Nb = 0, na.rm = TRUE,
+  verbose = FALSE)
 }
 \arguments{
 \item{runs}{list or matrix of simulation results from \code{\link{simQLdata}}}
 
 \item{X}{list or matrix of model parameters}
 
-\item{chol}{logical, \code{TRUE} (default), whether to decompose variance matrices}
+\item{var.type}{character, "\code{chol}" (default), whether to Cholesky decompose variance
+matrices either for sample average variance approximation or kriging variance matrices}
+
+\item{Nb}{numeric, number of bootstrap samples for kriging the variance matrix,
+only if `\code{var.type}`=`\code{kriging}`, default is zero which uses no bootstrapping}
 
 \item{na.rm}{if \code{TRUE} (default), remove `NA` values from simulation results}
 
@@ -28,7 +33,7 @@ An object of class \code{QLdata}  as a data frame with columns:
 
 	The following items are stored as attributes:
 
-  \item{chol}{ see above}
+  \item{type}{ see above}
 	 \item{nsim}{ number of simulations at each point }
 	 \item{xdim}{ parameter dimension}
 	 \item{nWarnings}{ Number of warnings during simulations}

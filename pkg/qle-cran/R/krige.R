@@ -202,7 +202,18 @@ extract <- function(X, type = c("mean","sigma2","weights")) UseMethod("extract",
 #' @export
 extract.krigResult <- function(X, type=c("mean","sigma2","weights")) {
 	type <- match.arg(type)
-	do.call(rbind,lapply(X,"[[",type))
+	switch(type,
+	   "weights" = { 
+		   if(!is.null(attr(X,"weights")))		# only for dual kriging weights!
+			 return( t(do.call(rbind,(attr(X,"weights")))) )
+		   lapply(X,function(x) {
+			 w <- matrix(unlist(x$weights),nrow=length(x$weights[[1]]))
+			 colnames(w) <- names(x$weights)
+			 w
+		 	})	
+	   },
+	   do.call(rbind,lapply(X,"[[",type))
+	)
 }
 
 # intern
@@ -444,13 +455,9 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 		res$var <- VTX + diag(sig2,n,n)
 
 		if(doInvert) {
-			res$inv <- try(do.call("solve",list(res$var)),silent=TRUE)
-			if(inherits(res$inv,"try-error")) {				
-				res$inv <- try(gsiInv(res$var),silent=TRUE)
-				if (inherits(res$inv,"try-error") || !is.numeric(res$inv) || any(is.na(res$inv))) {
-					return(.qleError(message="Variance matrix inversion failed: ",call=sys.call(),error=res))
-				}
-			}
+			res$inv <- try(do.call("gsiInv",list(res$var)),silent=TRUE)
+			if (inherits(res$inv,"try-error") || !is.numeric(res$inv) || any(is.na(res$inv)))
+			  return(.qleError(message="Variance matrix inversion failed: ",call=sys.call(),error=res))			
 		}
 	} else {
 		if(doInvert) {
@@ -494,6 +501,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param inverted 		currently ignored
 #' @param check			logical, \code{TRUE} (default), whether to check input arguments
 #' @param value.only  	if \code{TRUE} only the values of the QD are returned
+#' @param na.rm 		logical, if \code{TRUE} (default) remove `Na` values from the results
 #' @param cl			cluster object, \code{NULL} (default) (see \code{\link[parallel]{makeCluster}})
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
@@ -555,7 +563,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @rdname quasiDeviance
 #' @export
 quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL, 
-					 inverted = FALSE, check = TRUE, value.only=FALSE, 
+					 inverted = FALSE, check = TRUE, value.only=FALSE, na.rm = TRUE,
 					  cl = NULL, verbose=FALSE)
 {		
 	if(check)
@@ -611,18 +619,17 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 		}
 		
 		# check for NAs
-		has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
-		if(length(has.na) == length(ret)){
-			stop("All quasi-deviance calculations produced `Na` values.")
+		if(na.rm){
+			has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
+			if(length(has.na) == length(ret)){
+				stop("All quasi-deviance calculations produced `Na` values.")
+			}
+			if(length(has.na>0L)){		
+				message("Removing `Na` values from results of quasi-deviance calculation.")
+				return( structure(ret[-has.na],  "hasNa"=has.na))
+			}
 		}
-		if(length(has.na>0L)){		
-			warning("Removing `Na` values from results of quasi-deviance calculation.")
-			return(
-			structure(ret[-has.na],
-			  "hasNa"=has.na))
-        } else {
-		  return(ret)
-		}
+		return(ret)
 
 	}, error = function(e) {
 		message(.makeMessage("Calculation of quasi-deviance failed: ",
@@ -651,6 +658,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' 					  used as constant variance matrix
 #' @param check       logical, \code{TRUE} (default), whether to check all input arguments
 #' @param value.only  only return the value of the MD 
+#' @param na.rm   	  logical, if \code{TRUE} (default) remove `Na` values from the results
 #' @param cl		  cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
 #' @param verbose     if \code{TRUE}, then print intermediate output
 #' 
@@ -705,7 +713,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' @rdname mahalDist
 #' @export
 mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-		               inverted = FALSE, check = TRUE, value.only = FALSE,
+		               inverted = FALSE, check = TRUE, value.only = FALSE, na.rm = TRUE,
 					    cl = NULL, verbose = FALSE)
 {
 	  
@@ -739,7 +747,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 		   } else if(useSigma && !inverted){
 				# Only for constant Sigma, which is used as is!
 				inverted <- TRUE
-				Sigma <- try(solve(Sigma),silent=TRUE)
+				Sigma <- try(gsiInv(Sigma),silent=TRUE)
 				if(inherits(Sigma,"try-error")) {
 				  msg <- paste0("Inversion of constant variance matrix failed.")
 				  message(msg)
@@ -774,20 +782,18 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 				attr(Sigma,"inverted") <- inverted
 				attr(ret,"Sigma") <- Sigma			  
 	 		}
-			# check for NAs
-			has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
-			if(length(has.na) == length(ret)){
-				stop("All  Mahalanobis distance calculations produced `Na` values.")
+			# check for NAs/NaNs
+			if(na.rm){
+				has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
+				if(length(has.na) == length(ret)){
+					stop("All  Mahalanobis distance calculations produced `Na` values.")
+				}
+				if(length(has.na>0L)){
+					warning("Removed `Na` values from results of Mahalanobis distance calculation.")
+					return(	structure(ret[-has.na],	"hasNa"=has.na))
+			    }				
 			}
-			if(length(has.na>0L)){
-				warning("Removed `Na` values from results of Mahalanobis distance calculation.")
-				return(
-					structure(ret[-has.na],
-							"hasNa"=has.na))
-		    } else {
-				return(ret)
-			}
-					
+			return(ret)					
 							
 		}, error = function(e) {
 			 message(.makeMessage("Calculation of Mahalanobis-distance failed: ",

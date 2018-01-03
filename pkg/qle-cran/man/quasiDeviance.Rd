@@ -5,8 +5,8 @@
 \title{Quasi-deviance computation}
 \usage{
 quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-  inverted = FALSE, check = TRUE, value.only = FALSE, cl = NULL,
-  verbose = FALSE)
+  inverted = FALSE, check = TRUE, value.only = FALSE, na.rm = TRUE,
+  cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{points}{list or matrix of points where to compute the QD; a numeric vector is considered to be a point}
@@ -26,6 +26,8 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 
 \item{value.only}{if \code{TRUE} only the values of the QD are returned}
+
+\item{na.rm}{logical, if \code{TRUE} (default) remove `Na` values from the results}
 
 \item{cl}{cluster object, \code{NULL} (default) (see \code{\link[parallel]{makeCluster}})}
 

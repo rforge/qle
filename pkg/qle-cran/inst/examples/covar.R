@@ -8,95 +8,105 @@ data(normal)
 X <- as.matrix(qsd$qldata[,1:2])
 T <- qsd$qldata["mean.T1"]
 V <- qsd$qldata[["var.T1"]]
+
 # get sample means of simulated statistics
 Tstat <- qsd$qldata[grep("mean.",names(qsd$qldata))]
 
-# SIRF-2 covariance model (default)
-# 'alpha' parameter is fixed and not reml estimated below,
+nsim <- attr(qsd$qldata,"nsim")
+
+# Setup SIRF-2 (default) covariance model manually using simulation variances `V`
+# 
+# Covariance parameter 'alpha' is fixed and not estimated by REML (see below),
 # however, any parameter of the covariance model can be estimated
-# by the reml method or excluded from covariance fitting	
+# or excluded from the covariance fitting procedure
 cvm <- setCovModel(model="sirfk",  param = c("scale"=0.001,"alpha"=2.0),
 		fixed.param = c("alpha"), nugget=1e-4, npoints = nrow(X), trend = 2,
-		  var.sim = V)
-  
-# fitting by reml	
-fit <- fitCov(list(cvm),X,T,verbose=TRUE)[[1]]
+		  var.sim = V/nsim)
 
-# original from the (already reml fitted) data
-c(qsd$covT[[1]]$param,qsd$covT[[1]]$nugget)
-# fitted again
-(pnew <- c(fit$model$param,fit$model$nugget))
-## test reml evaluation
+print(cvm)
+
+# and fitt by REML	
+fit <- fitCov(list(cvm),X,T,verbose=TRUE)[[1]]
+# compare with original fit
+(pnew <- fit[[1]]$param)
+qsd$covT[[1]]$param
+
+# test reml evaluation
 val <- reml(list(cvm),pnew,T[1],X)[[1]]
 stopifnot(attr(fit,"optres")$objective == val)
 
-# set matern covariance for second model and fit  
+# Setup kriging (covariance) model for the second statistic
 T2 <- qsd$qldata["mean.T2"]
 V2 <- qsd$qldata[["var.T2"]]
-# covariance model for 2nd statistic
-cm2 <- setCovModel(model="matern",
-	    param = c("scale"=0.001,"nu"=2.5,"rho"=0.5),
-		nugget = 1e-4, npoints = nrow(X), dim = ncol(X), var.sim = V2, trend = 2)
-  
-# 2nd statistic with Matern covariance
-fit2 <- fitCov(list(cm2),X,T2,verbose=TRUE)[[1]]
-# compare reml fits
-c(fit$model$param,fit$model$nugget)
-c(fit2$model$param,fit2$model$nugget)
+# Use `matern` model and fit
+cvm2 <- setCovModel(model="matern",
+	     param = c("scale"=0.1,"nu"=2.5,"rho"=2),
+		 nugget = 1e-4, npoints = nrow(X),  trend = 2,
+		 var.sim = 1e-6)
+# fitting by REML
+(fit2 <- fitCov(list(cvm2),X,T2,verbose=TRUE)[[1]])
 
-# 2nd statistic with Matern covariance
-qsd_new <- qsd
-# replace 2nd covariance model (sirfk) by Matern 
-qsd_new$covT <- structure(list(fit$model,fit2$model),
-				  class="krige")
+## all at once fit
+# fitCov(
+#    list(cvm,cvm2),         # both models
+#	 X,
+#    Tstat,					 # both statistics
+#    verbose=TRUE)
+
+# merge covartiance models 
+qsd2 <- qsd
+qsd2$covT <- structure(list(fit$model,fit2$model),class="krige")
 
 ## Grid for MSE estimation
-x <- seq(qsd$lower[1],qsd$upper[1],by=0.05)
-y <- seq(qsd$lower[2],qsd$upper[2],by=0.05)
+x <- seq(qsd2$lower[1],qsd2$upper[1],by=0.05)
+y <- seq(qsd2$lower[2],qsd2$upper[2],by=0.05)
 p <- as.matrix(expand.grid(x,y))
  
 ## Kriging MSE
-## old fit kriging variances
-kvar <- varKM(qsd$covT,p,X,Tstat)
-## new fit with Matern, kriging variances
-kvar_matern <- varKM(qsd_new$covT,p,X,Tstat)
+## old fit and new fit (second with `matern`)
+kvar <- list(varKM(qsd$covT,p,X,Tstat),		
+			 varKM(qsd2$covT,p,X,Tstat))
 
-## Empirical integrated MSE (by estimated kriging variances):
-## Matern covariance suggests a better fit
-colMeans(kvar)
-colMeans(kvar_matern)
+## Empirically integrated MSE (by estimated kriging variances):
+colMeans(kvar[[1]]) # original
+colMeans(kvar[[2]]) # 2nd is fit by `matern` covariance
 
 ## show prediction variances
-## of 2nd statistic (mean average deviation)
+## Prediction variances using SIRF-2 covariance
 
-## Prediction variances using SIRF-k covariance
-dev.new()
-z1 <- matrix(kvar[,2],ncol=length(y))
-plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
-contour(x, y, z1, col = "black", lty = "solid",
-		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
-try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
+## first row: original fit, both statistics
+## second row: new fit, both statistics
+op <- par(mfrow=c(2,2))
+for(j in 1:2){
+ for(i in 1:2) {
+	z1 <- matrix(kvar[[j]][,i],ncol=length(y))
+	plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
+	contour(x, y, z1, col = "black", lty = "solid",
+			nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
+	try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE) 
+ }
+}
+par(op)
 
-## Prediction variances using Matern covariance function
-dev.new()
-z2 <- matrix(kvar_matern[,2],ncol=length(y))
-plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
-contour(x, y, z2, col = "black", lty = "solid",
-		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
-try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
 
 ## Estimation of prediction errors by cross-validation
 ## using the original covariance fit with covariance function SIRF-k 
-cvm <- prefitCV(qsd)
-cv <- crossValTx(qsd, cvm, p, type = "cve")
-## or with rmsd
-# cv <- crossValTx(qsd, cvm, p, type = "rmsd")
-colMeans(cv)
-z3 <- matrix(cv[,2],ncol=length(y))
+cv1 <- prefitCV(qsd)
+cv2 <- prefitCV(qsd2)
+cve <- list(crossValTx(qsd, cv1, p, type = "cve"),
+			crossValTx(qsd2, cv2, p, type = "cve"))
 
-# show cross-validation prediction errors
+# first row: original fit, both statistics
+# second row: new fit, both statistics
 dev.new()
-plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
-contour(x, y, z3, col = "black", lty = "solid",
-		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
-try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
+op <- par(mfrow=c(2,2))
+for(j in 1:2){	
+	for(i in 1:2){	
+	z3 <- matrix(cve[[j]][,i],ncol=length(y))
+	plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
+	contour(x, y, z3, col = "black", lty = "solid",
+			nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
+	try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
+ }
+}
+par(op)

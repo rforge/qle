@@ -14,8 +14,9 @@ x <- list(c("mu"=2,"sigma"=1))   # list of numeric vectors
 mahalDist(x,qsd)
 quasiDeviance(x,qsd)
 
-## Fit cross-validation models
-cvm <- prefitCV(qsd, verbose=TRUE)
+cvm <- NULL
+## alternatively fit cross-validation models
+# cvm <- prefitCV(qsd, verbose=TRUE)
 # use prediction errors based on these
 qsd$var.type <- "cholMean"
 (QD1 <- quasiDeviance(x,qsd,cvm=cvm))
@@ -31,7 +32,7 @@ qsd$var.type <- "wcholMean"
 ## 3D plot of quasi-deviance, with kriged variance matrix
 ## and added CV prediction variances, requires package `rgl`
 ############################################################
-#
+
 #library(rgl)
 #x <- seq(qsd$lower[1],qsd$upper[1],by=0.05)
 #y <- seq(qsd$lower[2],qsd$upper[2],by=0.05)
@@ -41,7 +42,7 @@ qsd$var.type <- "wcholMean"
 #D <- quasiDeviance(points,qsd,cvm=cvm,value.only=TRUE)
 #
 #z <- matrix(D,ncol=length(y))
-#persp3d(x,y,z,col="red", alpha=0.3, axes=T)
+#persp3d(x,y,z,col="red", alpha=0.3, axes=TRUE)
 #cnt <- contourLines(x,y,z,
 #	      lev=seq(range(z)[1],range(z)[2],
 #		  by=dist(range(z))/100))

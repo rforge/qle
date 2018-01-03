@@ -5,8 +5,8 @@
 \title{Set a covariance model}
 \usage{
 setCovModel(model = "sirfk", param = NULL, npoints = 0, var.sim = NULL,
-  as.nugget = FALSE, nugget = 1e-04, trend = 2, fixed.param = NULL,
-  lower = NULL, upper = NULL, ...)
+  nugget = 0.00015, trend = 2, fixed.param = NULL, lower = NULL,
+  upper = NULL, ...)
 }
 \arguments{
 \item{model}{name of covariance model}
@@ -17,9 +17,6 @@ setCovModel(model = "sirfk", param = NULL, npoints = 0, var.sim = NULL,
 
 \item{var.sim}{numeric vector, \code{NULL} (default), local simulation variances (so-called local nugget variances)}
 
-\item{as.nugget}{logical, \code{FALSE} (default), whether to treat `\code{var.sim}` as
-a fixed local nugget variance}
-
 \item{nugget}{starting value for (global) nugget variance estimation}
 
 \item{trend}{trend order ID: either linear (=1) or quadratic (=2) for polynomial trend terms}
@@ -27,14 +24,23 @@ a fixed local nugget variance}
 \item{fixed.param}{vector of names, corresponding to `\code{param}` of covariance parameters, which are hold fixed for covariance
 parameter estimation}
 
-\item{lower}{lower bounds for REML estimation}
+\item{lower}{lower bounds of covariance parameters for REML estimation}
 
-\item{upper}{upper bounds for REML estimation}
+\item{upper}{upper bounds of covariance parameters for REML estimation}
 
 \item{...}{additional arguments which can be stored}
 }
 \value{
-Object of class \code{covModel}
+Object of class \code{covModel}, a list of following elements
+ \item{model}{ integer of covariance function}
+ \item{param}{ estimtated covariance parameters}
+	\item{start}{ start point of REML estimation of covariance parameters}
+ \item{trend}{ trend order}
+ \item{fix.nugget}{ vector of (fixed) values used as local nugget variances}
+ \item{free}{ index of free parameters for REML estimation}
+	\item{lower}{ lower bounds of covariance parameters for REML estimation}
+ \item{upper}{ upper bounds of covariance parameters for REML estimation}
+ \item{...}{ additional objects which can be stored}
 }
 \description{
 Set a covariance model for kriging the sample means of the involved statistics or for the variance matrix of the statistics.
@@ -51,10 +57,10 @@ The function defines a covariance model for kriging the sample mean values of an
  \subsection{Use of simulation variance}{
  If a vector of simulation variances is statically set by `\code{var.sim}` for each location these are used as (local)
  nugget variance estimations which account for the sampling variability due to the repeated measurements of the statistics
- by simulation. The length should match the number of locations/points `\code{npoints}` otherwise the given vector components
- are recycled. Setting `\code{as.nugget}` treats these values as fixed for all subsequent covariance model estimations. In addition,
- a global scalar valued nugget, which can captures the variance of the underlying random function, can be set by `\code{nugget}` as
- a starting value for the REML estimation procedure. Clearly, both types of nugget variances have a direct influence on the REML estimates.
+ by simulation. The length should match the number of locations `\code{npoints}` otherwise the given vector components
+ are recycled. A global scalar valued nugget, which can captures the variance of the underlying random function, can be set by
+ `\code{nugget}` as a starting value for the REML estimation procedure. Clearly, both types of nugget variances have a direct
+ influence on the REML estimates.
  } 
 
  \subsection{Default parameters}{ 

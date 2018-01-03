@@ -20,17 +20,24 @@
 #' @param param			numeric vector, \code{NULL} (default), starting values of covariance parameters for estimation 
 #' @param npoints		number of sample points already evaluated for covariance parameter estimation
 #' @param var.sim		numeric vector, \code{NULL} (default), local simulation variances (so-called local nugget variances)
-#' @param as.nugget	    logical, \code{FALSE} (default), whether to treat `\code{var.sim}` as
-#' 						a fixed local nugget variance
 #' @param nugget		starting value for (global) nugget variance estimation
 #' @param trend			trend order ID: either linear (=1) or quadratic (=2) for polynomial trend terms 					    
 #' @param fixed.param	vector of names, corresponding to `\code{param}` of covariance parameters, which are hold fixed for covariance
 #' 						parameter estimation
-#' @param lower			lower bounds for REML estimation 
-#' @param upper			upper bounds for REML estimation
+#' @param lower			lower bounds of covariance parameters for REML estimation 
+#' @param upper			upper bounds of covariance parameters for REML estimation
 #' @param ...			additional arguments which can be stored
 #' 
-#' @return Object of class \code{covModel}
+#' @return Object of class \code{covModel}, a list of following elements
+#'  \item{model}{ integer of covariance function}
+#'  \item{param}{ estimtated covariance parameters}
+#' 	\item{start}{ start point of REML estimation of covariance parameters}
+#'  \item{trend}{ trend order}
+#'  \item{fix.nugget}{ vector of (fixed) values used as local nugget variances}
+#'  \item{free}{ index of free parameters for REML estimation}
+#' 	\item{lower}{ lower bounds of covariance parameters for REML estimation}
+#'  \item{upper}{ upper bounds of covariance parameters for REML estimation}
+#'  \item{...}{ additional objects which can be stored}
 #' 
 #' @details The function defines a covariance model for kriging the sample mean values of an involved statistic. The covariance model
 #'  (including a polynomial trend) defines the spatial dependence between different locations (points) of the
@@ -43,10 +50,10 @@
 #'  \subsection{Use of simulation variance}{
 #'  If a vector of simulation variances is statically set by `\code{var.sim}` for each location these are used as (local)
 #'  nugget variance estimations which account for the sampling variability due to the repeated measurements of the statistics
-#'  by simulation. The length should match the number of locations/points `\code{npoints}` otherwise the given vector components
-#'  are recycled. Setting `\code{as.nugget}` treats these values as fixed for all subsequent covariance model estimations. In addition,
-#'  a global scalar valued nugget, which can captures the variance of the underlying random function, can be set by `\code{nugget}` as
-#'  a starting value for the REML estimation procedure. Clearly, both types of nugget variances have a direct influence on the REML estimates.
+#'  by simulation. The length should match the number of locations `\code{npoints}` otherwise the given vector components
+#'  are recycled. A global scalar valued nugget, which can captures the variance of the underlying random function, can be set by
+#'  `\code{nugget}` as a starting value for the REML estimation procedure. Clearly, both types of nugget variances have a direct
+#'  influence on the REML estimates.
 #'  } 
 #' 
 #'  \subsection{Default parameters}{ 
@@ -71,18 +78,18 @@
 #' @rdname setCovModel
 #' @export
 setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NULL,
-						 as.nugget = FALSE, nugget = 1e-4, trend = 2, fixed.param = NULL, 
+						  nugget = 1.5e-4, trend = 2, fixed.param = NULL, 
 						   lower = NULL, upper = NULL,...)
 {	
 	stopifnot(npoints>0)
 	trend.nr <- pmatch(trend,c(1,2))
 	if(anyNA(trend.nr)) {
-	  msg <- paste0("Invalid drift number. Use either linear=1 or quadratic=2 drift.")
+	  msg <- paste0("Invalid trend order. Either choose `trend` as 1 (linear) or 2 (quadratic).")
 	  message(msg)
 	  stop(msg)
   	}
  	
-    cov.list <- c("sirfk","matern","powexp")
+    cov.list <- c("sirfk","matern","powexp","exp")
  	cov.nr <- pmatch(model, cov.list)
 	if (is.na(cov.nr)) {
 		msg <- paste("Unknown covariance model!",
@@ -119,10 +126,13 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 	        if(is.null(lower)) {
 			  lower <- rep(-Inf,length(param))	
 			}
-			lower <- if(anyNA(lower) | any(!is.finite(lower))) c(1e-6,1.0,0) else lower
-			upper <- if(is.null(upper)) {			  
-				c(5,i-0.001,3)						
-			} else c(upper[1],min(upper[2],i-1e-6),upper[3])			 				
+			lower <-
+			  if(anyNA(lower) | any(!is.finite(lower)))
+				  c(1e-6,1.0,1e-4) else lower
+			upper <-
+			  if(is.null(upper)) {			  
+				 c(5,i-1e-4,3)						
+			  } else c(upper[1],min(upper[2],i-1e-4),upper[3])			 				
 		},		
 		"matern" = {
 			param <-
@@ -136,7 +146,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 			     c(p,"nugget"=nugget)
 			 }
 			if(is.null(lower) || is.null(upper)) {
-				lower <- c(1e-6,2+1e-10,0.1,0)
+				lower <- c(1e-6,2+1e-10,0.1,1e-4)
 				upper <- c(10,3,10,10)
 			}			
 		},
@@ -153,20 +163,38 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 			 }
 	 
 			if(is.null(lower) || is.null(upper)) {
-				lower <- c(1e-6,1e-4,1e-4,0)
+				lower <- c(1e-6,1e-6,1e-4,1e-4)
 				upper <- c(3,3,1.9999,10)
+			}			
+		},
+		"exp" = {
+			param <-
+			if(is.null(param))
+				param <- c("scale"=1.0,"phi"=1.0,"nugget"=nugget)
+			else {
+				if(anyNA(match(names(param),c("scale","phi"))))
+					stop("Invalid parameter vector for model `exp`.")
+				p <- c("scale"=1.0,"phi"=1.0)  
+				p[names(param)] <- param				 
+				c(p,"nugget"=nugget)
+			}
+			
+			if(is.null(lower) || is.null(upper)) {
+				lower <- c(1e-6,1e-6,1e-4)
+				upper <- c(3,3,10)
 			}			
 		}
 	)	
-	start <- param
-	if(any(start<lower) || any(start>upper)) {
-		msg <- paste0("At least one parameter does not match constraints. Check `lower` and `upper`.")
-		message(msg)
-		stop(msg)
+	if(length(param) != length(lower) ||
+	   length(param) != length(upper)) {
+	  stop("`lower` or `upper` bound lengths must be equal to the length of the covariance parameter vector.")
 	}
-	 
-		
-	fixed <-  
+	start <- param
+	if(any(start<lower) || any(start>upper))
+		stop("At least one parameter does not match constraints. Check `lower` and `upper`.")
+	
+			
+	free <-  
 	 if(is.null(fixed.param)){
 		 seq(length(start))
 	 } else {
@@ -186,8 +214,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 				   "start"= start,				  				   				   
 				   "trend"= trend,
 				   "fix.nugget"= fix.nugget,	
-				   "as.nugget"= as.nugget,
-				   "fixed"= fixed,
+				   "free"= free,
 				   "lower"= lower,
 				   "upper"= upper,...),
 			class="covModel"
@@ -199,7 +226,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' 
 #' @title 		Restricted maximum likelihood (REML)
 #' 
-#' @description Calculate the REML function value given a covariance model and (observed) data 
+#' @description Calculate the REML value (witout constant term) for a given covariance model and data 
 #' 
 #' @param models   	 object of class \code{krige} (list of covariance models) or class
 #'					 	 \code{covModel} (a single covariance model), see \code{\link{setCovModel}}
@@ -249,37 +276,57 @@ reml <- function(models, pars, data, Xs, verbose = FALSE) {
 }
 
 # intern, covModel has to be initialized! 
-fnREML <- function(p, y, Xs, P, model, fixed = seq(length(p)), verbose = FALSE)
+fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 {	
 	 tryCatch({			
-		model$param[fixed] <- p		
+		model$param[free] <- p		
 		# covariance matrix
 		Cmat <- .Call(C_covMatrix,Xs,model)		
 		if (!is.matrix(Cmat) || anyNA(Cmat) || !is.numeric(Cmat))
-		 stop("Covariance matrix has `NA`s.")								
+		  stop("Error in covariance matrix: non-numeric values.")								
 			
+	 	msg <- NULL	
 	 	W <- crossprod(P, Cmat %*% P)
-		rc <- rcond(Cmat)
-		msg <- NULL	
-		if(rcond(W) < 1e-10 || rc < 1e-10) {		  
-		  msg <- paste(c("Covariance matrix reciprocal condition number: ", rc,"\nnear zero at parameter: \n\t ",
-						 format(p, digits=6, justify="right"),"\n"),
-				  collapse = " ")
-		  warning(msg)
-	    }
-	  	
-		Wc <- chol(W)
-		w  <- backsolve(Wc,y,transpose=TRUE)	
-	
-	    structure(
-		   as.vector(.5*(t(y)%*%w) + sum(log(diag(Wc)))),
-			  "info"=list("rcond"=rc,"msg"=msg, "p"=p) )
+		rc <- rcond(W)
+				
+	    if(rc > 1e-3){
+			Wc <- try(chol(W),silent=TRUE)
+			if(!inherits(Wc,"try-error") && all(diag(Wc)>0) ){
+				w  <- backsolve(Wc,y,transpose=TRUE)	
+				if(!inherits(w,"try-error")){
+				  return (
+				   structure(
+					as.numeric(.5*(sum(w^2)) + sum(log(diag(Wc)))),  # beware of brackets: 0.5*2*sum(log(diag(Wc)))
+				  	 "info"=list("rcond"=rc,"msg"=msg, "p"=p)) 
+	              )
+			  	} else {
+					if(verbose) 
+					 warning("Could not backsolve in `fnREML`.")
+				}
+			} 
+		} else {		  
+			msg <- paste0(c("reciprocal condition number (", rc,") of projected covariance matrix `W` is near zero at covariance parameter \n\t ",
+					format(p, digits=6, justify="right"),"\n"," which might be unreliable."), collapse = " ")
+			if(verbose)
+				warning(msg)
+		}				
+		z <- try(gsiSolve(W,y,use.solve=FALSE),silent=TRUE)
+		if(inherits(z,"try-error"))
+		  stop("`gsiSolve` failed. Cannot continue REML estimation.")
+	  	detW <- try(det(W),silent=TRUE)
+		if(inherits(detW,"try-error") || detW < 0)
+		 stop(.makeMessage("Could not compute determinant: ",detW," or negative value. \n"))
+	 	if(verbose && detW < 1e-17)
+		 warning("Determinant of projection matrix `W` (REML) is near zero.\n")
+		
+		return(	
+		    structure(
+				as.numeric( .5*(t(y) %*% z + log(detW)) ),
+				 "info"=list("rcond"=rc,"msg"=msg, "p"=p) )	
+		)		
 	  
 	} ,error = function(e) {
-			msg <- .makeMessage("Error in function 'fnREML': ",
-					conditionMessage(e))
-		    message(msg)						
-			stop(msg)									
+		 stop(.makeMessage("Error in function 'fnREML': ",	conditionMessage(e)))		  	
 		}
 	)		
 	
@@ -295,9 +342,9 @@ fnREML <- function(p, y, Xs, P, model, fixed = seq(length(p)), verbose = FALSE)
 ## H <- log(phi*D)
 ## exp(2*alpha*H)*2*H
 #' @importFrom nloptr nl.grad
-fnGradREML <- function(p, y, Xs, P, model, fixed = NULL, verbose = FALSE) {
-	list("objective"=fnREML(p,y,Xs,P,model,fixed,verbose),
-		 "gradient"=nloptr::nl.grad(p, fnREML, heps = .Machine$double.eps^(1/3),y,Xs,P,model,fixed)) 
+fnGradREML <- function(p, y, Xs, P, model, free = NULL, verbose = FALSE) {
+	list("objective"=fnREML(p,y,Xs,P,model,free,verbose),
+		 "gradient"=nloptr::nl.grad(p, fnREML, heps = .Machine$double.eps^(1/3),y,Xs,P,model,free)) 
 }  
 
 ## TODO add data as parameter
@@ -306,7 +353,7 @@ fnGradREML <- function(p, y, Xs, P, model, fixed = NULL, verbose = FALSE) {
 doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 {
 	# return if all parameters are fixed
-	if(!is.null(model$fixed) && length(model$fixed)==0L) {
+	if(!is.null(model$free) && length(model$free)==0L) {
 	  return(
 		structure(
 		  list(model = model,convergence = 1L),
@@ -332,20 +379,39 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 		p0 <- .PROJMED(model$start,model$lower,model$upper)
 		
 		res <- nloptr::nloptr(p0, fn, lb = model$lower, ub = model$upper, opts = opts,
-						y = y, Xs = Xs, P = P, model = model, fixed = model$fixed,
-						verbose = verbose)
+						y = y, Xs = Xs, P = P, model = model, free = model$free,
+						 verbose = verbose)
 		msg <- "Normal convergence."
 		if(inherits(res,"error") || is.null(res) || anyNA(res$solution)){
 			msg <- .makeMessage("Function call to 'nloptr' failed.")				
 			message(msg)
 			return(.qleError(message=msg,call=match.call(),error=res))
 		}
+		# do a final local search
+		if(!is.null(opts$local_opts)){
+			if(length(opts$local_opts) > 0L) {		
+				locopts <- nloptr::nl.opts()
+				locopts[names(opts$local_opts)] <- opts$local_opts 
+			} else {
+				locopts <- list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
+								"xtol_rel" = 1.0e-6, "maxeval" = 100)
+			}	
+			if(verbose)
+			  message("Do a final local search of covariance parameters.")
+			res0 <- nloptr::nloptr(res$solution, fn, lb = model$lower, ub = model$upper, opts = locopts,
+					 y = y, Xs = Xs, P = P, model = model, free = model$free,
+					  verbose = verbose)
+			if(inherits(res0,"error") || is.null(res0) || anyNA(res0$solution)){
+			   warning(.makeMessage("Local function call to 'nloptr' failed after global optimization."))
+			   res$final <- res0
+		    } else res <- res0
+		}
 		
 		converged <- FALSE
 		sol <- res$solution			
 		if(res$status >= 0L) {
 			converged <- TRUE
-			model$param[model$fixed] <- sol						   			   
+			model$param[model$free] <- sol						   			   
 	    } else {
 		   verbose <- TRUE
 		   msg <- .makeMessage("Estimation of covariance parameters did not converge.")		   
@@ -391,7 +457,11 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @return An object of class \code{reml} which consists of a list of named lists
 #'  (`\code{model}`, `\code{convergence}`) each storing a fitted covariance model itself
 #'  together with the optimization results from \code{\link[nloptr]{nloptr}} as an attribute
-#'  named `\code{optres}`. The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}}.  
+#'  named `\code{optres}`. The default method for estimating the covariance parameters is
+#'  \code{\link[nloptr]{mlsl}} which uses random starting points and thus could produce different results if
+#'  it is run multiple times. If the results strongly vary, then the corresponding REML function might have many
+#'  local minima which precludes the use of this default algorithm and another one, e.g. `\code{NLOPT_GN_DIRECT}`
+#'  (see \code{\link[nloptr]{nloptr.print.options}}), might lead to better results. 
 #' 
 #' @details The function fits a list of covariance models using the REML method. In order to avoid singularities
 #'  of the so-called trend matrices make sure to use at least the minimum required number of sample points stored in
@@ -417,9 +487,9 @@ fitCov <- function(models, Xs, data, controls = list(),
 		stop("Expected argument `data` of class `data.frame`.")	
 	if(!is.matrix(Xs))
 		stop("Expected argument `Xs` to be  a matrix of sample locations.")
-	
-	opts <- nloptr::nl.opts()	
+			
 	if(length(controls)>0L) {		
+		opts <- nloptr::nl.opts()
 		opts[names(controls)] <- controls
 	} else {
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
@@ -615,9 +685,9 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' @param var.type      name of variance matrix approximation type (see \code{\link{covarTx}})  
 #' @param var.opts	    list of arguments passed to \code{\link{setCovModel}}
 #' 						(only if `\code{var.type}`="\code{kriging}" and ignored otherwise)
-#' @param intrinsic 	logical vector of length one or equal to the number of Cholesky decompositions of variance matrices;
-#'  					for values \code{TRUE}, use an internal nugget variance estimate (see details)
-#' 						for kriging approximations of the variance matrix
+#' @param intrinsic 	logical vector, \code{FALSE} (default), of length one or equal to the number of Cholesky
+#' 					    decompositions of variance matrices; as default use an internal nugget variance estimate (see details)
+#' 						for kriging the variance matrix of the involved statistics
 #' @param ...			arguments passed to \code{\link{setCovModel}}
 #' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
 #' @param controls		list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization
@@ -628,26 +698,27 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' 
 #' @details The function estimates the parameters of a covariance model using the REML method for kriging
 #'   the sample means of the statistics and kriging the variance matrix of statistics unless `\code{var.type}`
-#'   equals "\code{const}". By default it uses the covariance model derived from a (self-similar) intrinsic random function
-#'   (`\code{sirfk}`) of order \eqn{k} (see, e.g. [1]) with \eqn{k=1,2} for all statistics (including a default quadratic drift term \eqn{k=2}).
-#'   The user can also define different covariance models for each statistic separately (see below). Other covariance models can be used by their
-#' 	 name `\code{model}` which is passed to the function \code{\link{setCovModel}}. 
+#'   equals "\code{const}". By default it uses the covariance model derived from a (self-similar) intrinsic random function, that is,
+#'   the `\code{sirfk}` function of order \eqn{k} (see, e.g. [1]) with \eqn{k=1,2}, for all statistics (including a default quadratic drift term
+#'   \eqn{k=2}). The user can also define different covariance models for each statistic separately (see below). Other covariance models can be used by their
+#' 	 name `\code{model}` which is passed to the function \code{\link{setCovModel}}. Kriging the variance matrix always uses the `\code{sirfk}` covariance model. 
 #'    		
 #'   Argument `\code{var.opts}` only sets the options for the covariance models for kriging the variance matrix if this is the users prefered
 #'   type of approximation. Other optional arguments, e.g., `\code{var.sim}` for the statistics, `\code{var.opts$var.sim}` for kriging the variance matrix,
-#'   specify the local or global  \dfn{nugget} values for each sample point depending on whether or not `\code{set.var}` (used for kriging the statistics) equals \code{TRUE}.
-#'   Both are passed to \code{\link{setCovModel}} and must be data frames of lengths (number of columns) corresponding to the number of covariance
-#'   models of statistics  and, respectively, to the number of \emph{Cholesky} decomposed terms in case of kriging the variance matrix.
-#'   If `\code{set.var}` is \code{TRUE}, then the values in `\code{var.sim}` are used as fixed `nugget` values and replicated to match the number of sample points if required.
-#'   Otherwise these are considered as simulation variances and hence scaled by 1/\code{nsim}, which is meaningful only for kriging the sample means of the
-#'   statistics.
-#' 
-#'   The same principle applies in case of kriging the variance matrix. Then the values given by `\code{var.opts$var.sim}`
-#'   (of length one or equal to the number of corresponding sample points) are used as scale factors for all Cholesky decomposed terms
-#'   unlsee `\code{intrinsic}` equals \code{TRUE}, otherwise considered as estimates of local nugget variances (of Cholesky decomposed terms at each
-#'   sample point). A global nugget value can be also estimated during the REML estimation which is the default option for both cases unless
-#'   this parameter is excluded from covariance parameter estimation (see \code{\link{setCovModel}}) and then this is used as it is.
-#'   The default method for estimating the covariance parameters is \code{\link[nloptr]{mlsl}} which can be modified by argument \code{controls}.
+#'   specify the local or global  \dfn{nugget} values for each sample point depending on whether or not `\code{set.var}` (used for kriging the statistics)
+#'   equals \code{TRUE}. Both are passed to \code{\link{setCovModel}} and must be data frames of lengths (number of columns) corresponding to the number of covariance
+#'   models of statistics and, respectively, to the number of \emph{Cholesky} decomposed terms in case of kriging the variance matrix.
+#'   If `\code{set.var}` equals \code{TRUE} (default), then local nugget variances are estimated by the variance of the sample average of the statistics.
+#'   Otherwise the values given in `\code{var.sim}` are used as fixed `nugget` variances and replicated to match the number of sample points if required.
+#'  
+#'   The same principle applies in case of kriging the variance matrix. If `\code{intrinsic}` equals \code{TRUE}, then local nugget variances
+#'   for each of the variance-covariances of the  of the statistics are estimated by a bootstrapping procedure. Otherwise the values given by `\code{var.opts$var.sim}`
+#'   (of length one or equal to the number of corresponding sample points) are used directly as local estimates (which then must correspond to
+#'   the other Cholesky decomposed terms). A global nugget value can be also estimated during the REML estimation which is the default option for both
+#'   cases unless this parameter is excluded from the covariance parameter estimation (see \code{\link{setCovModel}}). The default optimization algorithm for
+#'   estimating the covariance parameters is the random starting point method \code{\link[nloptr]{mlsl}} followed by a final local search by the same local algorithm.
+#'   Note that in this case the estimated parameters may vary when starting the REML procedure several times since starting points are chosen as random. All
+#'   options for the optimization can be modified by the argument `\code{controls}`.
 #' 
 #'   Note that the returned object can also be constructed manually and passed as an input argument to
 #'   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. In this case, first use \code{\link{setCovModel}} to construct
@@ -686,7 +757,9 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 	# if not used as a fixed nugget: set.var == FALSE	
 	set.var <- rep(set.var,length.out=ncol(dataT))
 	dfvar <-
-	 if(useVarSim) {		
+	 if(useVarSim) {
+	  if(anyNA(args$var.sim))
+		 stop("local nugget variance vector has `Na`s for kriging statistics.")
 	  rep(as.data.frame(args$var.sim),length.out=ncol(dataT))		
 	} else NULL
 	
@@ -695,11 +768,9 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		     function(i){
 			   args$var.sim <-
 				 if(set.var[i]) {					  
-					  args$as.nugget <- FALSE
 					  qldata[[xdim+nstat+i]]/nsim
-				 } else if(useVarSim) {					  
-					  args$as.nugget <- TRUE
-					  dfvar[[i]]
+				 } else if(useVarSim && any(dfvar[[i]]>0)) {				 
+					  dfvar[[i]]										# numeric vector of length equal number of locations
 				  } else NULL
 				 fnargs <- c(list("dataT"=dataT[[i]],	      		    # temporarly add the data				  				  			  
 								  "npoints"=np,
@@ -718,24 +789,37 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 	 	 }		 	   		   		 
   		 useVarSim <- !is.null(args$var.sim)
 		 Lvec <- qldata[grep("^L+",names(qldata))]		 
-		 # individually set intrinsic noise terms as nugget		
+		 
+		 # individually set intrinsic noise terms as local nugget variances
+		 # for each covariance model of Cholesky decomposed terms
 		 intrinsic <- rep(intrinsic,length.out = ncol(Lvec))		 
 		 dfvar <- 
 		   if(useVarSim) {
+			   if(anyNA(args$var.sim))
+				   stop("local nugget variance vector has `Na`s for kriging variance matrix.")
 			   rep(as.data.frame(args$var.sim),length.out=ncol(Lvec))			   
-		   } else NULL		   
+		   } else { NULL }
 		 
-		 covL <- lapply(1:ncol(Lvec),
+   		 # find number of additional columns in `qldata`
+   		 M <- if(attr(qldata,"Nb")>0) (nstat*(nstat+1))/2 else 0		 
+		 # first M columns are Cholesky terms,
+	     # 2nd are bootstrap variances
+		 covL <- lapply(1:(ncol(Lvec)-M),
 				  function(i)  {
-				   args$var.sim <-
-					 if(intrinsic[i]) {
-						 args$as.nugget <- FALSE
-						 ## TODO: improve! estimate nugget variance
-						 args$ptol <- if(useVarSim) as.numeric(dfvar[[i]]) else 1
-						 args$ptol*Lvec[[i]]						 
-					  } else if(useVarSim) {						 
-						 args$as.nugget <- TRUE
-						 dfvar[[i]]
+				     args$var.sim <-
+					 if(intrinsic[i] && M>0) {						 							 
+						 if(any(Lvec[[i+M]] < 0) || anyNA(Lvec[[i+M]])){
+							if(verbose)
+							  message("Bootstrap variance is negative or has `Na`s. So we set a default nugget variance value.")
+						    # set small value anyway
+							as.numeric(dfvar[[i]]) 
+						 } else {
+							 # square root of nugget variance as this corresponds
+							 # to a single value of the Cholseky decomposition 
+							 sqrt(Lvec[[i+M]])
+						 }
+					 } else if(useVarSim && any(dfvar[[i]]>0)) {						 
+						 as.numeric(dfvar[[i]]) 
 					 } else NULL
 					 	 	    
 					 fnargs <- c(list("dataT"=Lvec[[i]],									  		  
@@ -746,14 +830,14 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 )	 
 	 }		 	 
 	 # (default) reml optimization options 
-	 if(length(controls)>0L) {		
+	 if(length(controls) > 0L) {		
 		 opts <- nloptr::nl.opts()
 		 opts[names(controls)] <- controls
 	 } else {
 		 opts <- list("algorithm" = "NLOPT_GN_MLSL",
 				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-6,
 						 "xtol_rel" = 1.0e-6,"maxeval" = 1000),
-				 "maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)		  
+				  "maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)		  
 	 }
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)
@@ -802,7 +886,8 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 #' @param X   		matrix of sample locations (model parameters)
 #' @param useVar   	logical, \code{TRUE} (default), whether to use prediction variances
 #' @param criterion the criterion function to be minimized for parameter estimation (see \code{\link{qle}})
-#' @param ...		arguments passed to \code{\link{fitSIRFk}} for fitting covariance models
+#' @param ...		arguments passed to \code{\link{fitSIRFk}}, \code{\link{setQLdata}}, \code{\link{setCovModel}} 
+#'  					and \code{\link{QLmodel}} for fitting kriging covariance models
 #'  
 #' @return Object of class \code{\link{QLmodel}}
 #' 
@@ -814,7 +899,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 #' data(normal)
 #' 
 #' # simulate model at a minimum of required design points
-#' sim <- simQLdata(sim=qsd$sim,nsim=5,N=8,
+#' sim <- simQLdata(sim=qsd$simfn,nsim=5,N=8,
 #' 			 method="maximinLHS",lb=qsd$lower,ub=qsd$upper)
 #' 	 
 #' # true and error-free observation
@@ -830,33 +915,36 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 #' @rdname getQLmodel
 #' @export
 getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "qle", ...)
-{			 
-	# default function:
-	# using variances for REML and prediction
-	# for all covariance models
+{	
 	args <- list(...)
 	verbose <- isTRUE(args$verbose)
-	useChol <-
-		if(!is.null(args$var.type) && args$var.type == "const") {
-		  FALSE
-	    }  else TRUE		
-			
+		
 	tryCatch({
         if(.isError(runs))
 		  stop("Simulations have errors. Please check the input argument `runs`.")
 		if(verbose)
 		  cat("Collect data for fitting covariance models of statistics.\n")
-		qldata <- setQLdata(runs,X,chol=useChol,na.rm=TRUE,verbose=verbose)
-		if(.isError(qldata)) {
+	  		  
+	  	id <- which(is.na(pmatch(names(args),names(formals(setQLdata)))))
+		args.tmp <-
+		 if(length(id)>0L){
+		   if( (c("Nb") %in% names(args)) && !isTRUE(args$intrinsic) )	 
+		     args$Nb <- 0  # no bootstrap anyway if not "intrinsic" equals TRUE
+		   args[-id]
+	     } else NULL 
+ 		# construct all data
+	    qldata <- do.call(setQLdata,c(list(runs,X),args.tmp))
+		if(.isError(qldata))
 			return(qldata)
-		}
+		
 		# fitting statistics
 		if(verbose)
 		 cat("Fitting covariance models...\n")	 	
 	    id <- which(is.na(pmatch(names(args),names(c(formals(fitSIRFk),formals(setCovModel))))))
-	 	args.tmp <- if(length(id)>0L) {
+	 	args.tmp <-
+		 if(length(id)>0L) {
 			args[-id]
-		} else args	    
+		 } else args	    
 		
 		# fitting			 	
 	    mods <- do.call(fitSIRFk,c(list(qldata),args.tmp))	
@@ -926,7 +1014,7 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #'            method="augmentLHS",type="matrix")
 #' 
 #' # new simulations
-#' Xsim <- simQLdata(sim=qsd$sim,nsim=10,X=Xnew)
+#' Xsim <- simQLdata(sim=qsd$simfn,nsim=10,X=Xnew)
 #' 
 #' # prepare data
 #' Xdata <- setQLdata(Xsim,Xnew)
@@ -968,32 +1056,31 @@ updateCovModels <- function(qsd, nextData, fit = TRUE,
 	np <- nrow(Xs)
 		
 	if(length(controls)>0L) {		
+		# set default optimization controls
 		opts <- nloptr::nl.opts()
 		opts[names(controls)] <- controls
 	} else {
+		# use stored optimization controls
 		opts <- attr(qsd,"opts")	
 	}		 
 	# update function 
 	fitit <- (fit && !(nrow(Xs) %% qsd$nfit))
+	
+	#c(xm$fix.nugget, xm$ptol*data[[i]][-(1:(np-nnew))] )
 	.update <- function(covT, data, vars.new=NULL){
 		mod <- lapply(1:length(covT),		
 				function(i) {		   
 					xm <- covT[[i]]
 					# set starting point
-					xm$start <- xm$param[xm$fixed]									   
-					
+					xm$start <- xm$param[xm$free]	
 					if(!is.null(xm$fix.nugget)) {					  
 					  xm$fix.nugget <-
-						if(xm$as.nugget) {
-						  c(xm$fix.nugget,rep(xm$fix.nugget[1],nnew))						
-					  	} else if(!is.null(vars.new)) {							
-						  c(xm$fix.nugget,vars.new[[i]]/nsim.new)
-						} else if(!is.null(xm$ptol)) { # type == "kriging"						   						 
-						  c(xm$fix.nugget, xm$ptol*data[[i]][-(1:(np-nnew))] )							
-						} else NULL
+						if(!is.null(vars.new)){							
+						  c(xm$fix.nugget,vars.new[[i]])
+						} else c(xm$fix.nugget,rep(xm$fix.nugget[1],nnew)) # re-use first 
 		   			} # else (not using simulation variance for REML)
 					if(fitit) {
-						# temporarly store statistics (removed in 'doREMLfit')
+						# store data for REML (remove afterwards in 'doREMLfit')
 						xm$dataT <- data[[i]]										      			
 					}
 					xm
@@ -1012,13 +1099,25 @@ updateCovModels <- function(qsd, nextData, fit = TRUE,
 	}
 	
 	tryCatch({
-	  qsd$covT <- .update(qsd$covT,qsd$qldata[stid],nextData[vid])	
+	  qsd$covT <- .update(qsd$covT,
+			              qsd$qldata[stid],
+						  nextData[vid]/nsim.new)
+				  
 	  # update kriging VARIANCE models
  	  # Cholesky terms are the data
 	  if(qsd$var.type == "kriging"){
 		if(is.null(qsd$covL))
-		  stop("A covariance model for kriging the variance matrix must be defined but is `Null`.")
-		qsd$covL <- .update(qsd$covL,qsd$qldata[grep("^L+",names(qsd$qldata))])
+		   stop("A covariance model for kriging the variance matrix must be defined but is `Null`.")
+	    qsd$covL <-
+	     if(attr(qsd$qldata,"Nb") > 0){ 
+			 # if bootstrrapping nugget variances
+			 # and only use simulations variances at new points
+			 .update(qsd$covL,
+					 qsd$qldata[grep("^L[^b]",names(qsd$qldata))],
+					 nextData[grep("^Lb",names(qsd$qldata))])
+		 } else {
+			 .update(qsd$covL,qsd$qldata[grep("^L[^b]",names(qsd$qldata))],NULL) 
+		 }	 
   	  }
  	}, error = function(e) {
 	     msg <- .makeMessage("Failed to update covariance models: ",

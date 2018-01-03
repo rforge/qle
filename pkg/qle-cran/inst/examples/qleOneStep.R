@@ -32,8 +32,8 @@ S0 <- nloptr::direct("mahalDist",
 print(S0) 
 
 ## A least squares approach to find suitable
-## starting point, if possible, by the very general
-## global search strategy  `direct`, (see nloptr::direct). 
+## starting point, if possible, by a  global
+# search strategy  called `direct` (see nloptr::direct). 
 W <- diag(1,2)
 qsd$criterion <- "mahal"
 
@@ -44,8 +44,7 @@ S1 <- searchMinimizer(x0, qsd, W=W, method="direct",
 # results
 print(S1)
 
-## try quasi-scoring
-## but not much of an improvement  
+## now apply quasi-likelihood with quasi-scoring   
 qsd$criterion <- "qle"
 qscoring(qsd, S1$par)
 

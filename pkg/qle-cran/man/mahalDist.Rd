@@ -5,8 +5,8 @@
 \title{Mahalanobis distance of statistics}
 \usage{
 mahalDist(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-  inverted = FALSE, check = TRUE, value.only = FALSE, cl = NULL,
-  verbose = FALSE)
+  inverted = FALSE, check = TRUE, value.only = FALSE, na.rm = TRUE,
+  cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{points}{either matrix or list of points or a vector of parameters (but then considered
@@ -28,6 +28,8 @@ used as constant variance matrix}
 \item{check}{logical, \code{TRUE} (default), whether to check all input arguments}
 
 \item{value.only}{only return the value of the MD}
+
+\item{na.rm}{logical, if \code{TRUE} (default) remove `Na` values from the results}
 
 \item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
 

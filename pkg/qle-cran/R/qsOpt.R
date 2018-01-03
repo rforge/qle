@@ -23,10 +23,9 @@
 }
 
 .isError <- function(x) {
-	( class(x)=="error" ||
-	  !is.null(attr(x,"error")) ||
-	  inherits(x, "error") ||
-	  inherits(x, "try-error") 
+	( "error" %in% class(x) ||
+	  !is.null(attr(x,"error")) || isTRUE(attr(x,"error")) ||
+	  inherits(x, "error") || inherits(x, "try-error") 
 	)
 }
 
@@ -411,7 +410,7 @@ updateCV <- function(i, qsd, fit, ...) {
 	cvm <- lapply(1:length(covT),
 			function(j) {
 				xm <- covT[[j]]					
-				xm$start <- xm$param[xm$fixed]				
+				xm$start <- xm$param[xm$free]				
 			    if(!is.null(xm$fix.nugget))
 				  xm$fix.nugget <- xm$fix.nugget[-i]
 				if(fitit) {
@@ -519,8 +518,6 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 	)	
 }
 
-.qdFunx <- function(x) { .Call(C_qDValue,x) } 
-
 # internal, alloc C structure
 # Also for QL, a pre-set (inverse) variance matrix can be supplied by VTX
 # No predictions variances here (done at C level), theta is only needed
@@ -538,7 +535,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX	
 	} else if(useSigma && !inverted){
 		# Only for constant Sigma, which is used as is!
-		Sigma <- try(solve(Sigma),silent=TRUE)
+		Sigma <- try(gsiInv(Sigma),silent=TRUE)
 		if(inherits(Sigma,"try-error")) {
 			msg <- paste0("Inversion of constant variance matrix failed.")
 			message(msg)
@@ -582,19 +579,15 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		# invert it. In this case prediction variances are always used at C level
 		# Sigma is inverted after adding these as diagonal terms 	  	 
 		if(qsd$var.type == "kriging"){
-			stop("`Sigma` must be `Null` if using kriging approximation of variance matrix.")	    
+			stop("`Sigma` must be `NULL` if using kriging approximation of variance matrix.")	    
 		} else if(qsd$var.type == "const" && qsd$criterion == "qle")
 			stop("`Sigma` cannot be used as a constant variance matrix for criterion `qle`.")			
-		  else if(!isTRUE(attr(qsd$qldata,"chol"))) {
-			stop("Cholesky decomposed terms must be given. See function `setQLdata`.")
-		}		 	    
-		
+				
 	} else if(qsd$var.type == "kriging" && is.null(qsd$covL))
 		stop("Covariance models for kriging variance matrix must be given, see function `setQLdata`.")	
 	  else if(qsd$var.type == "const") 
 		stop("`Sigma` must not be NULL for `const` variance matrix approximation.")
-	  else if(!isTRUE(attr(qsd$qldata,"chol")))
-		stop("Cholesky decomposed terms must be given. See function `setQLdata`.")		
+	  	
 }
 
 
@@ -740,10 +733,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	
     if(!is.null(S0) && (.isError(S0) || S0$convergence <= 0L)){
 	   if(pl > 0L) { 
-		 cat("Minimization by `",fun.name,"` did not converge")
+		 msg <- message(.makeMessage("Minimization by `",fun.name,"` did not converge."))
 		 if(!is.null(S0$status))
-			cat(" (status=",S0$status,")")
-		 cat(".","\n")
+		  msg <- c(msg, paste(" (status=",S0$status,") ") )
+	  	 if(inherits(S0,"error"))
+			msg <- c(msg, conditionMessage(S0)) 
+		 message(msg)
 	   }
 	   method <- method[-1]
 	   if(is.na(method[1])){
@@ -1087,7 +1082,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  
 #' # main estimation with new evaluations
 #' # (simulations of the statistical model)
-#' OPT <- qle(qsd,qsd$sim,nsim=10,
+#' OPT <- qle(qsd,qsd$simfn,nsim=10,
 #' 		    global.opts=list("maxeval"=1),
 #'  		local.opts=list("test"=FALSE))
 #' 
@@ -1216,7 +1211,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 			Sigma <- NULL
 			message("Ignoring `Sigma` because kriging approximation of variance matrix is set.")
 		} else if(qsd$var.type == "const") {
-			Sigma <- try(solve(Sigma),silent=TRUE)
+			Sigma <- try(gsiInv(Sigma),silent=TRUE)
 			if(inherits(Sigma,"try-error"))
 				stop("Failed to invert initial estimate `Sigma` as a constant variance matrix.")		
 		}
@@ -2026,7 +2021,7 @@ print.QSResult <- function(x, pl = 1, digits = 5,...) {
 #' @export
 nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 	if(invert) 
-	  S <- try(solve(S),silent=TRUE)
+	  S <- try(gsiInv(S),silent=TRUE)
 	if(.isError(S)) {
 		msg <- paste0("Failed to invert matrix.")
 		message(msg)
@@ -2180,9 +2175,10 @@ updateQLmodel <- function(qsd, Xnew, newSim, fit = TRUE, cl = NULL, verbose = FA
 	nextData <-
 		tryCatch(
 		  setQLdata(newSim,
-				    X=Xnew,
-				    chol=(qsd$var.type!="const"),
-				    verbose=verbose),
+				    Xnew,
+					qsd$var.type,
+				    attr(qsd$qldata,"Nb"),
+					verbose=verbose),
 			error = function(e) {
 				msg <- .makeMessage("Construction of quasi-likelihood data failed: ",
 						   conditionMessage(e))				

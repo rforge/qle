@@ -56,6 +56,7 @@
 		mi <- which.min(dm[id,length(dm)])
 		dimnames(dm)[[1]][id[mi]] <- paste0(c(row.names(dm)[id[mi]],"*"),collapse="")
 	} else {
+		mi <- 1L
 		dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
 	}	
 	return(row.names(dm))
@@ -75,10 +76,7 @@
 	X <- try(
 	      lapply(QD,
 			function(qd) {
-				qIinv <- 
-					if(!.isError(qd)) {
-						try(solve(qd$I),silent=TRUE)
-					} else NA	  	
+				qIinv <- if(.isError(qd)) NA else try(gsiInv(qd$I),silent=TRUE)	  	
 				xdim <- ncol(qd$I)
 				if(.isError(qIinv) || !is.numeric(qIinv) || anyNA(qIinv)) {		
 					msg <- .makeMessage("Failed to invert quasi-information.")
@@ -118,9 +116,11 @@
  	},silent=TRUE)
 
 	isErr <- which(!(1:length(X) %in% ok))
-    structure(dm,		
-		X = if(length(isErr)>0L) X[isErr] else NULL,
-		error = if(length(isErr)>0L) isErr else NULL)	
+	if(length(isErr)>0L){
+		attr(dm,"X") <- X[isErr]
+		attr(dm,"error") <- isErr
+	}	
+	return( dm )  
 }
 
 
@@ -149,7 +149,7 @@
 #' @examples 
 #'  data(normal)
 #'  # a dummy estimation result
-#'  OPT <- qle(qsd,qsd$sim,global.opts=list("maxeval"=0))
+#'  OPT <- qle(qsd,qsd$simfn,global.opts=list("maxeval"=0))
 #'  
 #'  # and just a single root 
 #'  checkMultRoot(OPT,verbose=TRUE)
@@ -218,7 +218,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 	invI <- 
 		lapply(RES[ok],
 			function(x) {						
-				try(solve(x$I),silent=TRUE) 
+				try(gsiSolve(x$I),silent=TRUE) 
 			})
 	badInv <- sapply(invI,function(x) inherits(x,"try-error") || anyNA(x))
 	if(any(badInv))
@@ -256,7 +256,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 	stopifnot(is.numeric(tvals))
 	
 	# invert QI for predicted std. error (asymptotic) at estimated theta 
-	qi <- try(solve(I),silent=TRUE)
+	qi <- try(gsiInv(I),silent=TRUE)
 	if(inherits(qi,"try-error") || anyNA(qi))
 		message("Inversion of quasi-information matrix failed")
 	
@@ -492,7 +492,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	invI <- 
 		lapply(RES[ok],
 			function(x) {						
-				try(solve(x$I),silent=TRUE) 
+				try(gsiInv(x$I),silent=TRUE) 
 			})
 	badInv <- sapply(invI,function(x) inherits(x,"try-error") || anyNA(x))
 	if(any(badInv))
@@ -532,7 +532,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	stopifnot(is.numeric(tvals))
 	
 	# invert QI for predicted std. error (asymptotic) at estimated theta 
-	qi <- try(solve(local$I),silent=TRUE)
+	qi <- try(gsiInv(local$I),silent=TRUE)
 	if(inherits(qi,"try-error") || anyNA(qi))
 	  message("Inversion of quasi-information matrix failed")
 	

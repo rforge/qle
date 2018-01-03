@@ -10,6 +10,10 @@
 
 #include "qsoptim.h"
 
+/* remove! */
+#include <R_ext/Lapack.h>
+#include <R_ext/Linpack.h>
+
 #include <R_ext/Applic.h>
 #include <R_ext/Constants.h>
 
@@ -38,6 +42,51 @@ void projmid(double *x, int nx, double *lb, double *ub, int *info);
 void fnLSProjMonitor(double *x, void *data, double *f);
 
 SEXP getStatus( qfs_result status );
+
+
+/* testing only: do not forget to reset dynamic symbols */
+SEXP invertMatrix(SEXP R_A,SEXP R_type)
+{
+	int err = 0;
+	int n = GET_DIMS(R_A)[0];
+	inversion_type type = (inversion_type) asInteger(AS_INTEGER(R_type));
+
+	SEXP R_B = PROTECT(allocMatrix(REALSXP, n, n));
+	SEXP R_AP = PROTECT(allocMatrix(REALSXP, n, n));
+
+	MEMCPY(REAL(R_AP),REAL(R_A),SQR(n));
+	invMatrix(REAL(R_AP), n, REAL(R_B), &err, type);
+
+    UNPROTECT(2);
+	return R_B;
+
+}
+
+
+SEXP RSolve(SEXP R_A, SEXP R_B, SEXP R_type){
+	int err = 0,
+	 n = GET_DIMS(R_A)[0],
+	 m = GET_DIMS(R_B)[1];
+
+	Rprintf("n: %d, m: %d \n",n,m);
+	Rprintf("A -> [%d,%d] \n",GET_DIMS(R_A)[0],GET_DIMS(R_A)[1]);
+	Rprintf("B -> [%d,%d] \n",GET_DIMS(R_B)[0],GET_DIMS(R_B)[1]);
+
+	inversion_type type = (inversion_type) asInteger(AS_INTEGER(R_type));
+
+	SEXP R_AP = PROTECT(allocMatrix(REALSXP, n, n));
+	MEMCPY(REAL(R_AP),REAL(R_A),n*n);
+
+	SEXP R_Z = PROTECT(allocMatrix(REALSXP, n, m));
+	MEMCPY(REAL(R_Z),REAL(R_B),n*m);
+
+	double *Awork = CALLOC(SQR(n),double);
+	gsiSolve(REAL(R_AP), n, REAL(R_Z), m, Awork, &err, type);
+	FREE(Awork);
+
+	UNPROTECT(2);
+	return R_Z;
+}
 
 /** \brief Calculate Fisher score statistic
  *         of projected variable
@@ -172,7 +221,6 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 #define FREE_WORK { \
    FREE(d)     	    \
    FREE(xold)  	    \
-   FREE(gradf) 		\
 }
 
 /** \brief  Quasi-Fisher scoring iteration
@@ -205,22 +253,26 @@ qfs_result qfscoring(double *x,			 	/* start */
      *info=QFS_CONVERGENCE;
      return QFS_STOPVAL_REACHED;
    }
-
-   ql_model qlm = qfs->qlm;
    qfs_result status = QFS_NO_CONVERGENCE;
 
-   int i=0, niter=0, check=0;
-   int Nmax = qfs->max_iter, pl = qfs->pl;
+   int i=0, niter=0, check=0, dn=1,
+      Nmax = qfs->max_iter, pl = qfs->pl;
 
    double fold=0 , test=0, tmp=0,
    	   	  slope2=0, tau=0.5, delta=1.0,
 		  slope2_tol=SQR(qfs->slope_tol);
 
-   double *d,*xold,*gradf;
+   double *d=NULL,
+		  *xold=NULL;
    CALLOCX(d,n,double);
    CALLOCX(xold,n,double);
-   CALLOCX(gradf,n,double);
+
+   // temp pointers
+   ql_model qlm = qfs->qlm;
+   ql_storage_t qlsolve = qlm->qlsolve;
+
    // score vector from `fnMonitor`
+   double *qimat = qlm->qimat;
    double *score = qlm->score;
 
    test=0.0;
@@ -239,18 +291,15 @@ qfs_result qfscoring(double *x,			 	/* start */
    {
 	     fold=*f;
 	     MEMCPY(xold,x,n);
-	     MEMCPY(gradf,qlm->score,n);
-         solveCH(qlm->qimat,n,n,gradf,1,d,info);
+	     MEMCPY(d,score,n);
+         //solveCH(qimat,n,d,dn,info);
+	     gsiSolve(qimat,n,d,dn,qlsolve.qimat,info,Chol);
          if(*info != 0){
-        	 WRR("Solving for the direction failed. Try something else.")
-			 MEMCPY(d,gradf,n);
-			 solveLU(qlm->qimat,n,d,n,info);
-        	 if(*info != 0){
-        		 *info = QFS_ERROR;
-        		 status = QFS_BAD_DIRECTION;
-        		 LOG_ERROR(LAPACK_SOLVE_ERROR, "failed to compute LU decomposition.");
-        		 break;
-        	 }
+        	 *info = QFS_ERROR;
+        	 status = QFS_BAD_DIRECTION;
+        	 PRINT_MSG("Failednto calulate quasi-score correction.")
+        	 LOG_ERROR(LAPACK_SOLVE_ERROR, "gsiSolve");
+        	 break;
          }
 
          backtr(n,xold,fold,d,x,f,&check,fnMonitor,tau,&delta,(void*) qfs);
@@ -262,15 +311,13 @@ qfs_result qfscoring(double *x,			 	/* start */
            Rprintf("iter:.............%d \n", niter);
            Rprintf("bounds............%d \n", qfs->info);
            Rprintf("value:............%3.10f \n", *f);
-           Rprintf("LS step...........%3.10f (check=%d) \n\n", delta, check);
-           printVector("par:", x, &n);
+           Rprintf("step length:......%3.10f (check=%d) \n\n", delta, check);
+           printVector("current", x, &n);
            Rprintf("\n");
-           printVector("gradf:", gradf, &n);
+           printVector("score", score, &n);
            Rprintf("\n");
-           printVector("score:", score, &n);
-           Rprintf("\n");
-           printVector("direction:", d, &n);
-           Rprintf("\t norm_2: %3.10f\n\n", slope2);
+           printVector("direction (d)", d, &n);
+           Rprintf("\t ||d||_2 = %3.10f\n\n", slope2);
          }
 
          /** test for zero slope of direction */
@@ -307,9 +354,9 @@ qfs_result qfscoring(double *x,			 	/* start */
         	   test=0.0;
         	  *info=QFS_NO_CONVERGENCE;
 			 status=QFS_LINESEARCH_FAILURE;
-
+			 /* use score as a gradient for testing */
 			 for (i=0;i<n;++i) {
-				   tmp=std::fabs(gradf[i]);
+				   tmp=std::fabs(score[i]);
 				   if(tmp > test)
 					  test=tmp;
 			 }

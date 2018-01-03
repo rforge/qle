@@ -22,7 +22,8 @@ getQLmodel(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "qle",
 
 \item{criterion}{the criterion function to be minimized for parameter estimation (see \code{\link{qle}})}
 
-\item{...}{arguments passed to \code{\link{fitSIRFk}} for fitting covariance models}
+\item{...}{arguments passed to \code{\link{fitSIRFk}}, \code{\link{setQLdata}}, \code{\link{setCovModel}} 
+and \code{\link{QLmodel}} for fitting kriging covariance models}
 }
 \value{
 Object of class \code{\link{QLmodel}}
@@ -39,7 +40,7 @@ The function is a wrapper to \code{\link{setQLdata}} and \code{\link{fitSIRFk}}
 data(normal)
 
 # simulate model at a minimum of required design points
-sim <- simQLdata(sim=qsd$sim,nsim=5,N=8,
+sim <- simQLdata(sim=qsd$simfn,nsim=5,N=8,
 			 method="maximinLHS",lb=qsd$lower,ub=qsd$upper)
 	 
 # true and error-free observation
