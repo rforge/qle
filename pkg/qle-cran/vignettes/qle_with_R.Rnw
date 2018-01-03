@@ -1478,6 +1478,8 @@ criterion function. We initially sample \code{N} design points and simulate
 sim <- simQLdata(sim=simfunc,
            nsim=10,N=8,lb=lb,ub=ub,
               method="maximinLHS")
+# reset number of simulations	  
+attr(sim,"nsim") <- 100
 @
 Although, in this example, we could simulate an observed value \code{obs} of the
 statistics we use the population mean and standard deviation in order to exemplify
@@ -1506,7 +1508,7 @@ found minimizer whether it could be an approximate root.
 <<>>=
 OPT <- qle(qsd,
         simfunc,		
-        nsim=100,
+        nsim=10,
         global.opts=list("maxeval"=50),
         local.opts=list("lam_max"=1e-4,"weights"=0.5,
         "useWeights"=FALSE,"test"=TRUE),
