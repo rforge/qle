@@ -70,8 +70,8 @@ extern "C" {
 // Quasi-Scoring iteration
 SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_opt);
 
-SEXP invertMatrix(SEXP R_A, SEXP R_t);
-SEXP RSolve(SEXP R_A, SEXP R_B, SEXP R_type);
+//SEXP invertMatrix(SEXP R_A, SEXP R_t);
+//SEXP RSolve(SEXP R_A, SEXP R_B, SEXP R_type);
 
 #ifdef  __cplusplus
 }

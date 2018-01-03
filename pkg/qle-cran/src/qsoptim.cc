@@ -44,49 +44,57 @@ void fnLSProjMonitor(double *x, void *data, double *f);
 SEXP getStatus( qfs_result status );
 
 
-/* testing only: do not forget to reset dynamic symbols */
-SEXP invertMatrix(SEXP R_A,SEXP R_type)
-{
-	int err = 0;
-	int n = GET_DIMS(R_A)[0];
-	inversion_type type = (inversion_type) asInteger(AS_INTEGER(R_type));
+/**
+ *  @brief:
+ *   testing internal function `invMatrix`,
+ *   do not forget to reset dynamic symbols
+ *
+ *  */
+//SEXP invertMatrix(SEXP R_A,SEXP R_type)
+//{
+//	int err = 0;
+//	int n = GET_DIMS(R_A)[0];
+//	inversion_type type = (inversion_type) asInteger(AS_INTEGER(R_type));
+//
+//	SEXP R_B = PROTECT(allocMatrix(REALSXP, n, n));
+//	SEXP R_AP = PROTECT(allocMatrix(REALSXP, n, n));
+//
+//	MEMCPY(REAL(R_AP),REAL(R_A),SQR(n));
+//	invMatrix(REAL(R_AP), n, REAL(R_B), &err, type);
+//
+//  UNPROTECT(2);
+//	return R_B;
+//}
 
-	SEXP R_B = PROTECT(allocMatrix(REALSXP, n, n));
-	SEXP R_AP = PROTECT(allocMatrix(REALSXP, n, n));
-
-	MEMCPY(REAL(R_AP),REAL(R_A),SQR(n));
-	invMatrix(REAL(R_AP), n, REAL(R_B), &err, type);
-
-    UNPROTECT(2);
-	return R_B;
-
-}
-
-
-SEXP RSolve(SEXP R_A, SEXP R_B, SEXP R_type){
-	int err = 0,
-	 n = GET_DIMS(R_A)[0],
-	 m = GET_DIMS(R_B)[1];
-
-	Rprintf("n: %d, m: %d \n",n,m);
-	Rprintf("A -> [%d,%d] \n",GET_DIMS(R_A)[0],GET_DIMS(R_A)[1]);
-	Rprintf("B -> [%d,%d] \n",GET_DIMS(R_B)[0],GET_DIMS(R_B)[1]);
-
-	inversion_type type = (inversion_type) asInteger(AS_INTEGER(R_type));
-
-	SEXP R_AP = PROTECT(allocMatrix(REALSXP, n, n));
-	MEMCPY(REAL(R_AP),REAL(R_A),n*n);
-
-	SEXP R_Z = PROTECT(allocMatrix(REALSXP, n, m));
-	MEMCPY(REAL(R_Z),REAL(R_B),n*m);
-
-	double *Awork = CALLOC(SQR(n),double);
-	gsiSolve(REAL(R_AP), n, REAL(R_Z), m, Awork, &err, type);
-	FREE(Awork);
-
-	UNPROTECT(2);
-	return R_Z;
-}
+/**
+ * @brief
+ * 	 testing internal function `gsiSolve`
+ *   do not forget to reset dynamic symbols
+ */
+//SEXP RSolve(SEXP R_A, SEXP R_B, SEXP R_type){
+//	int err = 0,
+//	 n = GET_DIMS(R_A)[0],
+//	 m = GET_DIMS(R_B)[1];
+//
+//	Rprintf("n: %d, m: %d \n",n,m);
+//	Rprintf("A -> [%d,%d] \n",GET_DIMS(R_A)[0],GET_DIMS(R_A)[1]);
+//	Rprintf("B -> [%d,%d] \n",GET_DIMS(R_B)[0],GET_DIMS(R_B)[1]);
+//
+//	inversion_type type = (inversion_type) asInteger(AS_INTEGER(R_type));
+//
+//	SEXP R_AP = PROTECT(allocMatrix(REALSXP, n, n));
+//	MEMCPY(REAL(R_AP),REAL(R_A),n*n);
+//
+//	SEXP R_Z = PROTECT(allocMatrix(REALSXP, n, m));
+//	MEMCPY(REAL(R_Z),REAL(R_B),n*m);
+//
+//	double *Awork = CALLOC(SQR(n),double);
+//	gsiSolve(REAL(R_AP), n, REAL(R_Z), m, Awork, &err, type);
+//	FREE(Awork);
+//
+//	UNPROTECT(2);
+//	return R_Z;
+//}
 
 /** \brief Calculate Fisher score statistic
  *         of projected variable
