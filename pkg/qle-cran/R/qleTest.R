@@ -316,7 +316,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 #' @param alpha			significance level for testing the hypothesis
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 #' 						re-estimated parameters
-#' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param iseed			integer, the seed for initializing the cluster workers for parallel computations 
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'

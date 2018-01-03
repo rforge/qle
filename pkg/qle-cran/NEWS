@@ -1,2 +1,13 @@
 This file is intended for further news about bug fixes and further modifications of the package.
-The (initial) current version is 0.16-5.
+The (initial) current version was 0.16-5.
+
+Changes with 0.16-8
+---------------------
+
+1) Fixed numerical issues when calculating REML function values for badly conditioned covariance matrices
+2) Added bootstrap option for estimating local nugget variances of Cholesky decomposed terms
+   during the kriging approximation of variance matrices of statistics
+3) Solving linear equations/doing matrix inversions is more robust by `gsiSolve` and `gsiInv` trying a Cholesky decomposition
+   first and, if it fails, SVD or finally a Bunch-Kaufman factorization. This may lead to computations of generalized inverse
+   matrices or only approximate solutions to the equations.
+4) New rigorous checks of possible `NaN`, `NA` and non finite values

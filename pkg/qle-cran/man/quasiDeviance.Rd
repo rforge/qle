@@ -29,7 +29,7 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 
 \item{na.rm}{logical, if \code{TRUE} (default) remove `Na` values from the results}
 
-\item{cl}{cluster object, \code{NULL} (default) (see \code{\link[parallel]{makeCluster}})}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }

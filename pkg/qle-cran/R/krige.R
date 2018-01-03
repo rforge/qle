@@ -502,7 +502,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param check			logical, \code{TRUE} (default), whether to check input arguments
 #' @param value.only  	if \code{TRUE} only the values of the QD are returned
 #' @param na.rm 		logical, if \code{TRUE} (default) remove `Na` values from the results
-#' @param cl			cluster object, \code{NULL} (default) (see \code{\link[parallel]{makeCluster}})
+#' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
 #' @return Numeric vector of QD values or a list as follows:
@@ -659,7 +659,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' @param check       logical, \code{TRUE} (default), whether to check all input arguments
 #' @param value.only  only return the value of the MD 
 #' @param na.rm   	  logical, if \code{TRUE} (default) remove `Na` values from the results
-#' @param cl		  cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param cl		  cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param verbose     if \code{TRUE}, then print intermediate output
 #' 
 #' @return Either a vector of MD values or a list of lists, where each contains the following elements:

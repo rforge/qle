@@ -19,7 +19,7 @@ simQLdata(sim, ..., nsim, X = NULL, mode = c("list", "matrix", "mean"),
 
 \item{mode}{type of return value}
 
-\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{iseed}{integer seed for initializing the cluster workers}
 

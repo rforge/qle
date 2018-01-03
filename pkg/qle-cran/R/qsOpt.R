@@ -311,8 +311,9 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #' @param cvm		list of prefitted covariance models from function \code{\link{prefitCV}}
 #' @param theta		optional, default \code{NULL}, list or matrix of points where to estimate prediction variances
 #' @param type		name of prediction variance measure 
-#' @param cl	    cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}} 
-#'
+#' @param cl	    cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
+#' 						 
+#' 	
 #' @return A matrix of estimated prediction variances for each point given by the argument \code{theta} (rows)
 #'  and for each statistic (columns).  
 #'
@@ -361,7 +362,7 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #' varKM(qsd$covT,theta0,X,Tstat) 	 
 #' 
 #' 
-#' @seealso \code{\link{prefitCV}}, \code{\link[parallel]{makeCluster}}
+#' @seealso \code{\link{prefitCV}}
 #'
 #' @author M. Baaske
 #' @rdname crossValTx
@@ -445,7 +446,7 @@ updateCV <- function(i, qsd, fit, ...) {
 #' @param reduce	  if \code{TRUE} (default), reduce the number of covariance models to refit
 #' @param type		  type of prediction variances, "\code{cv}" (default), see \code{\link{qle}}
 #' @param control	  control arguments for REML estimation passed to \code{\link[nloptr]{nloptr}}  	
-#' @param cl	      cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param cl	      cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param verbose	  if \code{TRUE}, print intermediate output
 #'
 #' @return A list of certain length depending on the current sample size (number of evaluated points).
@@ -899,7 +900,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
 #' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
-#' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}} 
+#' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}" 
 #' @param iseed			integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster
 #' @param plot 			if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)
 #'
@@ -1013,9 +1014,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  requires an active 2D graphical device in advance. The function can also be run in an cluster environment
 #'  using the `\code{parallel}` package. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
 #'  loading required packages on each cluster node, which are used in the simulation function
-#'  (see \code{\link[parallel]{clusterExport}} and \code{\link[parallel]{clusterApply}} in \code{parallel} package).
+#'  (see \code{\link{clusterExport}} and \code{\link{clusterApply}}).
 #'  If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
-#'  for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link[parallel]{clusterSetRNGStream}},
+#'  for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link{clusterSetRNGStream}},
 #'  for reproducible results of estimation in case a local cluster is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
 #'  using a prespecified cluster object \code{cl}, then the user is responsible for seeding whereas the seed can be stored
 #'  in the return value as well, see attribute `\code{optInfo}$iseed`.  

@@ -451,7 +451,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @param data		 data frame of simulated sample means of statistics
 #' 					 first column corrsponds to the first model in the list `\code{models}` and so forth
 #' @param controls	 list of control parameters, see \code{\link[nloptr]{nloptr}}
-#' @param cl		 cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param cl		 cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param verbose 	 logical, \code{TRUE} for intermediate output
 #' 
 #' @return An object of class \code{reml} which consists of a list of named lists
@@ -689,7 +689,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' 					    decompositions of variance matrices; as default use an internal nugget variance estimate (see details)
 #' 						for kriging the variance matrix of the involved statistics
 #' @param ...			arguments passed to \code{\link{setCovModel}}
-#' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param controls		list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization
 #' @param verbose		if \code{TRUE}, print intermediate results
 #' 
@@ -986,7 +986,7 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #' @param qsd			object of class \code{\link{QLmodel}} which is to be updated
 #' @param nextData		object of class \code{QLdata} which includes new simulation results
 #' @param fit 			logical, if \code{TRUE} (default), re-estimate covariance parameters
-#' @param cl			cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}
+#' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param controls	    list of control parameters passed to \code{\link[nloptr]{nloptr}}
 #' @param verbose 		logical, whether to print intermediate information
 #' 

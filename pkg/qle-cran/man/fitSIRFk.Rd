@@ -28,7 +28,7 @@ for kriging the variance matrix of the involved statistics}
 
 \item{controls}{list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization}
 
-\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{verbose}{if \code{TRUE}, print intermediate results}
 }

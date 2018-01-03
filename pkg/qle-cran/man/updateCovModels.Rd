@@ -14,7 +14,7 @@ updateCovModels(qsd, nextData, fit = TRUE, cl = NULL, controls = list(),
 
 \item{fit}{logical, if \code{TRUE} (default), re-estimate covariance parameters}
 
-\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{controls}{list of control parameters passed to \code{\link[nloptr]{nloptr}}}
 

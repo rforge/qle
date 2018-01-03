@@ -12,7 +12,7 @@ setQLdata(runs, X = NULL, var.type = "cholMean", Nb = 0, na.rm = TRUE,
 
 \item{X}{list or matrix of model parameters}
 
-\item{var.type}{character, "\code{chol}" (default), whether to Cholesky decompose variance
+\item{var.type}{character, "\code{cholMean}" (default), whether to Cholesky decompose variance
 matrices either for sample average variance approximation or kriging variance matrices}
 
 \item{Nb}{numeric, number of bootstrap samples for kriging the variance matrix,
@@ -48,13 +48,14 @@ The function aggregates all neccessary data for quasi-likelihood estimation stor
 	sample locations and the corresponding simulation results of the statistics.
  If `\code{X}` equals \code{NULL}, then the sample points are taken from the object `\code{runs}`.
 
- The most critical part is the decomposition of variance matrices for each sample location if `\code{chol}`
- equals \code{TRUE}. The decompositions are used for average approximations of the variance matrix of statistics.
- If these fail for any reason we try to ignore, if possible, the corresponding sample point, exclude
- it from all following calculations with some information for the user. Unless the user preferes to supply a constant
- estimate of the variance matrix for estimation later by function \code{\link{qle}}, the default is to approximate the variance
- at any parameter by either a kriging interpolation of the \emph{Cholesky} terms or as an average over all sampled variance
- matrices using the decomposed Cholesky terms.
+ The most critical part is the decomposition of variance matrices for each sample location unless `\code{var.type}`
+ equals "\code{const}" in which case a constant variance matrix approximation is expected later by function \code{\link{qle}}.
+ The Cholesky decompositions are used for average approximations of the variance matrix of the statistics when calculating the
+ quasi-score vector or any type of function criterion based on the Mahalanobis distance or quasi-deviance.
+ If these fail for any reason we try to ignore, if possible, the corresponding sample points and exclude them
+ from all following calculations. Unless a constant estimate of the variance matrix, the default is to approximate the
+ variance at any model parameter by either a kriging interpolation of the \emph{Cholesky} terms or as an average over
+ all sampled variance matrices also based on the decomposed Cholesky terms (see vignette).
 }
 \examples{
 # simulate model statistics at LHS design
@@ -67,8 +68,8 @@ sim <- simQLdata(sim =
          nsim=10, N=10, method="maximinLHS",
          lb=c("mu"=-1.5,"sd"=0), ub=c("mu"=2,"sd"=1))
 
-# setup QL approximation mode
-qldata <- setQLdata(sim,chol=TRUE,verbose=TRUE) 
+# setup the QL data model using defaults
+qldata <- setQLdata(sim,verbose=TRUE) 
   
 }
 \author{

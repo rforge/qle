@@ -39,7 +39,7 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
-\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{iseed}{integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster}
 
@@ -159,9 +159,9 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  requires an active 2D graphical device in advance. The function can also be run in an cluster environment
  using the `\code{parallel}` package. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
  loading required packages on each cluster node, which are used in the simulation function
- (see \code{\link[parallel]{clusterExport}} and \code{\link[parallel]{clusterApply}} in \code{parallel} package).
+ (see \code{\link{clusterExport}} and \code{\link{clusterApply}}).
  If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
- for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link[parallel]{clusterSetRNGStream}},
+ for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link{clusterSetRNGStream}},
  for reproducible results of estimation in case a local cluster is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
  using a prespecified cluster object \code{cl}, then the user is responsible for seeding whereas the seed can be stored
  in the return value as well, see attribute `\code{optInfo}$iseed`.  

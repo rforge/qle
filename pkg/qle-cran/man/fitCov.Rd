@@ -17,7 +17,7 @@ first column corrsponds to the first model in the list `\code{models}` and so fo
 
 \item{controls}{list of control parameters, see \code{\link[nloptr]{nloptr}}}
 
-\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }

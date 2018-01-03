@@ -16,7 +16,7 @@ prefitCV(qsd, reduce = TRUE, type = c("cv", "max"), control = list(),
 
 \item{control}{control arguments for REML estimation passed to \code{\link[nloptr]{nloptr}}}
 
-\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{verbose}{if \code{TRUE}, print intermediate output}
 }

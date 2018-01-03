@@ -16,7 +16,7 @@ crossValTx(qsd, cvm, theta = NULL, type = c("rmsd", "msd", "cve", "scve",
 
 \item{type}{name of prediction variance measure}
 
-\item{cl}{cluster object, \code{NULL} (default), see \code{\link[parallel]{makeCluster}}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 }
 \value{
 A matrix of estimated prediction variances for each point given by the argument \code{theta} (rows)
@@ -74,7 +74,7 @@ varKM(qsd$covT,theta0,X,Tstat)
 
 }
 \seealso{
-\code{\link{prefitCV}}, \code{\link[parallel]{makeCluster}}
+\code{\link{prefitCV}}
 }
 \author{
 M. Baaske
