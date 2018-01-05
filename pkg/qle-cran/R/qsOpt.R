@@ -1107,11 +1107,12 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	.printInfo = function(){		
 		if(pl > 0L) {
 			cat("\n")
-			if((nglobal+nlocal) >= maxEval ||
-				nglobal >= maxIter){
+			nmax <- nglobal+nlocal
+			if(nmax > maxEval || nglobal > maxIter){
 			 cat("Final results: \n\n")
-			}
-			cat("Evaluations: ",nglobal+nlocal+1,"\n")						
+			 cat("Evaluations: ",nmax,"\n")
+			} else
+			 cat("Evaluations: ",nmax+1,"\n")						
 			cat("Current iterate: \n\n")
 			print.default(formatC(signif(as.numeric(xt), digits=8), digits=8, format="fg", flag="#"),
 					print.gap = 4, quote = FALSE)
@@ -1128,8 +1129,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 
 	.showConditions = function() {
 		if(pl > 1L) {
-			if((nglobal+nlocal) >= maxEval ||
-				nglobal >= maxIter){
+			if((nglobal+nlocal) > maxEval ||
+				nglobal > maxIter){
 			  cat("Final conditions: \n\n")
 			}
 			cat("Iterations.......","global=",nglobal,", local=",nlocal,"\n")
