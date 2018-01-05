@@ -1132,7 +1132,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				nglobal >= maxIter){
 			  cat("Final conditions: \n\n")
 			}
-			cat(paste0("Iterations: global=",nglobal,", local=",nlocal,")"),"\n")
+			cat("Iterations.......","global=",nglobal,", local=",nlocal,"\n")
 			cat("minimized:.......",status[["minimized"]],"\n")
 			cat("global:..........",status[["global"]]>1L,"(",status[["global"]],")\n")			
 			if(locals$nextSample=="score")
