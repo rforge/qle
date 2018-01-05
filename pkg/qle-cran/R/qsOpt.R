@@ -1106,7 +1106,11 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	# print information 	
 	.printInfo = function(){		
 		if(pl > 0L) {
-			cat("\n\n")			
+			cat("\n")
+			if((nglobal+nlocal) >= maxEval ||
+				nglobal >= maxIter){
+			 cat("Final results: \n\n")
+			}
 			cat("Evaluations: ",nglobal+nlocal+1,"\n")						
 			cat("Current iterate: \n\n")
 			print.default(formatC(signif(as.numeric(xt), digits=8), digits=8, format="fg", flag="#"),
@@ -1123,9 +1127,12 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	}
 
 	.showConditions = function() {
-		if(pl > 1) {
-			cat(paste0("Update parameter: \n"))				
-			cat(paste0("(global=",nglobal,", local=",nlocal,")"),"\n\n")
+		if(pl > 1L) {
+			if((nglobal+nlocal) >= maxEval ||
+				nglobal >= maxIter){
+			  cat("Final conditions: \n\n")
+			}
+			cat(paste0("Iterations: global=",nglobal,", local=",nlocal,")"),"\n")
 			cat("minimized:.......",status[["minimized"]],"\n")
 			cat("global:..........",status[["global"]]>1L,"(",status[["global"]],")\n")			
 			if(locals$nextSample=="score")
@@ -1161,8 +1168,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				   print(Stest)
 				}
 				cat("\n")
-			}			
-		}
+			}
+			cat("----\n\n")
+		}	
 	}	
 	
 	if(!is.numeric(pl) || pl < 0L)
@@ -1703,12 +1711,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				}							
 							
 				# print stopping conditions				
-				.showConditions()
-				
-				if(pl > 0L) {
-				 cat("----\n\n")	
-			 	}
-				
+				.showConditions()				
+							
 				# simulate at new locations
 				# new simulations, qsd$nsim is default
 				newSim <-
@@ -1790,7 +1794,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	) # end outer tryCatch	
 	
 	# final results
-	.showConditions()
+    .printInfo()
+	.showConditions()	
+		
 	# stop on error 
 	if(.isError(dummy))
 	 return(dummy)
