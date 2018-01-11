@@ -14,10 +14,10 @@ x <- list(c("mu"=2,"sigma"=1))   # list of numeric vectors
 mahalDist(x,qsd)
 quasiDeviance(x,qsd)
 
-cvm <- NULL
 ## alternatively fit cross-validation models
 # cvm <- prefitCV(qsd, verbose=TRUE)
 # use prediction errors based on these
+cvm <- NULL
 qsd$var.type <- "cholMean"
 (QD1 <- quasiDeviance(x,qsd,cvm=cvm))
 
