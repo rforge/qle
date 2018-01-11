@@ -2,7 +2,7 @@ This file is intended for further news about bug fixes and further modifications
 The (initial) current version was 0.16-5.
 
 Changes with 0.16-8
----------------------
+-------------------
 
 1) Fixed numerical issues when calculating REML function values for badly conditioned covariance matrices
 2) Added bootstrap option for estimating local nugget variances of Cholesky decomposed terms
@@ -11,3 +11,12 @@ Changes with 0.16-8
    first and, if it fails, SVD or finally a Bunch-Kaufman factorization. This may lead to computations of generalized inverse
    matrices or only approximate solutions to the equations.
 4) New rigorous checks of possible `NaN`, `NA` and non finite values
+
+Changes with 0.16-9
+-------------------
+
+1) Local test of approximate root is now done only in case the quasi-deviance/quasi-score is numerically not zero
+2) TODO: 
+    - check flip of sign in quasi-score (qscoring)
+    - qleTest: new arguments, par, obs
+		  
