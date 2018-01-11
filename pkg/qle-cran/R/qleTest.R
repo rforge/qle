@@ -561,10 +561,10 @@ qleTest <- function(est, local = NULL, sim, ...,
   
 	relED <-
 	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {
-		 abs(1-sqrt(diag(msem))/sqrt(diag(qi)))
+		 try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
 	 } else {
-		message("Failed to compute relative difference of empirical and predicted error.")
-		NULL
+		message(.makeMessage("Detected `NAs` values (for relative differences) in quasi-information or MSE matrix while testing."))		
+		NA
 	 }
 	
 	# results

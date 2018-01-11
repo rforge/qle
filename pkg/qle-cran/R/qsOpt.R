@@ -22,7 +22,7 @@
 	 class = c(subclass, c("error","condition")), error = error)
 }
 
-.isError <- function(x) {
+.isError <- function(x) {	
 	( "error" %in% class(x) ||
 	  !is.null(attr(x,"error")) || isTRUE(attr(x,"error")) ||
 	  inherits(x, "error") || inherits(x, "try-error") 
@@ -104,20 +104,20 @@
 }
 
 .addQscoreOptions <- function() {
-	list( "ftol_stop" = .Machine$double.eps^(1/2),
-		  "xtol_rel"  = .Machine$double.eps,
+	list( "ftol_stop" = .Machine$double.eps,
+		  "xtol_rel"  = .Machine$double.eps^(1/3),
 		  "grad_tol"  = .Machine$double.eps^0.25,
-		  "ftol_rel"  = .Machine$double.eps^(1/2),
-		  "ftol_abs"  = .Machine$double.eps^(1/2),
-		  "score_tol" = 1e-3,
-		  "slope_tol" = 1e-2,
-		  "maxiter" = 100,
+		  "ftol_rel"  = .Machine$double.eps^(1/3),
+		  "ftol_abs"  = .Machine$double.eps^0.5,
+		  "score_tol" = 1e-5,
+		  "slope_tol" = 1e-3,
+		  "maxiter"   = 100,
 		  "pl"=0L)
 }
 
 .getDefaultGLoptions <- function(xdim) {
-	list("stopval" = 0,								 		# global stopping value
-		 "C_max" = 1e-3,
+	list("stopval" = .Machine$double.eps,			 		# global stopping value
+		 "C_max"   = 1e-3,
 		 "xtol_rel" = .Machine$double.eps^(1/3),
 		 "maxiter" = 100,									# max number of global iterations
 		 "maxeval" = 100,									# max number of global and local iterations
@@ -134,17 +134,17 @@
 
 .getDefaultLOCoptions <- function(xdim) {
 	list("ftol_rel" = .Machine$double.eps^(1/3),
-		 "ftol_abs"	= 0.01,
-		 "lam_max" = 1e-2,
-		 "pmin" = 0.05,
+		 "ftol_abs"	= .Machine$double.eps^0.5,			   # whether local minimizer is numerically zero
+		 "lam_max" = 1e-2,								   # less restrictive
+		 "pmin" = 0.05,									   # minimum accepted probability of coverage of sample points within search domain
 		 "weights" = c(0.005,0.1,0.2,0.4,0.6,0.8,0.995),   # only for sampling with criterion `score`
 		 "nsample" = (xdim+1)*1000,						   # number of local random samples
 		 "perr_tol" = rep(0.05,xdim),					   # empirical error is 5% smaller than predicted error by inverse QI
 		 "nobs"=100,									   # sampling size (root testing)
 		 "alpha" = 0.05,							       # significance level testing a root		 
 		 "eta" = c(0.025,0.05),							   # c("decrease"=0.05,"increase"=0.075) additive step size	
-		 "nfail" = 3,									   
-		 "nsucc" = 3,
+		 "nfail" = 3,									   # number of failed (not yet improved) iterations until next decrease of weights 
+		 "nsucc" = 3,									   # number of successful iterations until next increase of weights 
 		 "nextSample" = "score",						   # default selection criterion
 		 "useWeights" = TRUE,							   # do not dynamically adjust weights and cycle through the weights								   
 		 "test" = FALSE)								   # do not test approximate root										
@@ -355,7 +355,7 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #' cvm <- prefitCV(qsd)
 #' theta0 <- c("mu"=2,"sd"=1)
 #' 
-#' # get MSd by cross-validation at theta0 
+#' # get mean squared deviation using cross-validation at theta0 
 #' crossValTx(qsd, cvm, theta0, type = "msd")
 #' 
 #' # and kriging variance  
@@ -1108,47 +1108,42 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		if(pl > 0L) {
 			cat("\n")
 			nmax <- nglobal+nlocal
-			if(nmax > maxEval || nglobal > maxIter){
-			 cat("Final results: \n\n")
-			 cat("Evaluations: ",nmax,"\n")
-			} else
-			 cat("Evaluations: ",nmax+1,"\n")						
+			if(nmax >= maxEval || nglobal >= maxIter)
+			  cat("Final results: \n\n")
+   		    cat("Total evaluations...",nmax,"\n")						
+			cat("Criterion value.....",formatC(ft, digits=4, format="e", big.mark=","),"\n\n")
 			cat("Current iterate: \n\n")
 			print.default(formatC(signif(as.numeric(xt), digits=8), digits=8, format="fg", flag="#"),
 					print.gap = 4, quote = FALSE)
-			cat("\n")			
+			cat("\n")						
 			if(!is.null(Stest) && !.isError(Stest)){
 			 qt <- attr(Stest$test,"qt")
-			 cat("Criterion value < X-squared (",names(qt),"): ",formatC(ft, digits=4, format="e", big.mark=","))
-			 cat(paste0(" (<",formatC(qt, digits=4, format="e", big.mark=","),")"))
-			} else
-			 cat("Criterion value: ",formatC(ft, digits=4, format="e", big.mark=","))
-			cat("\n\n")
+			 cat("Criterion value < ",names(qt),"quantile: ",formatC(ft, digits=4, format="e", big.mark=","))
+			 cat(paste0(" <",formatC(qt, digits=4, format="e", big.mark=",")),"\n")			 
+			}			 
+			cat("\n")
 		}		
 	}
 
 	.showConditions = function() {
 		if(pl > 1L) {
-			if((nglobal+nlocal) > maxEval ||
-				nglobal > maxIter){
-			  cat("Final conditions: \n\n")
-			}
-			cat("Iterations.......","global=",nglobal,", local=",nlocal,"\n")
-			cat("minimized:.......",status[["minimized"]],"\n")
-			cat("global:..........",status[["global"]]>1L,"(",status[["global"]],")\n")			
+		    cat("Iterations......",paste0("global=",nglobal,", local=",nlocal,"\n"))
+			cat("Sampling:.......",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
+			cat("Local search:...",paste0(ifelse(status[["minimized"]],"success","failed"),"\n"))			
 			if(locals$nextSample=="score")
-				cat("weight factor:...",w,"\n")
-			cat("start at:........","[",formatC(signif(as.numeric(x),digits=6),digits=6,format="fg", flag="#"),"]","\n")
-			cat("solution:........","[",formatC(signif(as.numeric(xt),digits=6),digits=6,format="fg", flag="#"),"]")
-			cat("\n")			
-			cat("new sample:......","[",formatC(signif(as.numeric(Snext$par),digits=6),digits=6,format="fg", flag="#"),"]","\n")			
+				cat("weight factor:..",w,"\n")
+			
+			cat("Start:..........","[",formatC(signif(as.numeric(x),digits=6),digits=6,format="fg", flag="#"),"]","\n")
+			cat("Solution:.......","[",formatC(signif(as.numeric(xt),digits=6),digits=6,format="fg", flag="#"),"]","\n")
+			cat("Sample:.........","[",formatC(signif(as.numeric(Snext$par),digits=6),digits=6,format="fg", flag="#"),"]","\n")			
 			cat("\n")
 			
 			# other conditions
+			# max of quasi-score depends on whether criterion was minimized (local) or not
 			cat("Current stopping conditions: \n\n")			
 			cond <- 
 			 if(status[["minimized"]]) {
-			  c("|score_max|" = max(abs(S0$score)))				
+			   	c("|score_max|" = max(abs(S0$score)))				
 			 } else c("|score_max|" = max(abs(QD$score)))
 	 
 			cond <-
@@ -1273,6 +1268,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	# setting controls as data frame
 	ctls <- .setControls(globals,locals)
 	# data frame for storing relative estimation error deviation
+	# add to `ctls` if testing is enabled
 	perr <- 
 	 if(locals$test) {
 	  if(length(locals$perr_tol)!=xdim)
@@ -1472,16 +1468,18 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								
 			   # current iteration did not stop 
 			   # choose next type of phase: pure local or global				
-			   if(status[["minimized"]] && locals$test){			   				# found a local minimizer, testing for approximate root		   
+				if(ft < locals$ftol_abs){									# criterion function value is numerically zero!
+					status[["global"]] <- 0L
+				} else if(status[["minimized"]] && locals$test){			# found a local minimizer, testing for approximate root		   
 				   if(pl>0)
-					cat("Tesing approximate root...\n")					 
+					cat("Testing approximate root...\n")					 
 				   Stest <-
 					 tryCatch({					    
 						newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=pl>0)
 						if(.isError(newObs))
 						  stop(paste(c("Cannot generate data at approximate root: \n\t ",
 							    format(xt, digits=6, justify="right")),collapse = " "))				  
-					    # test for an approximate root
+					    # test for an approximate root (based on criterion function)
 	                    .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 							      qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 							          theta=theta, cvm=cvm, cl=cl)	
@@ -1493,29 +1491,29 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 							.qleError(message=msg,call=match.call(),error=e)
 						}		
 					)
-					# store results in temporary list
+					# store results in temporary list for failure analysis
 					tmplist <- c(tmplist,list("Stest"=Stest))
 					
 					# get status phase
 					status[["global"]] <-
 					 if(.isError(Stest)){
-						msg <- paste(c("Could not test approximate root: \n\t ",
-										format(xt, digits=6, justify="right")),collapse = " ")
-						message(msg)
-						if(ft < locals$ftol_abs)
-						 0L else 2L													# if testing fails check for approximate root
-					 } else if(attr(Stest$test,"passed")) {	1L }					# otherwise 
-			           else if(ft < locals$ftol_abs){ 0L }							
-			           else 2L			
-				  } else if(ft < locals$ftol_abs) {									# if not testing required: a chance to switch to or stay in the local phase
-					  status[["global"]] <- 0L
-				  } else {
+						msg <- paste(c("Cannot test approximate root at: \n\t ",
+								 format(xt, digits=6, justify="right")),collapse = " ")
+						message(msg)   
+					 } else if(attr(Stest$test,"passed")) {	1L }					# has approximate root  
+			           else 2L														# switch to global phase
+			   
+				  } else {															# local minimization failed by any method
+				
+					# Though we might have found a local minimizer, we do not
+					# sample there because we trust the selection criteria
+					# which additionally considers point-interdistances. 
 					# start next local search from last sample point
 					# and thus imitate kind of random multistart local search
 					if(status[["minimized"]]){										# found a local minimizer, but potentially no root
-						xt <- Snext$par						# x <- xt
+						xt <- Snext$par												# set current iterate to selected (sample/evaluatio) point
 						QD <- criterionFun(xt)[[1]]
-						ft <- QD$value						# f <- ft
+						ft <- QD$value												# and corresponding criterion function value 						
 						tmplist <- c(tmplist,list("QD"=QD))							
 					}
 					status[["global"]] <- 2L
@@ -1537,10 +1535,12 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 							# found approximate root
 						    							
 							# stopping conditions for
-							# relative estimation error deviation (see qleTest)
-							perr["val"] <- attr(Stest,"relED")	
-							if(locals$test && all(!is.null(perr["val"]))){						    
-								if( any(perr["val"] < perr["cond"]) ){									 	 # can be a vector for each component of the parameter					        
+							# relative estimation error deviation (see qleTest)							
+							if(locals$test && !is.null(Stest) && !.isError(Stest)) {
+								perr["val"] <- attr(Stest,"relED")	
+								if(anyNA(perr["val"]))
+								 message("Cannot test stopping conditions while testing local minimizer. `NAs` detected.")
+								else if( any(perr["val"] < perr["cond"]) ){									 	 # can be a vector for each component of the parameter					        
 									perr["stop"] <- perr["stop"] + as.integer(perr["val"] < perr["cond"])	 # and count separately for each one
 									if(any(perr["stop"] >= globals$NmaxQI))											
 										break																			
@@ -1732,12 +1732,14 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 
 				# ... and update
 				qsd <-
-				 if(status[["minimized"]] && locals$test && !.isError(newObs)) {					 
-					 updateQLmodel(qsd, rbind("d"=Snext$par,"x"=xt), # d (sample point), x (local minimum)
+				 if(status[["minimized"]] && locals$test &&
+					!is.null(Stest) && !.isError(newObs)) {				
+					  # character 'd' in output from `X` means sample point, `x` denotes a local minimum
+					  updateQLmodel(qsd, rbind("d"=Snext$par,"x"=xt), 
 							 structure(c(newSim,newObs),nsim=c(nsim,locals$nobs),class="simQL"),						 
 							 fit=TRUE, cl=cl, verbose=pl>0L)					 
 				 } else {
-					 updateQLmodel(qsd, Snext$par, newSim,						 
+					  updateQLmodel(qsd, Snext$par, newSim,						 
 							 fit=TRUE, cl=cl, verbose=pl>0L)
 				 }
 									
@@ -1833,7 +1835,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		 	 "qsd"=qsd,
 			 "cvm"=cvm,
 			 "why"=arg.names,
-			 "final" = S0,			 	
+			 "final" = S0,			 												# NULL if `last.global` is TRUE
 			 "convergence"=(status[["minimized"]] && length(arg.names) > 0L)),	 	
 		tracklist = tracklist,		
 		optInfo = list("x0"=x0,
