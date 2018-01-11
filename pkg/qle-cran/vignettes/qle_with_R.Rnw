@@ -158,7 +158,7 @@ first one is directly derived from quasi-likelihood theory. The so-called
   s(\theta) = \hat{Q}(\theta)^t \hat{I}(\theta)^{-1} \hat{Q}(\theta),
 \end{equation} 
 where we suppress the dependency on the observed statistics $y$ for
-convienience. In particular, the QS and QD are considered as inexpensive approximations
+convenience. In particular, the QS and QD are considered as inexpensive approximations
 of their respective counterparts if $T$ could be computed from $X$ under the
 model $\Ptheta$ without error at any $\theta\in\D$. The QD - roughly speaking - measures the
 ''deviance`` of the QS vector from zero and thus provides a global view on the estimation
