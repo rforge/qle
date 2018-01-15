@@ -71,38 +71,35 @@ int chol2var(double *x, double *z, int nx, double *y) {
  *
  * @return void
  */
-void fdJac(double *x, int dx, double *fval, int m, double *jac,
-            fnCompare_wrap func, void *data, double eps, int to_negative, int *info) {
+void fdJac(double *x, int dx, double *fval, int m, double *jac, double *fdwork,
+	  fnCompare_wrap func, void *data, double eps, int to_negative, int *info) {
 
-	int j, k, have_na = 0;
-	double h, temp, *fval_tmp, *x_tmp, y;
-
-	CALLOCX(fval_tmp,m,double);
-	CALLOCX(x_tmp,dx,double);
-	MEMCPY(x_tmp,x,dx);
+	int j, k, have_na=0;
+	double h, tmp, y;
 
 	for (j=0;j<dx;j++) {
-		temp=x_tmp[j];
-		h=eps*std::fabs(temp);
-		if(h==0) h=eps;
-		 x_tmp[j]=temp+h;
-		 if (ISNAN(x_tmp[j]) || !R_FINITE(x_tmp[j]))
-		   {have_na = 1; break; }
-		 h=x_tmp[j]-temp;
-		 func(x_tmp, data, fval_tmp,info);
-		 if(*info > 0)
+		tmp=x[j];
+		h=eps*std::fabs(tmp);
+		if(h < DBL_EPSILON)
+		 { h=eps; }
+		x[j]=tmp+h;
+		if (ISNAN(x[j]) || !R_FINITE(x[j]))
+		  {have_na = 1; break; }
+	    h=x[j]-tmp;
+		func(x,data,fdwork,info);
+		if(*info > 0)
 		  { have_na=1; break;}
-		 x_tmp[j]=temp;
-		 if(to_negative) h = -h;
-		 for(k=0;k<m;k++) {
-		  y = (fval_tmp[k] - fval[k])/h;
+		x[j]=tmp;
+		if(to_negative)
+		 { h = -h; }
+		for(k=0;k<m;k++) {
+		  y = (fdwork[k] - fval[k])/h;
 		  if (ISNAN(y) || !R_FINITE(y))
-		    {have_na = 1; }
-		  jac[k*dx+j] = y;
-		 }
+		    {have_na = 1; break; }
+		  //jac[j*m+k] = y;   // original:   m \times n
+		  jac[k*dx+j] = y;    // transposed: n rows (parameters) \times m values, e. i. statistics or something else
+		}
 	}
-	FREE(x_tmp);
-	FREE(fval_tmp);
 	*info = have_na;
 }
 

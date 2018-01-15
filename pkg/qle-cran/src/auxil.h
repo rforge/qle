@@ -40,8 +40,8 @@ extern "C" {
 
 int  chol2var(double *x, double *z, int nx, double *y );
 
-void fdJac(double *x, int dx, double *fval, int m, double *jac,
-           fnCompare_wrap func, void* data, double eps, int to_negative, int *info);
+void fdJac(double *x, int dx, double *fval, int m, double *jac, double *fdwork,
+	  fnCompare_wrap func, void* data, double eps, int to_negative, int *info);
 
 void dist_X1_X2( double *x, int nrx, int xdim, double *y, int nry, double *d );
 

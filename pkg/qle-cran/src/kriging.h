@@ -76,7 +76,7 @@ typedef struct krig_result_s {
 	  CALLOCX(w,nCov*lx,double);     // kriging weights as matrix: nCov rows, lx columns
 	  CALLOCX(mean,nCov,double);     // kriging means (at single point)
 	  if(krigType)
-	     CALLOCX(sig2,nCov,double);  // kriging variances (at single point) and nCov covariances
+	   CALLOCX(sig2,nCov,double);    // kriging variances (at single point) and nCov covariances
   }
 
 } krig_result_t, *krig_result;
@@ -335,7 +335,7 @@ typedef struct ql_data_s {
 
   // always to be allocated
   double *obs,          /* Statistics of reference parameter */
-         *qtheta,       /* working array of length nCov, (T(x)-E[T(X)]) */
+         *qtheta,       /* working array of length nCov, (T(x)-E[T(X)]) and fdJac */
 		 *vmat,         /* variance matrix of statistics */
 		 *vmat_work,    /* variance matrix of statistics */
 		 *work,	        /* copy of diagonal terms of variance matrix of statistics */

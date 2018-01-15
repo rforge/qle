@@ -17,7 +17,8 @@
 #include "kriging.h"
 
 static int ONE_ELEMENT = 1;
-static double ZERO_ELEMENT = 0;
+static int ZERO_ELEMENT = 0;
+static double ZERO_DBL = 0.0;
 static ql_model qlm_global = NULL ;
 
 int intern_dualKmat(double *C, int Cdim, double *F, int Fdim, double *K);
@@ -834,7 +835,7 @@ double ql_model_s::intern_mahalVarTrace(double *x) {
 
 	 matmult(qld->vmat,nCov,nCov,qld->qtheta,nCov,ONE_ELEMENT,qld->tmp,&info);
 	 if(info > 0){
-	   LOG_WARNING(info,"mat_trans")
+	   LOG_WARNING(info,"matmult")
 	   return R_NaN;
 	 }
 	 /* score vector */
@@ -1352,7 +1353,7 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat, int *err) {
 }
 
 int ql_model_s::intern_quasiObs(double *x, double *score, double *qiobs) {
-   fdJac(x,dx,score,dx,qiobs,&wrap_intern_quasiScore,(void*) this,FD_EPS,ONE_ELEMENT,&info);
+   fdJac(x,dx,score,dx,qiobs,qld->qtheta,&wrap_intern_quasiScore,(void*) this,FD_EPS,ONE_ELEMENT,&info);
    if(info != NO_ERROR)
 	 WRR("`NaN` values detected in `fdJac`.")
    return info;
@@ -1528,18 +1529,18 @@ void cv_model_s::set(SEXP R_Xmat, SEXP R_data, SEXP R_cm) {
 	}
 }
 
-void cv_model_s::cvError(double *x, krig_model *km, double *cv, int *err) {
+void cv_model_s::cvError(double *x, krig_model *km, double *cv, int *info) {
 	int i,k;
 	double yhat = 0;
 
 	for(k = 0; k < nCov; ++k) {
 		s2[k] = ybar[k] = 0;
-		km[k]->dualKriging(x,ONE_ELEMENT,y0+k,err);
-		if(*err != NO_ERROR)
+		km[k]->dualKriging(x,ONE_ELEMENT,y0+k,info);
+		if(*info != NO_ERROR)
 		 break;
 	}
-	if(*err != NO_ERROR){
-	 LOG_ERROR(*err,"dualKriging");
+	if(*info != NO_ERROR){
+	 LOG_ERROR(*info,"dualKriging");
 	 return;
 	}
 
@@ -1550,9 +1551,9 @@ void cv_model_s::cvError(double *x, krig_model *km, double *cv, int *err) {
 			cmp = cm[i];
 			kmp = cmp->km;
 			for(k = 0; k < nCov; ++k) {
-				kmp[k]->dualKriging(x,ONE_ELEMENT,&yhat,err);
+				kmp[k]->dualKriging(x,ONE_ELEMENT,&yhat,info);
 				if (!R_FINITE(yhat))
-				 { *err=1; continue; }
+				 { *info=1; continue; }
 				ytil[k*nc+i] = nc*y0[k] - (nc-1)*yhat;
 				ybar[k] += ytil[k*nc+i];
 			}
@@ -1561,7 +1562,7 @@ void cv_model_s::cvError(double *x, krig_model *km, double *cv, int *err) {
 	for(i = 0; i < nc; ++i) {
 		for(k = 0; k < nCov; ++k){
 			if (!R_FINITE(ybar[k]))
-			  { *err=1; continue; }
+			  { *info=1; continue; }
 			s2[k] += SQR(ytil[k*nc+i]-ybar[k]/nc);
 		}
 	}
@@ -1569,16 +1570,15 @@ void cv_model_s::cvError(double *x, krig_model *km, double *cv, int *err) {
 	if(errType) {
 	 for(k = 0; k < nCov; ++k) {
 		 if (!R_FINITE(s2[k]))
-		   { *err=1; continue; }
+		   { *info=1; continue; }
 		 tmp = fnc*s2[k];
 		 cv[k] = MAX(tmp,cv[k]);
 	 }
 	} else {
 		for(k = 0; k < nCov; ++k){
 			if (!R_FINITE(s2[k]))
-			 { *err=1; continue; }
+			 { *info=1; continue; }
 			cv[k] = fnc*s2[k];
-
 		}
 	}
 
@@ -1586,10 +1586,10 @@ void cv_model_s::cvError(double *x, krig_model *km, double *cv, int *err) {
 
 
 inline void
-glkrig_models::jacobian(double *x, double *mean, double *jac, int *err) {
-	fdJac(x,dx,mean,nCov,jac,&wrap_intern_kriging,(void*)this,FD_EPS,ZERO_ELEMENT,err);
-	if(*err != NO_ERROR)
-	  LOG_WARNING(*err,"fdJac")
+glkrig_models::jacobian(double *x, double *mean, double *jac, int *info) {
+	fdJac(x,dx,mean,nCov,jac,krigr[1]->mean,&wrap_intern_kriging,(void*)this,FD_EPS,ZERO_ELEMENT,info);
+	if(*info != NO_ERROR)
+	  LOG_WARNING(*info,"fdJac")
 }
 
 /**
@@ -1597,18 +1597,18 @@ glkrig_models::jacobian(double *x, double *mean, double *jac, int *err) {
  * for all nCov statistics
  */
 inline void
-glkrig_models::kriging(double *x, double *m, double *s, double *w, int *err) {
+glkrig_models::kriging(double *x, double *m, double *s, double *w, int *info) {
 	if(krigType) {
 		for(int k=0; k<nCov; k++){
-			km[k]->univarKriging(x,ONE_ELEMENT,m+k,s+k,w+k,err);
-			if(*err != NO_ERROR)
-			  LOG_ERROR(*err,"univarKriging")
+			km[k]->univarKriging(x,ONE_ELEMENT,m+k,s+k,w+k,info);
+			if(*info != NO_ERROR)
+			  LOG_ERROR(*info,"univarKriging")
 		}
 	} else {
 		for(int k=0; k<nCov; k++){
-			km[k]->dualKriging(x,ONE_ELEMENT,m+k,err);
-			if(*err != NO_ERROR)
-			  LOG_ERROR(*err,"dualKriging")
+			km[k]->dualKriging(x,ONE_ELEMENT,m+k,info);
+			if(*info != NO_ERROR)
+			  LOG_ERROR(*info,"dualKriging")
 		}
 	}
 }
@@ -1618,14 +1618,14 @@ glkrig_models::kriging(double *x, double *m, double *s, double *w, int *err) {
  * Dual kriging a single point, single statistic
  */
 void
-krig_model_s::dualKriging(double *x, int nx, double *m, int *err) {
-	if( (*err = intern_covVector(Xmat,dx,lx,x,nx,s0,&cov)) != NO_ERROR)
+krig_model_s::dualKriging(double *x, int nx, double *m, int *info) {
+	if( (*info = intern_covVector(Xmat,dx,lx,x,nx,s0,&cov)) != NO_ERROR)
 	  WRR("`NaN` detected in `intern_covVector`.")
 
 	trendfunc(x,nx,dx,f0,cov.trend);
 
 	/** weights do not change */
-	if( (*err = intern_dualKrigingPrediction(s0,f0,fddim,dw,lx,m)) != NO_ERROR)
+	if( (*info = intern_dualKrigingPrediction(s0,f0,fddim,dw,lx,m)) != NO_ERROR)
 	 WRR("`NaN` detected in `intern_dualKrigingPrediction`.")
 
 }
@@ -1708,7 +1708,7 @@ krig_model_s::univarKriging(double *x, int nx, double *mean, double *sigma2, dou
 	  lambda[j] = lambdak[j] - lambda[j];
 
 	/* calculate kriging variance */
-	double sum = cov.cf(&cov,&ZERO_ELEMENT);
+	double sum = cov.cf(&cov,&ZERO_DBL);
 	//Rprintf("%s: %u: %f", __FILE__, __LINE__, sum);;
 
 	for (j=0; j < lx; j++)

@@ -305,7 +305,7 @@ qfs_result qfscoring(double *x,			 	/* start */
          if(*info != 0){
         	 *info = QFS_ERROR;
         	 status = QFS_BAD_DIRECTION;
-        	 PRINT_MSG("Failednto calulate quasi-score correction.")
+        	 PRINT_MSG("Cannot compute quasi-score correction vector.")
         	 LOG_ERROR(LAPACK_SOLVE_ERROR, "gsiSolve");
         	 break;
          }
@@ -316,10 +316,10 @@ qfs_result qfscoring(double *x,			 	/* start */
          /*! display information */
          if(pl >= 10) {
            Rprintf("--------------------------------------------------------------\n\n");
-           Rprintf("iter:.............%d \n", niter);
-           Rprintf("bounds............%d \n", qfs->info);
-           Rprintf("value:............%3.10f \n", *f);
-           Rprintf("step length:......%3.10f (check=%d) \n\n", delta, check);
+           Rprintf("iteration.........%d \n", niter);
+           Rprintf("at bounds.........%d \n", qfs->info);
+           Rprintf("objective.........%3.10f \n", *f);
+           Rprintf("step size.........%3.10f (check=%d) \n\n", delta, check);
            printVector("current", x, &n);
            Rprintf("\n");
            printVector("score", score, &n);
