@@ -174,7 +174,9 @@ SEXP estimateJacobian(SEXP R_Xmat, SEXP R_data, SEXP R_points, SEXP R_covT, SEXP
    PROTECT(R_dimT = allocVector(VECSXP,2));
    SET_DIMNAMES_MATRIX2(R_dimT,R_nI,R_data)
 
-   double *point  = 0;
+   double *point=0, *fdwork=0;
+   CALLOCX(fdwork,nCov,double);
+
    //krig_result_s krigr(nCov,lx);
    for(int i=0; i < npoints; ++i)
    {
@@ -189,8 +191,8 @@ SEXP estimateJacobian(SEXP R_Xmat, SEXP R_data, SEXP R_points, SEXP R_covT, SEXP
 	  setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
 
 	  // get jacobian
-	  if( (info = glkm.intern_jacobian(point,REAL(R_jac))) != NO_ERROR)
-		  XWRR(info,"intern_jacobian")
+	  if( (info = glkm.intern_jacobian(point,REAL(R_jac),fdwork)) != NO_ERROR)
+		 XWRR(info,"intern_jacobian")
 
 	  PROTECT(R_jac_element = allocVector(VECSXP, 1));
 	  PROTECT(R_names = allocVector(STRSXP, 1));
@@ -201,8 +203,8 @@ SEXP estimateJacobian(SEXP R_Xmat, SEXP R_data, SEXP R_points, SEXP R_covT, SEXP
 	  SET_VECTOR_ELT(R_jac_element,0,R_jac);
 	  SET_VECTOR_ELT(R_jacobians,i,R_jac_element);
 	  UNPROTECT(3);
-
    }
+   FREE(fdwork)
    UNPROTECT(2);
    return R_jacobians;
 }
@@ -390,7 +392,8 @@ SEXP mahalValue(SEXP R_point) {
   PROTECT(R_score = allocVector(REALSXP,dx));
 
   /* Jacobian */
-  if( (info = qlm_global->glkm->intern_jacobian(x,qlm_global->jac)) != NO_ERROR)
+  double *fdwork = qlm_global->qld->fdwork;
+  if( (info = qlm_global->glkm->intern_jacobian(x,qlm_global->jac,fdwork)) != NO_ERROR)
 	XERR(info,"intern_jacobian")
 
   /* score vector */
@@ -507,7 +510,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 /* mahalanobis distance */
 					 fval = qlm.intern_mahalValue(x);
 
-					 info = glkm->intern_jacobian(x,REAL(R_jac));
+					 info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
 					 CHECK_UNPROTECT("intern_jacobian")
 
 					 /* score vector */
@@ -573,7 +576,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 /* mahalanobis distance */
 					 fval = qlm.intern_mahalValue(x);
 
-					 info = glkm->intern_jacobian(x,REAL(R_jac));
+					 info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
 					 CHECK_UNPROTECT("intern_jacobian")
 
 					 /* score vector */
@@ -661,7 +664,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							fval = qlm.intern_mahalValue_theta(x);
 
 							// Jacobian
-							info = glkm->intern_jacobian(x,REAL(R_jac));
+							info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
 							CHECK_UNPROTECT("intern_jacobian")
 
 							// score vector
@@ -715,7 +718,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							fval = qlm.intern_mahalValue_theta(x);
 
 							// Jacobian
-							glkm->intern_jacobian(x,REAL(R_jac));
+							glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
 							CHECK_UNPROTECT("intern_jacobian")
 
 							// score vector
@@ -839,7 +842,7 @@ double ql_model_s::intern_mahalVarTrace(double *x) {
 	   return R_NaN;
 	 }
 	 /* score vector */
-	 if ( (info = glkm->intern_jacobian(x,jac)) != NO_ERROR){
+	 if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
 		LOG_ERROR(info,"intern_jacobian");
 		return R_NaN;
 	 }
@@ -1073,7 +1076,7 @@ double ql_model_s::qfScoreStat(double *x, double *jac, double *score, double *qi
 	//printVector("krig.mean",glkm->krigr[0]->mean,&dx);
 	//printVector("krig.var",glkm->krigr[0]->sig2,&dx);
 
-	if ( (info = glkm->intern_jacobian(x,jac)) != NO_ERROR){
+	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
 		LOG_ERROR(info,"intern_jacobian")
 		return R_NaN;
 	}
@@ -1114,7 +1117,7 @@ double ql_model_s::intern_qfTrace(double *x) {
 		return R_NaN;
 	}
 
-	if ( (info = glkm->intern_jacobian(x,jac)) != NO_ERROR){
+	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
 		LOG_ERROR(info,"intern_jacobian")
 		return R_NaN;
 	}
@@ -1172,7 +1175,7 @@ double ql_model_s::intern_qfVarStat(double *x) {
 		return R_NaN;
 	}
 
-	if ( (info = glkm->intern_jacobian(x,jac)) != NO_ERROR){
+	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
 	    LOG_ERROR(info,"intern_jacobian")
 		return R_NaN;
 	}
@@ -1286,7 +1289,7 @@ wrap_intern_quasiScore(double *x, void *data, double *score, int *err ) {
 	   return;
    }
 
-   glkm->jacobian(x,krig_tmp->mean,qld->jactmp,err);
+   glkm->jacobian(x,krig_tmp->mean,qld->jactmp,qld->fdwork,err);
    if(*err != NO_ERROR){
 	   LOG_ERROR(*err,"jacobian");
 	   return;
@@ -1353,7 +1356,7 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat, int *err) {
 }
 
 int ql_model_s::intern_quasiObs(double *x, double *score, double *qiobs) {
-   fdJac(x,dx,score,dx,qiobs,qld->qtheta,&wrap_intern_quasiScore,(void*) this,FD_EPS,ONE_ELEMENT,&info);
+   fdJacobian(x,dx,score,dx,qiobs,qld->fdscore,&wrap_intern_quasiScore,(void*) this,FD_EPS,ONE_ELEMENT,&info);
    if(info != NO_ERROR)
 	 WRR("`NaN` values detected in `fdJac`.")
    return info;
@@ -1586,8 +1589,8 @@ void cv_model_s::cvError(double *x, krig_model *km, double *cv, int *info) {
 
 
 inline void
-glkrig_models::jacobian(double *x, double *mean, double *jac, int *info) {
-	fdJac(x,dx,mean,nCov,jac,krigr[1]->mean,&wrap_intern_kriging,(void*)this,FD_EPS,ZERO_ELEMENT,info);
+glkrig_models::jacobian(double *x, double *mean, double *jac, double *fdwork, int *info) {
+	fdJacobian(x,dx,mean,nCov,jac,fdwork,&wrap_intern_kriging,(void*)this,FD_EPS,ZERO_ELEMENT,info);
 	if(*info != NO_ERROR)
 	  LOG_WARNING(*info,"fdJac")
 }

@@ -277,9 +277,9 @@ typedef struct glkrig_models_s
 	  return info;
    }
 
-  void jacobian(double *x, double *mean, double *jac, int *err);
-  inline int intern_jacobian(double *x, double *jac) {
-	  jacobian(x, krigr[0]->mean, jac, &info);
+  void jacobian(double *x, double *mean, double *jac, double *fdwork, int *err);
+  inline int intern_jacobian(double *x, double *jac, double *fdwork) {
+	  jacobian(x, krigr[0]->mean, jac, fdwork, &info);
 	  return info;
   }
 
@@ -335,12 +335,14 @@ typedef struct ql_data_s {
 
   // always to be allocated
   double *obs,          /* Statistics of reference parameter */
-         *qtheta,       /* working array of length nCov, (T(x)-E[T(X)]) and fdJac */
+         *qtheta,       /* working array of length nCov, (T(x)-E[T(X)]) */
 		 *vmat,         /* variance matrix of statistics */
 		 *vmat_work,    /* variance matrix of statistics */
 		 *work,	        /* copy of diagonal terms of variance matrix of statistics */
 		 *workx,		/* for kriging the variance matrix */
 		 *jactmp, 		/* transpose of jac or simply temporary storage */
+		 *fdwork,		/* working array for FD approxmiation ETX/dtheta (length: number of statistics) */
+		 *fdscore,		/* working array for FD approxmiation   Q/dtheta (length: number of parameters) */
 		 *Atmp, 	    /* temporary working matrix */
   	  	 *tmp;
 
@@ -351,12 +353,14 @@ typedef struct ql_data_s {
   // alloc and init
   ql_data_s(SEXP R_obs, SEXP R_Vmat, SEXP R_qlopts, int _nCov, int *_dims) :
 		  obs(0), qtheta(0), vmat(0), vmat_work(0), work(0),
-		  workx(0), jactmp(0), Atmp(0), tmp(0), qlopts(R_qlopts),
+		  workx(0), jactmp(0), fdwork(0), fdscore(0), Atmp(0), tmp(0), qlopts(R_qlopts),
 		  dx(_dims[1]), lx(_dims[0]), nCov(_nCov)
   {
 	 int nCov2 = SQR(nCov);
 
 	 CALLOCX(qtheta,nCov,double);
+	 CALLOCX(fdwork,nCov,double);
+	 CALLOCX(fdscore,dx,double);
 	 CALLOCX(Atmp,dx*nCov,double);
 	 CALLOCX(obs,nCov,double);
 	 CALLOCX(tmp,nCov,double);
@@ -396,6 +400,8 @@ typedef struct ql_data_s {
 
   ~ql_data_s() {
 	  FREE(jactmp)
+	  FREE(fdwork)
+	  FREE(fdscore)
 	  FREE(tmp)
 	  FREE(obs)
 	  FREE(Atmp)
@@ -480,7 +486,7 @@ typedef struct ql_model_s {
 		 CALLOCX(qimat,dxdx,double);
 		 CALLOCX(jac,dx*nCov,double);
 
-		 /* ql storage */
+		 /* ql storage for solving */
 		 CALLOCX(qlsolve.score,dx,double);
 		 CALLOCX(qlsolve.qimat,dxdx,double);
 		 CALLOCX(qlsolve.varS,dxdx,double);

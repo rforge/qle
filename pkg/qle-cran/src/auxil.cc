@@ -55,23 +55,26 @@ int chol2var(double *x, double *z, int nx, double *y) {
 }
 
 
-/*! \brief Finite difference approximation,
- *            Comment: Calculate gradient or jacobian
+/*! \brief Simple finite difference approximation,
+ *    compute gradient or Jacobian
  *
  * @param x vector of coordinates, the point
  * @param nx if x is pointer to a row of a matrix of points, nx are the number of rows of x
  * @param dx length of x
  * @param fval vector of function values at x
  * @param m length of fval
- * @param jac gradient/jacobian
+ * @param jac gradient/Jacobian
+ * @param fdwork working vector of length m
  * @param func callback function pointer
  * @param data void data pointer
  * @param eps difference
+ * @param to_negative whether to multiply by -1
+ * @param info integer to signal NA or non finite values
  *
  *
  * @return void
  */
-void fdJac(double *x, int dx, double *fval, int m, double *jac, double *fdwork,
+void fdJacobian(double *x, int dx, double *fval, int m, double *jac, double *fdwork,
 	  fnCompare_wrap func, void *data, double eps, int to_negative, int *info) {
 
 	int j, k, have_na=0;
