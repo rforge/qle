@@ -6,7 +6,7 @@ library(qle)
 data(normal)
 
 # setting number of local cores
-options(mc.cores=6)
+options(mc.cores=8)
 
 ## one step minimization
 ## no sammpling
@@ -25,11 +25,15 @@ OPT <- qle(qsd,qsd$simfn,nsim=10,
 # both: root finding and minimizing criterion function
 OPT <- qle(qsd,qsd$simfn,nsim=10,
 		global.opts=list("maxeval"=10),
-		local.opts=list("weights"=c(0.5),"useWeights"=FALSE),
-		pl=10, plot=TRUE)
-attr(OPT,"tracklist")
+		local.opts=list("weights"=c(0.5),"useWeights"=FALSE),pl=10)
 
-## no scoring, therefore search on criterion function only
+# intermediate results
+attr(OPT,"tracklist")
+# compare final with quasi-deviance at solution
+OPT$final
+quasiDeviance(OPT$par,OPT$qsd,verbose=TRUE)[[1]]
+
+## here no quasi-scoring, therefore search on criterion function only
 #OPT <- qle(qsd,qsd$simfn,nsim=10,		
 #		global.opts=list("maxeval"=10),
 #		local.opts=list("ftol_abs"=1e-10,"weights"=c(0.5),"useWeights"=FALSE,"test"=TRUE),
@@ -40,19 +44,20 @@ attr(OPT,"tracklist")
 #		local.opts=list("ftol_abs"=0),
 #		global.opts=list("maxeval"=10),
 #		method="bobyqa",pl=10)
-#attr(OPT,"final") # NULL
+
+#OPT$final 
 #attr(OPT,"tracklist")
 #attr(OPT,"optInfo")
 
-# restart estimation and do a pure global search (setting `ftol_abs=0`), 
-# sample additional points for evaluation and select new candidates by
-# criterion `var`
-GL <- qle(OPT$qsd, qsd$simfn, nsim=10,		
-		global.opts = list("maxiter"=10, "stopval"=0),
-		local.opts = list("nextSample"="var","ftol_abs"=0),
-		pl=10, iseed=1234)
+## restart estimation and do a pure global search (setting `ftol_abs=0`), 
+## sample additional points for evaluation and select new candidates by
+## criterion `var`
+#GL <- qle(OPT$qsd, qsd$simfn, nsim=10,		
+#		global.opts = list("maxiter"=10, "stopval"=0),
+#		local.opts = list("nextSample"="var","ftol_abs"=0),
+#		pl=10, iseed=1234)
 
-## show 
+## show final results
 #library(rgl)
 #cvm <- NULL
 #qsd <- OPT$qsd
