@@ -16,7 +16,18 @@ Changes with 0.16-9
 -------------------
 
 1) Local test of approximate root is now done only in case the quasi-deviance/quasi-score is numerically not zero
-2) TODO: 
-    - check flip of sign in quasi-score (qscoring)
-    - qleTest: new arguments, par, obs
+2) C function for FD approximation now uses pre-allocated storage
 		  
+		  
+Current known issues
+--------------------
+	o flip of sign in quasi-score vector (qscoring)	  
+		The implementation of the quasi-scoring iteration has some trouble with the correct
+		sign of the quasi-score components for values near zero mostly due to finite precision problems
+		
+	o function `qleTest` is not yet much meaningful in the final estimated model parameter
+	
+	
+TODO
+----
+	o qleTest: modify with new arguments, par, obs  
