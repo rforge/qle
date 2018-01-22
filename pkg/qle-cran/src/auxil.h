@@ -21,9 +21,7 @@ inline const T &MIN(const T &a, const T &b)
 {return b < a ? (b) : (a);}
 
 typedef void (*Fp_merger)(double *, double*, int*);
-typedef void (*fnCompare) (double *x, void *data, double *f);
 typedef void (*fnCompare_wrap) (double *x, void *data, double *f, int *err);
-
 
 typedef struct qr_data_s {
 	  double *qr, *tau;
@@ -79,6 +77,8 @@ void Imat(double *x, int n);
 double norm_x_2( double *x, int nrx, int ncx, int ii);
 double norm_2( double *x1, double *x2, int dx1, int dx2, int xdim);
 double norm2( double *x1, int n1, double *x2, int n2, int d, int i1, int i2);
+//
+double denorm(double *x, int n);
 double innerProduct(double *x, double *y, int size);
 //
 void nullSpaceMat(qr_data qr, double *x,int *err);

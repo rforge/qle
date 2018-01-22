@@ -12,7 +12,6 @@
 
 #include "kriging.h"
 
-
 typedef enum {
 	 QFS_ERROR = -10, 				/* generic failure code */
 	 QFS_MAXITER_REACHED = -5,
@@ -20,13 +19,13 @@ typedef enum {
      QFS_LINESEARCH_ZEROSLOPE = -3,
      QFS_BAD_DIRECTION = -2,    	/* Calculating Newton direction failed*/
 	 QFS_NO_CONVERGENCE = -1,   	/* no convergence */
-     QFS_CONVERGENCE = 1,       	/* convergence */
-     QFS_SCORETOL_REACHED = 2,
-     QFS_FTOLREL_REACHED = 3,
-     QFS_STOPVAL_REACHED = 4,
-     QFS_XTOL_REACHED = 5,
-     QFS_GRADTOL_REACHED = 6,
-     QFS_SLOPETOL_REACHED = 7,
+     QFS_CONVERGENCE = 0,       	/* convergence */
+     QFS_SCORETOL_REACHED = 1,
+     QFS_FTOLREL_REACHED = 2,
+     QFS_STOPVAL_REACHED = 3,
+     QFS_XTOL_REACHED = 4,
+     QFS_GRADTOL_REACHED = 5,
+	 QFS_SLOPETOL_REACHED = 6,
      QFS_LOCAL_CONVERGENCE = 10
 } qfs_result;
 
@@ -41,23 +40,22 @@ typedef struct qfs_options_s {
 		 ftol_abs,
 		 ftol_rel,
 		 score_tol,
-		 xtol_rel,
-		 slope_tol;
+		 slope_tol,
+		 xtol_rel;
 
   int max_iter;    /* limits */
 
-  qfs_options_s(ql_model _qlm, SEXP R_options) : qlm(_qlm), num_iter(0), num_eval(0)
+  qfs_options_s(ql_model _qlm, SEXP R_options) :
+	  qlm(_qlm), num_iter(0), num_eval(0), pl(0), info(0)
   {
-	info = 0;
     pl = asInteger(getListElement( R_options, "pl"));
-
 	ftol_rel  = asReal(getListElement( R_options, "ftol_rel" ));
 	ftol_stop = asReal(getListElement( R_options, "ftol_stop"));
 	ftol_abs  = asReal(getListElement( R_options, "ftol_abs"));
 	score_tol = asReal(getListElement( R_options, "score_tol"));
 	xtol_rel  = asReal(getListElement( R_options, "xtol_rel" ));
+	slope_tol = asReal(getListElement( R_options, "slope_tol" ));
 	grad_tol  = asReal(getListElement( R_options, "grad_tol" ));
-	slope_tol = asReal(getListElement( R_options, "slope_tol"));
 	max_iter  = asInteger(getListElement( R_options, "maxiter"));
   }
 

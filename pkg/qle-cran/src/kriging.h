@@ -549,6 +549,7 @@ typedef struct ql_model_s {
 
 	double intern_qfTrace(double *x);
     double intern_qfVarStat(double *x);
+	double intern_qfScoreNorm(double *x);
 
     inline double intern_qfScoreStat(double *x) {
 	  	return qfScoreStat(x,jac,score,qimat);

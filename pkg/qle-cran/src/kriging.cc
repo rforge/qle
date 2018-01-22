@@ -493,9 +493,9 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  /* using prediction variances */
 			  if(glkm->krigType)
 			  {
-            	  double fval = 0;
+            	  double fval = 0, qn = 0;
             	  int nprotect = 5;
-            	  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS",""};
+            	  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac", "varS", "Qnorm", ""};
 
 				  for(i=0;i<np;i++)
 				  {
@@ -509,13 +509,13 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 					 /* mahalanobis distance */
 					 fval = qlm.intern_mahalValue(x);
-
 					 info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
 					 CHECK_UNPROTECT("intern_jacobian")
 
 					 /* score vector */
 					 matmult(REAL(R_jac),dx,nCov,qlm.qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),&info);
 					 CHECK_UNPROTECT("matmult")
+					 qn = denorm(REAL(R_S),dx);
 
 					 /* quasi-info */
 					 mat_trans(qld->jactmp,nCov,REAL(R_jac),dx,dx,nCov,&info);
@@ -554,6 +554,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 SET_VECTOR_ELT(R_ans, 4, R_sig2);
 					 SET_VECTOR_ELT(R_ans, 5, R_jac);
 					 SET_VECTOR_ELT(R_ans, 6, R_varS);
+					 SET_VECTOR_ELT(R_ans, 7, ScalarReal(qn));
 
 					 SET_VECTOR_ELT(R_ret, i, R_ans);
 					 UNPROTECT(6);
@@ -562,9 +563,9 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  } else {
 
 				  /* no prediction variances */
-				  double fval=0;
+				  double fval=0, qn=0;
 				  int nprotect=3;
-				  const char *nms[] = {"value", "par", "I", "score", "jac",""};
+				  const char *nms[] = {"value", "par", "I", "score", "jac", "Qnorm", ""};
 
 				  for(i=0;i<np;i++)
 				  {
@@ -575,13 +576,13 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 double *x = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
 					 /* mahalanobis distance */
 					 fval = qlm.intern_mahalValue(x);
-
 					 info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
 					 CHECK_UNPROTECT("intern_jacobian")
 
 					 /* score vector */
 					 matmult(REAL(R_jac),dx,nCov,qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),&info);
 					 CHECK_UNPROTECT("matmult")
+					 qn = denorm(REAL(R_S),dx);
 
 					 /* quasi-info */
 					 mat_trans(qld->jactmp,nCov,REAL(R_jac),dx,dx,nCov,&info);
@@ -602,6 +603,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 SET_VECTOR_ELT(R_ans, 2, R_I);
 					 SET_VECTOR_ELT(R_ans, 3, R_S);
 					 SET_VECTOR_ELT(R_ans, 4, R_jac);
+					 SET_VECTOR_ELT(R_ans, 5, ScalarReal(qn));
 
 					 SET_VECTOR_ELT(R_ret, i, R_ans);
 					 UNPROTECT(4);
@@ -647,9 +649,9 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 			  if(glkm->krigType)
 			  {
-					  double fval=0;
+					  double fval=0, qn=0;
 					  int nprotect=5;
-					  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS",""};
+					  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS","Qnorm",""};
 
 					  for(i=0;i<np;i++)
 					  {
@@ -670,6 +672,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							// score vector
 							matmult(REAL(R_jac),dx,nCov,qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),&info);
 							CHECK_UNPROTECT("matmult")
+							qn = denorm(REAL(R_S),dx);
 
 							// quasi-Info
 							info = qlm.intern_quasiInfo(REAL(R_jac),REAL(R_I));
@@ -695,6 +698,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							SET_VECTOR_ELT(R_ans, 4, R_sig2);
 							SET_VECTOR_ELT(R_ans, 5, R_jac);
 							SET_VECTOR_ELT(R_ans, 6, R_varS);
+							SET_VECTOR_ELT(R_ans, 7, ScalarReal(qn));
 							setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 							SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -703,7 +707,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 			  } else {
 
-					  double fval=0;
+					  double fval=0,qn=0;
 					  int nprotect=3;
 					  const char *nms[] = {"value", "par", "I", "score", "jac",""};
 
@@ -724,6 +728,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							// score vector
 							matmult(REAL(R_jac),dx,nCov,qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),&info);
 							CHECK_UNPROTECT("matmult")
+							qn = denorm(REAL(R_S),dx);
 
 							// quasi-Info
 							qlm.intern_quasiInfo(REAL(R_jac),REAL(R_I));
@@ -738,6 +743,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							SET_VECTOR_ELT(R_ans, 2, R_I);
 							SET_VECTOR_ELT(R_ans, 3, R_S);
 							SET_VECTOR_ELT(R_ans, 4, R_jac);
+							SET_VECTOR_ELT(R_ans, 5, ScalarReal(qn));
 							setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 							SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -916,7 +922,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
       int i = 0, info = 0,
     	  np = LENGTH(R_points);
 
-      value_type type = (value_type)asInteger(AS_INTEGER(R_qdValue));
+      value_type type = (value_type) asInteger(AS_INTEGER(R_qdValue));
 
       ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, type);
 
@@ -953,7 +959,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
     		  nCov = qlm.nCov;
 
     	  double *point = NULL,
-    			  fval = 0, qval = 0;
+    			  fval = 0, qval = 0, qn = 0;
 
           SEXP R_ret, R_ans, R_sig2 = R_NilValue;
           SEXP R_Iobs, R_S, R_jac, R_I, R_varS;
@@ -980,7 +986,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
         	  int nprotect=6;
         	  const char *nms[] =
         	  	  {"value", "par", "I", "score", "sig2",
-        	  	   "jac","varS", "Iobs", "qval", ""};
+        	  	   "jac","varS", "Iobs", "Qnorm", "qval", ""};
 
         	  for(; i < np; ++i) {
 					  PROTECT(R_S = allocVector(REALSXP,dx));
@@ -1001,6 +1007,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 
 					  qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
 					  MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
+					  qn = denorm(REAL(R_S),dx);
 
 					  setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
 					  setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
@@ -1016,7 +1023,8 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 					  SET_VECTOR_ELT(R_ans, 5, R_jac);
 					  SET_VECTOR_ELT(R_ans, 6, R_varS);
 					  SET_VECTOR_ELT(R_ans, 7, R_Iobs);
-					  SET_VECTOR_ELT(R_ans, 8, ScalarReal(qval));
+					  SET_VECTOR_ELT(R_ans, 8, ScalarReal(qn));
+					  SET_VECTOR_ELT(R_ans, 9, ScalarReal(qval));
 					  setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 					  SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -1025,7 +1033,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
           } else {
         	  int nprotect=4;
         	  const char *nms[] =
-				  {"value", "par", "I", "score", "jac", "Iobs" ,""};
+				  {"value", "par", "I", "score", "jac", "Iobs", "Qnorm" ,""};
 
 			  for(; i < np;  ++i) {
 					  PROTECT(R_S = allocVector(REALSXP,dx));
@@ -1035,6 +1043,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 
 					  point = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
 					  fval = qlm.qfScoreStat(point,REAL(R_jac),REAL(R_S),REAL(R_I));
+					  qn = denorm(REAL(R_S),dx);
 
 					  info = qlm.intern_quasiObs(point,REAL(R_S),REAL(R_Iobs));
 					  CHECK_UNPROTECT("intern_quasiObs")
@@ -1050,6 +1059,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 					  SET_VECTOR_ELT(R_ans, 3, R_S);
 					  SET_VECTOR_ELT(R_ans, 4, R_jac);
 					  SET_VECTOR_ELT(R_ans, 5, R_Iobs);
+					  SET_VECTOR_ELT(R_ans, 6, ScalarReal(qn));
 					  setVmatAttrib(&qlm, R_VmatNames, R_ans);
 
 					  SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -1109,6 +1119,50 @@ double ql_model_s::qfScoreStat(double *x, double *jac, double *score, double *qi
 	return qfValue(score,qimat);
 }
 
+
+double ql_model_s::intern_qfScoreNorm(double *x) {
+	/* kriging statistics */
+	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
+		LOG_ERROR(info,"intern_kriging")
+		return R_NaN;
+	}
+	//printVector("krig.mean",glkm->krigr[0]->mean,&dx);
+	//printVector("krig.var",glkm->krigr[0]->sig2,&dx);
+
+	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
+		LOG_ERROR(info,"intern_jacobian")
+		return R_NaN;
+	}
+	//printMatrix("jac",jac,&dx,&nCov);
+
+	if( (info = intern_cvError(x)) != NO_ERROR){
+		 LOG_ERROR(info,"intern_cvError")
+		 return R_NaN;
+	}
+
+	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,&info);
+	if(info != NO_ERROR) {
+		LOG_ERROR(info,"varMatrix")
+		return R_NaN;
+	}
+	//printMatrix("vmat",qld->vmat,&nCov,&nCov);
+
+	if( (info = intern_quasiScore(jac,score)) != NO_ERROR){
+		 LOG_ERROR(info,"intern_quasi-score")
+		 return R_NaN;
+	}
+	//printVector("score",score,&dx);
+
+	if ( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR){
+		 LOG_ERROR(info,"intern_quasiInfo")
+		 return R_NaN;
+	}
+	//printMatrix("Imat",qimat,&dx,&dx);
+	double sum=0;
+	for(int i=0; i<dx; ++i)
+	  sum += score[i]*score[i];
+	return std::sqrt(sum);
+}
 
 double ql_model_s::intern_qfTrace(double *x) {
 	/* kriging */
@@ -1221,13 +1275,11 @@ double ql_model_s::intern_qfVarStat(double *x) {
  */
 double ql_model_s::qfValue(double *score, double *varS) {
 	MEMCPY(qlsolve.score,score,dx);
-	//solveDSPTRS(varS,dx,qlsolve.score,ONE_ELEMENT,&info);
 	gsiSolve(varS,dx,qlsolve.score,ONE_ELEMENT,qlsolve.varS,&info,Chol);
 	if(info != NO_ERROR){
 	   LOG_ERROR(info,"gsiSolve");
 	   return R_NaN;
 	}
-
 	double sum=0;
 	for(int i=0; i<dx; ++i)
 	  sum += qlsolve.score[i]*score[i];

@@ -200,7 +200,7 @@ double norm_2( double *x1, double *x2, int dx1, int dx2, int xdim) {
 
 }
 
-double denorm (double *x, int n) {
+double denorm(double *x, int n) {
   double value = 0.0;
   for (int i = 0; i < n; i++ )
     value += x[i] * x[i];
