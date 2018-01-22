@@ -104,21 +104,21 @@
 }
 
 .addQscoreOptions <- function() {
-	list( "ftol_stop" = .Machine$double.eps,
-		  "xtol_rel"  = .Machine$double.eps^(1/3),
-		  "grad_tol"  = .Machine$double.eps^0.25,
-		  "ftol_rel"  = .Machine$double.eps^(1/3),
-		  "ftol_abs"  = .Machine$double.eps^0.5,
+	list( "ftol_stop" = 1e-10,
+		  "xtol_rel"  = 1e-6,
+		  "grad_tol"  = 1e-4,
+		  "ftol_rel"  = 1e-8,
+		  "ftol_abs"  = 1e-6,								# only for local minima if grad_tol reached as a more restrictive check
 		  "score_tol" = 1e-5,
-		  "slope_tol" = 1e-3,
+		  "slope_tol" = 1e-4,
 		  "maxiter"   = 100,
-		  "pl"=0L)
+		  "pl" = 0L)
 }
 
 .getDefaultGLoptions <- function(xdim) {
 	list("stopval" = .Machine$double.eps,			 		# global stopping value
 		 "C_max"   = 1e-3,
-		 "xtol_rel" = .Machine$double.eps^(1/3),
+		 "xtol_rel" = .Machine$double.eps^0.25,
 		 "maxiter" = 100,									# max number of global iterations
 		 "maxeval" = 100,									# max number of global and local iterations
 		 "sampleTol" = .Machine$double.eps^0.25,			# minimum (euclidean) distance between samples		 
@@ -663,9 +663,8 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' 	  \item{par}{solution vector}
 #' 	  \item{value}{objective value}
 #' 	  \item{method}{applied method}
-#' 	  \item{status}{termination code}
+#' 	  \item{convergence}{termination code}
 #' 	  \item{score}{if applicable, quasi-score vector (or gradient of MD)}
-#' 	  \item{convergence}{logical, indicates numerical convergence}	 
 #' 
 #' @examples
 #' data(normal)
@@ -732,23 +731,28 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		} else NULL
 	}
 	
-    if(!is.null(S0) && (.isError(S0) || S0$convergence <= 0L)){
+    if(!is.null(S0) && (.isError(S0) || S0$convergence < 0L)){
 	   if(pl > 0L) { 
-		 msg <- message(.makeMessage("Minimization by `",fun.name,"` did not converge."))
-		 if(!is.null(S0$status))
-		  msg <- c(msg, paste(" (status=",S0$status,") ") )
+		 msg <- .makeMessage("Minimization by `",fun.name,"` did not converge: ")
+		 if(!is.null(S0$convergence))
+		  msg <- c(msg, paste0(" (status=",S0$convergence,")") )
 	  	 if(inherits(S0,"error"))
 			msg <- c(msg, conditionMessage(S0)) 
 		 message(msg)
 	   }
+	   if(pl >= 10L){
+	   	   message("Failed minimization: \n\n")
+		   print(S0)
+		   cat("\n\n")
+	   }
 	   method <- method[-1]
 	   if(is.na(method[1])){
-			message("No convergence and only one method supplied")
+			message("No convergence and only one method supplied.")
 			return(S0)	
 	   }		
     }
 	
-	if(is.null(S0) || S0$convergence <= 0L) {	  	
+	if(is.null(S0) || S0$convergence < 0L) {	  	
 	  S0 <- 
 		tryCatch({			
 			if(length(control) == 0L){
@@ -818,7 +822,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 								}
 						)		 
 					  }, error = function(e) {e})
-				if(!inherits(S0,"error") && S0$convergence > 0L) {				
+			    
+				if(!inherits(S0,"error") && S0$convergence >= 0L) {				
 					break
 				} else {
 					msg <- .makeMessage("Minimization failed by: ",fun.name,".")
@@ -844,12 +849,11 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
  	
     if(class(S0) != "QSResult") {	 
 	  S0 <- structure(
-	    	    c(S0,list("method"=fun.name,						  
-					   	  "status"=S0$convergence,
+	    	    c(S0,list("method"=fun.name,				   	  
 						  "criterion"=qsd$criterion,						 
 				 		  "start"=x0)),
 	  		   class="QSResult")
-	 
+		 
 	  if(info){
 		qd <-
 		  tryCatch({				
@@ -863,7 +867,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 				.qleError(message=msg,call=sys.call(),error=e)		
 		  })
 		if(!.isError(qd)){			
-	 		S0 <- structure(c(S0,qd[[1]]),
+	 		S0 <- structure(
+					  c(S0,qd[[1]][which(!(names(qd[[1]]) %in% names(S0)))]),
 					 Sigma = attr(qd,"Sigma"),
 				   class = "QSResult")				 	
 	 	} else { 
@@ -871,11 +876,14 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 			return(structure(S0, error = qd))
 		}
 	  }
-    }
-	
-	if(verbose)
-	  cat("Successful minimization by: ",fun.name,"\n\n")  
-  		
+    }	
+	if(verbose){
+	  cat(paste0("Successful minimization by: ",fun.name," (status=",S0$convergence,")","\n\n"))
+	  if(pl >= 10L){
+		  print(S0)
+		  cat("\n\n")
+	  }
+    }  		
     return(S0)   
 }
 
@@ -1381,7 +1389,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				# during the global phase, eventually a sampled point 'Snext' also becomes
 				# a minimizer after a number of steps cycling through the global weights						
 				x <- xt; f <- ft;		
-				if(!inherits(S0,"error") && S0$convergence){					
+				if(!inherits(S0,"error") && S0$convergence >= 0L){					
 					xt <- S0$par
 					ft <- S0$value
 					 I <- S0$I
@@ -1809,6 +1817,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	ctls["maxiter",c(2,4)] <- c(nglobal,nglobal >= maxIter)
 	ctls["maxeval",c(2,4)] <- c(nglobal+nlocal, nglobal+nlocal >= maxEval)	
 	
+	#browser()
+	
 	# remove `nfail`, `nsucc`
 	ctls <-
 	 if(.isError(S0)) {
@@ -1885,7 +1895,7 @@ print.qle <- function(x, pl = 2, digits = 5,...){
 		
 		cat("\n")
 		if(pl > 1) {			
-			if(x$convergence) {
+			if(x$convergence >= 0L) {
 				by <- x$ctls[x$why,"val"]
 				names(by) <- x$why
 				cat("Convergence: ")
@@ -1942,14 +1952,14 @@ print.QSResult <- function(x, pl = 1, digits = 5,...) {
     if(!is.numeric(pl) || pl < 0L )
 	 stop("Print level must be a positive numeric value.")
  
-	cat("Local method: ",x$method,"\n\n")		
+	cat(paste0("Local method:\n\n `",x$method,"`\n\n"))		
 	cat("Solution: \n\n")
 	print.default(formatC(signif(x$par, digits = digits), digits = digits, format="fg", flag="#"),
 			print.gap = 4, quote = FALSE)
 	cat("\n")
-	cat("Objective:\n\n",x$value,"\n\n")
+	cat("Quasi-deviance:\n\n",x$value,"\n\n")
 	cat("Iterations....",x$iter,"\n")		
-	cat("Convergence...",x$convergence,"\n")				
+	cat("Convergence...",x$convergence >= 0L,"\n")				
 	if(!is.null(x$score)){
 		cat("\nStopped by: \n\n",unlist(strsplit(paste(x$message, "\n" ),':')), fill=TRUE )
 		if(x$criterion == "qle") {
@@ -2083,15 +2093,14 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @param verbose   \code{FALSE} (default), otherwise print intermediate output
 #'
 #' @return List of results of quasi-scoring iteration.
-#'  \item{status}{ integer, why scoring iterations stopped}
-#'  \item{message}{ string, corrsponding to `\code{status}`}
+#'  \item{convergence}{ integer, why scoring iterations stopped}
+#'  \item{message}{ string, corrsponding to `\code{convergence}`}
 #'  \item{iter}{ number of iterations}
 #'  \item{value}{ quasi-deviance value}
 #'  \item{par}{ solution vector}
 #'  \item{score}{ quasi-score vector}
 #'  \item{I}{ quasi-information matrix}
 #'  \item{start}{ starting point}
-#'  \item{convergence}{ integer, for convergence=1 and local convergence=10, no convergence=-1}
 #'  \item{method}{ simply: "\code{qscoring}"}
 #'  \item{criterion}{ equal to "\code{qle}"} 
 #'
@@ -2125,7 +2134,6 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' 		\item{\code{grad_tol}:}{ upper bound on the quasi-score vector components,
 #' 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
 #' 		\item{\code{score_tol}:}{ upper bound on the quasi-score vector components, testing for an approximate root}
-#'		\item{\code{slope_tol}:}{ upper bound on the 2-norm of the quasi-score vector, testing for an approximate descent step}
 #'      \item{\code{maxiter}:}{ maximum allowed number of iterations}
 #' 	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual
 #' 							 iterates and further values}

@@ -208,7 +208,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 	  return(RES)
 	
     # check results again
-	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence>0))
+	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L))
 	if(length(ok) == 0L){
 		stop(.makeMessage("All re-estimations have errors or did not converge, first errors: ","\n"))						
 	} else if(length(ok) < length(RES)){
@@ -475,7 +475,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	  return(.qleError(message=msg,call=match.call(),error=RES))	
 	}
 	# check results again
-	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence>0 ))
+	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L ))
 	if(length(ok) == 0L){
 		msg <- paste("All re-estimations have errors or did not converge: ")
 		warning(msg)
