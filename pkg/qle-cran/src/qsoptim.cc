@@ -390,7 +390,7 @@ void backtr(int n, double *xold, double fold,  double *d, double *g, double *x,
 
   slope2=( type ? -fold : innerProduct(g,d,n)); 	// equals monitor if
   *slope=slope2;       						     	// quasi-deviance is used
-  if(slope2 >= 0.0){
+  if(!R_FINITE(slope2) || slope2 >= 0.0){
   	   WRR("Roundoff problems in line search.")
   	   *check=1;
   	   return;
@@ -424,7 +424,7 @@ void backtr(int n, double *xold, double fold,  double *d, double *g, double *x,
 				slope2=-fold;						// heuristic: some required decrease in monitor fucntion QD
 			 }
 			 *slope=slope2;
-			 if(slope2 >= 0.0){
+			 if(!R_FINITE(slope2) || slope2 >= 0.0){
 			   WRR("Roundoff problems in line search.")
 			   *check=1;
 			   return;
