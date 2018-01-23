@@ -159,7 +159,7 @@ crossValTx(qsd, cvm, type = "sigK")
 OPT <- qle(qsd, simClust, cond=cond,  
 		qscore.opts=list("pl"=0,"score_tol"=1e-3),
 		global.opts = list("maxiter"=5,
-				           "maxeval" = 5,
+				           "maxeval" = 10,
 				           "weights"=c(50,10,5,1,0.1),
 						   "NmaxQI"=3),
 		local.opts = list("lam_max"=1e-2,
@@ -170,9 +170,9 @@ OPT <- qle(qsd, simClust, cond=cond,
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
 						  "test"=FALSE),			# testing is enabled
 		method = c("qscoring","bobyqa","direct"),		
-		errType="max", iseed=297, cl=cl, pl=5)
+		errType="max", iseed=297, cl=cl, pl=10)
 
-print(OPT)
+print(OPT,pl=10)
 
 # extract information of parameter estimation
 local <- OPT$final
