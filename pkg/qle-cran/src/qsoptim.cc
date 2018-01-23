@@ -416,12 +416,12 @@ void backtr(int n, double *xold, double fold,  double *d, double *g, double *x,
 			 *fn2=monitor;
 			 // use new monitor for old value
 			 (*fn)(xold, data, &fold, info);		// recompute monitor at fold
-			 if(type){								// set new slope paramater
+			 if(type){								// set new slope parameter
 				type=0;								// use norm of quasi-score next iteration of LS
 			 	slope2=innerProduct(g,d,n);			// would be the slope of norm QS if we had the Jacobian of QS (use QI instead as approximation)
 			 } else {
 				type=1;								// use quasi-deviance next iteration of LS
-				slope2=-fold;						// heuristic: some required decrease in monitor fucntion QD
+				slope2=-fold;						// heuristic: some required decrease in monitor function QD
 			 }
 			 *slope=slope2;
 			 if(!R_FINITE(slope2) || slope2 >= 0.0){
