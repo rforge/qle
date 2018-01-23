@@ -17,6 +17,9 @@ Changes with 0.16-9
 
 1) Local test of approximate root is now done only in case the quasi-deviance/quasi-score is numerically not zero
 2) C function for FD approximation now uses pre-allocated storage
+3) Improved LS in quasi-scoring, now using norm of QS and QD as monitor functions (switching when no progress in LS)
+4) If local search was successful, then (even during global phase) use it as the current iteration point
+5) Start local search from last sample point (global phase) or last local minimum (local phase) 		  
 		  
 		  
 Current known issues
