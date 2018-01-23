@@ -927,8 +927,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  Attributes: 	 
 #'  
 #'  \item{tracklist}{ an object (list) of class \code{QDtrack} containing the local minimization results,
-#'     criterion function evaluations (only in case of non-convergence), evaluated sample points and
-#' 		 the status of the corresponding iteration}    
+#'     evaluated sample points and the status of the corresponding iteration}    
 #'  \item{optInfo}{ a list of arguments related to the estimation procedure:}
 #'  \itemize{
 #'    \item{x0:}{ starting parameter vector}
@@ -1892,11 +1891,11 @@ print.qle <- function(x, pl = 2, digits = 5,...){
   
 	if(pl > 0L) {
 	  	if(x$qsd$criterion == "mahal")
-		 cat("Mahalanobis distance value: \n\n",x$value,"\n\n")
+		 cat("Mahalanobis distance: \n\n",x$value,"\n\n")
 		else			
-		 cat("Quasi-deviance value: \n\n",x$value,"\n\n")
+		 cat("Quasi-deviance: \n\n",x$value,"\n\n")
 	  	
-		cat("Estimated parameter:\n\n")
+		cat("Estimate:\n\n")
 		print.default(formatC(signif(x$par, digits = digits), digits = digits, format="fg", flag="#"),
 				print.gap = 4, quote = FALSE)
 		
@@ -1911,18 +1910,18 @@ print.qle <- function(x, pl = 2, digits = 5,...){
 			    else cat("\n\n")
 				print.default(formatC(by, format="e", digits=digits), right=FALSE, print.gap=2,
 						quote=FALSE)
-			} else cat("(No convergence criteria matched.)\n\n")
+			} else cat("(None of convergence criteria matched.)\n\n")
 		} 
 	}
   	if(pl > 1L) {
 		cat("\n")	
 		nsim <- unlist(x$ctls["maxeval","val"])*attr(x,"optInfo")$nsim	
 		cat("Evaluations: ",unlist(x$ctls["maxeval","val"])," (simulations: ",nsim,")\n\n")
-		cat("Variance approximation by: ",x$qsd$var.type,"\n")	
+		cat("Variance approximation type: ",x$qsd$var.type,"\n")	
 	}
 	if(pl > 2L) {
 		if(!.isError(x$final)) {
-			cat("\n\n ***  Final search results *** \n\n\n")			
+			cat("\n\n ***  Final results *** \n\n\n")			
 			print(x$final)
 	 	}
 		if(x$qsd$var.type != "kriging"){
@@ -1953,7 +1952,7 @@ print.qle <- function(x, pl = 2, digits = 5,...){
 #' @export 
 print.QSResult <- function(x, pl = 1, digits = 5,...) {	
 	if(.isError(x)) 
-	  stop(.makeMessage("Quasi-scoring result has errors.","\n"))
+	  stop(.makeMessage("Quasi-scoring iteration had errors.","\n"))
 	if(!inherits(x,"QSResult"))
 	  stop("Method is only for objects of class `QSResult`.")	
     if(!is.numeric(pl) || pl < 0L )
@@ -1980,7 +1979,7 @@ print.QSResult <- function(x, pl = 1, digits = 5,...) {
 	if(pl > 1L) {
 		Sigma <- attr(x,"Sigma")		
 		if(!is.null(Sigma)) {	
-			cat("\nVariance matrix approximation: \n\n Sigma = \n\n")
+			cat("\nApproximation of variance matrix: \n\n Sigma = \n\n")
 			print(Sigma)
 			cat("\n\n")
 		} 		
