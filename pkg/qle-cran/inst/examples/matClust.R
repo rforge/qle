@@ -71,7 +71,7 @@ Nsample <- 12
 
 # define parameter space
 lb <- c("kappa"=20,"R"=0.01,"mu"=1)
-ub <- c("kappa"=30,"R"=0.25,"mu"=5)
+ub <- c("kappa"=35,"R"=0.25,"mu"=5)
 
 # general approach to initialize a (local) cluster object
 cl <- makeCluster(8)
@@ -112,10 +112,18 @@ x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
 attr(cvm,"type") <- "max"
 
 # first try quasi-scoring with CV errors (type=max)
-QS0 <- qscoring(qsd,x0,
-		 opts=list("ftol_rel"=1e-6,"slope_tol"=1e-3),
-		 cvm=cvm,pl=10,verbose=TRUE)
+(QS0 <- qscoring(qsd,x0,
+		 opts=list("pl"=10,
+				   "ftol_rel"=1e-7,
+				   "xtol_rel"=1e-7,
+				   "score_tol"=1e-7,
+				   "slope_tol"=1e-7),
+		 cvm=cvm,pl=10,verbose=TRUE))
  
+QS0$Qnorm
+quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]
+
+
 ## inspect CV errors vs. kriging variances
 # no significant bias in predicting the statistics 
 crossValTx(qsd, cvm, type = "acve")
@@ -146,38 +154,51 @@ crossValTx(qsd, cvm, type = "sigK")
 # the maximum of CV errors and kriging variances
 # in order to accouont for the prediction uncertainty
 # of sample means of the statistics
+
+#debug(qle)
 OPT <- qle(qsd, simClust, cond=cond,  
-		global.opts = list("maxiter"=10,
-				           "maxeval" = 15,
-				           "weights"=c(10,5,1),
+		qscore.opts=list("pl"=0,"score_tol"=1e-3),
+		global.opts = list("maxiter"=5,
+				           "maxeval" = 5,
+				           "weights"=c(50,10,5,1,0.1),
 						   "NmaxQI"=3),
 		local.opts = list("lam_max"=1e-2,
 				          "nobs"=50,				# number of (bootstrap) generated observations for testing local minimizer
 				          "nextSample"="score",		# sample criterion
-				          "ftol_abs"=0.1,			# upper bound on 
+				          "ftol_abs"=1e-7,			# upper bound on 
 						  "weights"=c(0.55),		# constant weight factor
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
-						  "test"=TRUE),				# testing is enabled
+						  "test"=FALSE),			# testing is enabled
 		method = c("qscoring","bobyqa","direct"),		
 		errType="max", iseed=297, cl=cl, pl=5)
 
 print(OPT)
 
-
 # extract information of parameter estimation
 local <- OPT$final
 info <- attr(OPT,"optInfo")
+track <- attr(OPT,"tracklist")
+
+local$message
+do.call(rbind,lapply(track,function(x) x$S0$score))
+track
 
 # do a global search with final QL model
 # and compare with the following local results
+xt <- track[[5]]$Snext$par
+D0 <- searchMinimizer(xt, OPT$qsd,
+		opts=list("pl"=10,"xtol_rel"=1e-6),
+		method="qscoring",cvm=OPT$cvm,
+		verbose=TRUE)
+
+
 S0 <- searchMinimizer(OPT$par, OPT$qsd,
-			method="bobyqa",cvm=OPT$cvm,
+			method="qscoring",cvm=OPT$cvm,
 			verbose=TRUE)
 
 # quas-scoring again more precise results
 QS <- qscoring(OPT$qsd,OPT$par,
-		opts=list("slope_tol"=1e-4,
-				   "score_tol"=1e-3),
+		opts=list("score_tol"=1e-3),
 		cvm=OPT$cvm,pl=10)
 
 # compare the different estimates

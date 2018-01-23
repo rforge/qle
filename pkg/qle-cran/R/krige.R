@@ -624,7 +624,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 			if(length(has.na) == length(ret)){
 				stop("All quasi-deviance calculations produced `Na` values.")
 			}
-			if(length(has.na>0L)){		
+			if(length(has.na > 0L)){		
 				message("Removing `Na` values from results of quasi-deviance calculation.")
 				return( structure(ret[-has.na],  "hasNa"=has.na))
 			}
