@@ -622,10 +622,10 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 		if(na.rm){
 			has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
 			if(length(has.na) == length(ret)){
-				stop("All quasi-deviance calculations produced `Na` values.")
+				stop("All quasi-deviance calculations produced `NA` values.")
 			}
 			if(length(has.na > 0L)){		
-				message("Removing `Na` values from results of quasi-deviance calculation.")
+				message("Removing `NA` values from results of quasi-deviance calculation.")
 				return( structure(ret[-has.na],  "hasNa"=has.na))
 			}
 		}
@@ -786,10 +786,10 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 			if(na.rm){
 				has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
 				if(length(has.na) == length(ret)){
-					stop("All  Mahalanobis distance calculations produced `Na` values.")
+					stop("All  Mahalanobis distance calculations produced `NA` values.")
 				}
 				if(length(has.na>0L)){
-					warning("Removed `Na` values from results of Mahalanobis distance calculation.")
+					warning("Removed `NA` values from results of Mahalanobis distance calculation.")
 					return(	structure(ret[-has.na],	"hasNa"=has.na))
 			    }				
 			}
