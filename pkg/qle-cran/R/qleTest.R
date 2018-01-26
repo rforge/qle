@@ -61,7 +61,7 @@
 	
   	ok <- which(A[,1]==TRUE & apply(A[,2:3],1,any))
   	if(length(ok) == 0L){
-	    message(.makeMessage("None of the estimates seems match `ftol_stop` or `score_tol` condition. Try to select the one which has smallest criterion value."))
+	    message(.makeMessage("None of the estimates seems match `ftol_stop` or `score_tol` condition.\nSelect the one which has smallest criterion value."))
 		id <- try(which.min(dm[,"value"]),silent=TRUE)
 		if(!inherits(id,"try-error") && length(id)>0L)
 		  dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
@@ -115,7 +115,7 @@
 				   .qleError(message=msg,call=sys.call(),error=qIinv)
 				}
 				M <- qIinv%*%qd$Iobs				
-				structure(c("minor"=.isPosDef(qd$Iobs),
+				structure(c("minor"=.isPosDef(qd$Iobs),				# if not pos. def. then this root is excluded
 							"value"=qd$value,							
 						   	"|det|"=abs(1-det(M)),
 							"|max|"=max(abs(diag(M)-rep(1,xdim))),
