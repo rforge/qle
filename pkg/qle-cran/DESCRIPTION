@@ -1,7 +1,7 @@
 Package: qle
 Title: Simulation-Based Quasi-Likelihood Estimation
-Version: 0.16-8
-Date: 2018-01-03
+Version: 0.17
+Date: 2018-01-26
 Authors@R: c(person("Markus", "Baaske", role = c("aut", "cre", "cph"),
 			 email = "markus.baaske@uni-jena.de"),
 			 person("K. Gerald", "van den Boogaart", role = c("ths"),
