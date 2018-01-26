@@ -4,27 +4,28 @@
 \alias{multiSearch}
 \title{A multistart version of local searches for parameter estimation}
 \usage{
-multiSearch(qsd, xstart = NULL, nstart = 10, ..., cl = NULL,
-  verbose = FALSE)
+multiSearch(xstart = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
+  cl = NULL, verbose = FALSE)
 }
 \arguments{
+\item{xstart}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
+
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{xstart}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
+\item{...}{arguments passed to \code{\link{searchMinimizer}}}
 
 \item{nstart}{number of random samples from which to start local searches (if `\code{xstart}`=\code{NULL}, then ignored)}
 
-\item{...}{arguments passed to \code{\link{searchMinimizer}}}
+\item{optInfo}{logical, \code{FALSE} (default), whether to store original local search results}
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{verbose}{if \code{TRUE} (default), print intermediate output}
 }
 \value{
-Matrix of estimated parameters for which any of the available minimization methods
- has been successfully applied. If `code{verbose}` is \code{TRUE}, then the originally estimtation reuslts
- are also returned. The best solution is stored as an attribute named `\code{par}` if any could have been found
- and \code{NULL} otherwise.
+Object of class \code{QSResult} and attribute `\code{roots}`, e.t. the matrix of estimated parameters for which any of
+ the available minimization methods has been successfully applied. If `code{optInfo}` is \code{TRUE}, then the originally estimtation reuslts
+ are also returned. The best solution is stored as an attribute named `\code{par}` if any could have been found.
 }
 \description{
 The function is multistart version of \code{\link{searchMinimizer}} which selects the best
@@ -38,8 +39,12 @@ The function performs a number of local searches depending which local method `\
 }
 \examples{
  data(normal)
- roots <- multiSearch(qsd,nstart=3,method=c("qscoring","bobyqa"),
-           opts=list("ftol_stop"=1e-9,"score_tol"=1e-3),verbose=TRUE)
+ x0 <- c("mu"=3.5,"sigma"=1.5)
+ S0 <- multiSearch(xstart=x0,qsd,method=c("qscoring","bobyqa"),
+           opts=list("ftol_stop"=1e-9,"score_tol"=1e-3),nstart=4,
+            optInfo=TRUE,verbose=TRUE)
+
+ roots <- attr(S0,"roots")
  id <- attr(roots,"id")
  stopifnot(!is.na(id)) 
  id  # index of best root found in matrix roots
