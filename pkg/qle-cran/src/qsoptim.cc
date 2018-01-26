@@ -90,7 +90,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     qfs_result status = qfscoring(xsol,xdim,&fval,&qfs,&info);
 
     /* return objects */
-    SEXP R_S, R_jac, R_I;
+    SEXP R_S, R_jac, R_I, R_Iobs=R_NilValue;
     PROTECT(R_S = allocVector(REALSXP,xdim));
     ++nProtected;
     PROTECT(R_I = allocMatrix(REALSXP,xdim,xdim));
@@ -102,6 +102,13 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     MEMCPY(REAL(R_S),qlm.score,xdim);
     MEMCPY(REAL(R_I),qlm.qimat,xdim*xdim);
     MEMCPY(REAL(R_jac),qlm.jac,xdim*qlm.nCov);
+    if(qfs.doIobs){
+      	PROTECT(R_Iobs = allocMatrix(REALSXP,xdim,xdim));
+       	++nProtected;
+       	info = qlm.intern_quasiObs(xsol, qlm.score, REAL(R_Iobs));
+       	if( info != NO_ERROR )
+       	  XWRR( info, "inter_quasiObs")
+    }
 
     /* add prediction variances to return list */
     SEXP R_sig2 = R_NilValue, R_varS = R_NilValue;
@@ -147,7 +154,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 
     static const char *nms[] =
      {"convergence", "message", "iter", "value", "par",
-     "score", "sig2", "I", "varS", "start", "Qnorm",
+     "score", "sig2", "I", "Iobs", "varS", "start", "Qnorm",
 	 "method", "criterion", ""};
 
     SEXP R_ret = R_NilValue;
@@ -162,11 +169,12 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     SET_VECTOR_ELT(R_ret, 5, R_S);
     SET_VECTOR_ELT(R_ret, 6, R_sig2);
     SET_VECTOR_ELT(R_ret, 7, R_I);
-    SET_VECTOR_ELT(R_ret, 8, R_varS);
-    SET_VECTOR_ELT(R_ret, 9, R_start);
-    SET_VECTOR_ELT(R_ret, 10, ScalarReal(fval));
-    SET_VECTOR_ELT(R_ret, 11, mkString("qscoring"));
-    SET_VECTOR_ELT(R_ret, 12, mkString("qle"));
+    SET_VECTOR_ELT(R_ret, 8, R_Iobs);
+    SET_VECTOR_ELT(R_ret, 9, R_varS);
+    SET_VECTOR_ELT(R_ret, 10, R_start);
+    SET_VECTOR_ELT(R_ret, 11, ScalarReal(fval));
+    SET_VECTOR_ELT(R_ret, 12, mkString("qscoring"));
+    SET_VECTOR_ELT(R_ret, 13, mkString("qle"));
     setVmatAttrib(&qlm, R_VmatNames, R_ret);
     SET_CLASS_NAME(R_ret,"QSResult")
 
@@ -346,11 +354,11 @@ qfs_result qfscoring(double *x,			 	/* start */
 			 /*! test for relative change in x */
 			 test=0.0;
 			 for (i=0;i<n; ++i) {
-				 tmp=(std::fabs(x[i]-xold[i]))/MAX(std::fabs(x[i]),1.0);
-				 if(tmp > test)
-				   test=tmp;
+				   tmp=(std::fabs(x[i]-xold[i]))/MAX(std::fabs(x[i]),1.0);
+				   if(tmp > test)
+				    test=tmp;
 			 }
-			 if(test < qfs->xtol_rel) {
+			 if(test < qfs->xtol_rel && test > 0) {
 				FREE_WORK
 				qfs->num_iter=niter;
 				return QFS_XTOL_REACHED;

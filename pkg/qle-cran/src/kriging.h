@@ -540,7 +540,7 @@ typedef struct ql_model_s {
 
     }
 
-	inline int intern_quasiObs(double *x, double *score, double *qiobs);
+	int intern_quasiObs(double *x, double *score, double *qiobs);
 
 	inline int intern_quasiScore(double *jac, double *score) {
 		 quasiScore(glkm->krigr[0]->mean,jac,qld->vmat,score,&info);

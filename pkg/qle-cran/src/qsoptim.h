@@ -33,7 +33,7 @@ typedef struct qfs_options_s {
   ql_model qlm;
 
   int num_iter, num_eval; /* used */
-  int pl, info;	 		  /* print level */
+  int pl, info, doIobs;	 		  /* print level */
 
   double grad_tol,        /* stopping criteria */
   	     ftol_stop,
@@ -46,9 +46,10 @@ typedef struct qfs_options_s {
   int max_iter;    /* limits */
 
   qfs_options_s(ql_model _qlm, SEXP R_options) :
-	  qlm(_qlm), num_iter(0), num_eval(0), pl(0), info(0)
+	  qlm(_qlm), num_iter(0), num_eval(0), pl(0), info(0), doIobs(FALSE)
   {
     pl = asInteger(getListElement( R_options, "pl"));
+    doIobs = asInteger(getListElement( R_options, "Iobs"));
 	ftol_rel  = asReal(getListElement( R_options, "ftol_rel" ));
 	ftol_stop = asReal(getListElement( R_options, "ftol_stop"));
 	ftol_abs  = asReal(getListElement( R_options, "ftol_abs"));
