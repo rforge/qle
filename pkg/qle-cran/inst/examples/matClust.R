@@ -130,14 +130,16 @@ opts <-list("ftol_stop"=1e-10,"ftol_rel"=1e-7,
 		    "xtol_rel"=1e-10,"score_tol"=1e-3,
 			"slope_tol"=1e-6) 
 
-roots <- multiSearch(qsd,xstart=NULL,nstart=25,
-		  method,opts,cvm=cvm,cl=cl,verbose=TRUE)
+S0 <- multiSearch(xstart=x0,qsd,method,opts,check=FALSE,
+		cvm=cvm,nstart=25,optInfo=TRUE,cl=cl,verbose=TRUE)
 
+# best found root
+roots <- attr(S0,"roots")
 (id <- attr(roots,"id"))
 stopifnot(!is.na(id))
-# best found root
 attr(roots,"par")
- 
+roots
+
 ## inspect CV errors vs. kriging variances
 # no significant bias in predicting the statistics 
 crossValTx(qsd, cvm, type = "acve")
@@ -169,26 +171,27 @@ crossValTx(qsd, cvm, type = "sigK")
 # in order to accouont for the prediction uncertainty
 # of sample means of the statistics
 
-#debug(qle)
 OPT <- qle(qsd, simClust, cond=cond,  
-		qscore.opts=list("pl"=0,
+		qscore.opts=list("pl"=0,					# >=10 show quasi-scoring iterations
 				         "xtol_rel"=1e-7,
 						 "ftol_rel"=1e-7,
 						 "ftol_abs"=1e-6,
 						 "score_tol"=1e-3),
 		global.opts = list("maxiter"=5,
-				           "maxeval" = 5,
+				           "maxeval" = 10,
 				           "weights"=c(50,10,5,1,0.1),
-						   "NmaxQI"=3),
+						   "NmaxQI"=3, 
+						   "nstart"=25),			# default number of starting points
 		local.opts = list("lam_max"=1e-2,
-				          "nobs"=50,				# number of (bootstrap) generated observations for testing local minimizer
+				          "nobs"=50,				# number of (bootstrap) observations for testing local minimizer
 				          "nextSample"="score",		# sample criterion
-				          "ftol_abs"=0.1,			# upper bound on criterion value
+				          "ftol_abs"=1e-7,			# upper bound on criterion value
 						  "weights"=c(0.55),		# constant weight factor
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
 						  "test"=FALSE),			# testing is enabled
 		method = c("qscoring","bobyqa","direct"),		
-		errType="max", iseed=297, cl=cl, pl=10)
+		errType="max", iseed=297, multistart=TRUE,
+		cl=cl, pl=10)								# pl=10 also show failed local minimizations
 
 print(OPT,pl=10)
 
@@ -196,10 +199,10 @@ print(OPT,pl=10)
 local <- OPT$final
 info <- attr(OPT,"optInfo")
 track <- attr(OPT,"tracklist")
-
+# last message from local minimization
 local$message
+# history of roots
 do.call(rbind,lapply(track,function(x) x$S0$score))
-track
 
 # do a global search with final QL model
 # and compare with the following local results
