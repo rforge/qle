@@ -12,7 +12,7 @@ Changes with 0.16-8
    matrices or only approximate solutions to the equations.
 4) New rigorous checks of possible `NaN`, `NA` and non finite values
 
-Changes with 0.16-9
+Changes with 0.17
 -------------------
 
 1) Local test of approximate root is now done only in case the quasi-deviance/quasi-score is numerically not zero
