@@ -20,7 +20,9 @@ Changes with 0.16-9
 3) Improved LS in quasi-scoring, now using norm of QS and QD as monitor functions (switching when no progress in LS)
 4) If local search was successful, then (even during global phase) use it as the current iteration point
 5) Start local search from last sample point ( if at global phase) or last local minimum (if at local phase)
-6) Use a last local search at maximum iterations if at global phase with highest weight 		  
+6) Use a last local search at maximum iterations if at global phase with highest weight 	
+7) Added multistart support if the algorithm is in global phase. The best root found so far (for the criteria see the vigntte)
+   is selected and used for minitoring the progress, e.g. whether to switch to the local phase again or termination. 	  
 		  
 		  
 Current known issues
