@@ -65,7 +65,7 @@ qsd$cv.fit <- FALSE
 cvm <- prefitCV(qsd)
 theta0 <- c("mu"=2,"sd"=1)
 
-# get MSd by cross-validation at theta0 
+# get mean squared deviation using cross-validation at theta0 
 crossValTx(qsd, cvm, theta0, type = "msd")
 
 # and kriging variance  

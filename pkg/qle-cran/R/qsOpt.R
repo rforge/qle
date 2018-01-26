@@ -887,6 +887,87 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
     return(S0)   
 }
 
+#' @name multiSearch
+#'
+#' @title A multistart version of local searches for parameter estimation
+#'
+#' @description  The function is multistart version of \code{\link{searchMinimizer}} which selects the best
+#' 	root of the quasi-score (if there is any) or a local minimum from all found minima according to the criteria described in the vignette.
+#' 
+#' @param qsd		object of class \code{\link{QLmodel}}
+#' @param xstart 	numeric, \code{NULL} default, list, vector or matrix of starting parameters 
+#' @param nstart 	number of random samples from which to start local searches (if `\code{xstart}`=\code{NULL}, then ignored)
+#' @param ...    	arguments passed to \code{\link{searchMinimizer}} 
+#' @param cl 	 	cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
+#' @param verbose	if \code{TRUE} (default), print intermediate output
+#' 
+#' @details The function performs a number of local searches depending which local method `\code{method}` was passed to
+#'  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{xstart}` or are generated as an augmented 
+#'  design based on the sample set stored in `\code{qsd}`. The function evaluates all found solutions and selects the one which 
+#'  is best according to the criteria defined in the vignette.
+#' 
+#' @return Matrix of estimated parameters for which any of the available minimization methods
+#'  has been successfully applied. If `code{verbose}` is \code{TRUE}, then the originally estimtation reuslts
+#'  are also returned. The best solution is stored as an attribute named `\code{par}` if any could have been found
+#'  and \code{NULL} otherwise.
+#' 
+#' @seealso \code{\link{checkMultRoot}}
+#'  
+#' @examples 
+#'  data(normal)
+#'  roots <- multiSearch(qsd,nstart=3,method=c("qscoring","bobyqa"),
+#'            opts=list("ftol_stop"=1e-9,"score_tol"=1e-3),verbose=TRUE)
+#'  id <- attr(roots,"id")
+#'  stopifnot(!is.na(id)) 
+#'  id  # index of best root found in matrix roots
+#'  attr(roots,"par")  # the final parameter estimate w.r.t. id
+#'  
+#' @rdname multiSearch
+#' @author M. Baaske 
+#' @export 
+multiSearch <- function(qsd,xstart=NULL,nstart=10,...,cl=NULL,verbose=FALSE){
+	if(is.null(xstart)){		
+		X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
+		xstart <- multiDimLHS(N=nstart,qsd$lower,qsd$upper,X=X,
+				method="augmentLHS",type="matrix")
+	} 
+	if(!is.list(xstart))
+		xstart <- .ROW2LIST(xstart)
+	
+	opt.args <- list(...)
+	RES <- do.call(doInParallel,
+			c(list(X=xstart,
+				FUN=function(xstart,...){
+					searchMinimizer(xstart,...,check=FALSE)
+				},
+				cl=NULL, qsd=qsd), opt.args)) 
+	
+	if(.isError(RES))
+	 return(RES)
+	# check results again
+	ok <- which(sapply(RES,function(x) !.isError(x) & x$convergence >= 0L))
+	if(length(ok) == 0L){
+		stop(.makeMessage("All local searches have errors or did not converge.","\n"))						
+	} else if(length(ok) < length(RES)){
+		message(paste0("A total of ",length(RES)-length(ok)," local searches have errors or did not converge."))							
+	}
+	
+	hasError <- which(!(1:length(RES) %in% ok))
+	if(length(hasError) > 0L)	
+		message(paste0("A total of ",length(hasError)," local searches failed."))
+	
+	roots <- .evalRoots(RES[ok])
+	if(.isError(roots)) {
+		msg <- .makeMessage("Could not evaluate best results of local searches")
+		message(msg)
+		attr(roots,"RES") <- RES
+		return(.qleError(message=msg,call=match.call(),error=roots))	   
+	}	
+	if(verbose)
+	 attr(roots,"RES") <- RES	
+	structure(roots,hasError=hasError) 	
+}
+
 #' @name qle
 #'
 #' @title Simulated quasi-likelihood parameter estimation
@@ -2122,6 +2203,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @param inverted  currently ignored
 #' @param check		logical, \code{TRUE} (default), whether to check input arguments
 #' @param cvm		list of covariance models for cross-validation (see \code{\link{prefitCV}})
+#' @param Iobs	    logical, \code{FALSE} default, whether to compute observed quasi-information matrix
 #' @param pl	    numeric, print level, use \code{pl}>0 to give intermediate output  	
 #' @param verbose   \code{FALSE} (default), otherwise print intermediate output
 #'
@@ -2184,7 +2266,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @export
 qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 			    	  inverted = FALSE, check = TRUE, cvm = NULL, 
-				 	   pl = 0L, verbose = FALSE)
+				 	   Iobs = TRUE, pl = 0L, verbose = FALSE)
 {	
 	if(check)
 	 .checkArguments(qsd,x0,Sigma)
@@ -2209,7 +2291,8 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 	opts <- .qsOpts(opts,pl)
 	qlopts <- list("varType"=qsd$var.type,					  
 				   "useCV"=!is.null(cvm),
-				   "useSigma"=FALSE)
+				   "useSigma"=FALSE,
+		   		   "Iobs"=Iobs)
 		   
 	try(.Call(C_QSopt, x0, qsd, qlopts, X, Sigma, cvm, opts), silent=TRUE)	
 }

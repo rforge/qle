@@ -5,7 +5,7 @@
 \title{Quasi-scoring iteration}
 \usage{
 qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
-  check = TRUE, cvm = NULL, pl = 0L, verbose = FALSE)
+  check = TRUE, cvm = NULL, Iobs = TRUE, pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -24,21 +24,22 @@ qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
 
 \item{cvm}{list of covariance models for cross-validation (see \code{\link{prefitCV}})}
 
+\item{Iobs}{logical, \code{FALSE} default, whether to compute observed quasi-information matrix}
+
 \item{pl}{numeric, print level, use \code{pl}>0 to give intermediate output}
 
 \item{verbose}{\code{FALSE} (default), otherwise print intermediate output}
 }
 \value{
 List of results of quasi-scoring iteration.
- \item{status}{ integer, why scoring iterations stopped}
- \item{message}{ string, corrsponding to `\code{status}`}
+ \item{convergence}{ integer, why scoring iterations stopped}
+ \item{message}{ string, corrsponding to `\code{convergence}`}
  \item{iter}{ number of iterations}
  \item{value}{ quasi-deviance value}
  \item{par}{ solution vector}
  \item{score}{ quasi-score vector}
  \item{I}{ quasi-information matrix}
  \item{start}{ starting point}
- \item{convergence}{ integer, for convergence=1 and local convergence=10, no convergence=-1}
  \item{method}{ simply: "\code{qscoring}"}
  \item{criterion}{ equal to "\code{qle}"}
 }
@@ -76,7 +77,6 @@ The function implements a step-length controlled quasi-scoring iteration with si
 		\item{\code{grad_tol}:}{ upper bound on the quasi-score vector components,
 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
 		\item{\code{score_tol}:}{ upper bound on the quasi-score vector components, testing for an approximate root}
-	\item{\code{slope_tol}:}{ upper bound on the 2-norm of the quasi-score vector, testing for an approximate descent step}
      \item{\code{maxiter}:}{ maximum allowed number of iterations}
 	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual
 							 iterates and further values}

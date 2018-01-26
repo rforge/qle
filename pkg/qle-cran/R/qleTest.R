@@ -42,28 +42,59 @@
 	)	
 }
 
-# choose the best acc. to consistency 
-# criteria and the smallest value of quasi-score
-.evalBestRoot <- function(dm) {
+# choose the best root, if any, according to the  
+# criteria (see vignette) and the smallest value
+# of the maximum of the quasi-score vector
+.evalBestRoot <- function(dm,opts) {
 	stopifnot(is.data.frame(dm))	
-	nm <- apply(dm,2,which.min)	
+	notNa <- !(apply(dm,1,anyNA))
+	if(sum(notNa) < nrow(dm)){		
+	  message("`NA` values removed from estimated parameters.")
+	} else if(sum(notNa) == 0L) {
+	  warning("Cannot find best root. All rows in data frame of estimated parameters contain `NA`s.")
+	  return( structure(row.names(dm),"id"=NA))
+    }
+	A <- matrix(FALSE,nrow(dm),3)
+	A[notNa,] <- cbind(as.numeric(dm[notNa,"minor"]) == 0, 
+		  as.numeric(dm[notNa,"value"]) < opts$ftol_stop,
+		  as.numeric(dm[notNa,"|score_max|"]) < opts$score_tol)
+	
+  	ok <- which(A[,1]==TRUE & apply(A[,2:3],1,any))
+  	if(length(ok) == 0L){
+	    message(.makeMessage("None of the estimates seems match `ftol_stop` or `score_tol` condition. Try to select the one which has smallest criterion value."))
+		id <- try(which.min(dm[,"value"]),silent=TRUE)
+		if(!inherits(id,"try-error") && length(id)>0L)
+		  dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
+		else {
+		   id <- NA
+		   warning("Cannot find best root. All estimated criterion values contain `NA`s.")
+		}
+	  	return( structure(row.names(dm),"id"=id))
+    }
+    stopifnot(length(ok)>0L)
+	nm <- apply(dm[ok,-1],2,which.min)	
 	id <- sapply(1:length(nm),function(x) sum(nm[1:x] == nm[x]))
 	maxid <- cbind(nm, id)[,2]
 	id <- as.numeric(nm[which(maxid == max(maxid),arr.ind=TRUE)])
 	if(length(id) > 1L){
 		for(i in id)		  	
-			dimnames(dm)[[1]][i] <- paste0(c(row.names(dm)[i],"*"),collapse=" ")	   
-		mi <- which.min(dm[id,length(dm)])
-		dimnames(dm)[[1]][id[mi]] <- paste0(c(row.names(dm)[id[mi]],"*"),collapse="")
+		 dimnames(dm)[[1]][ok[i]] <- paste0(c(row.names(dm)[ok[i]],"*"),collapse=" ")	   
+		mi <- which.min(dm[ok[id],length(dm)])
+		dimnames(dm)[[1]][ok[id[mi]]] <- paste0(c(row.names(dm)[ok[id[mi]]],"*"),collapse="")
 	} else {
 		mi <- 1L
-		dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
+		dimnames(dm)[[1]][ok[id]] <- paste0(c(row.names(dm)[ok[id]],"*"),collapse=" ")
 	}	
-	return(row.names(dm))
+	return( structure(row.names(dm),"id"=ok[id[mi]]) )
 }
 
 
-.evalRoots <- function(QD, par = NULL) {	
+.evalRoots <- function(QD, par = NULL,
+		        opts=list("ftol_stop"=1e-7,
+						  "score_tol"=1e-3))
+{	
+	if(length(opts) == 0L)
+	 stop("Options `opts` should not be empty for evaluation of roots.") 	
 	if(.isError(QD)){	  	
 		return(.qleError(message=.makeMessage("Evaluation of roots failed."),
 					call=sys.call(),error=QD))
@@ -78,14 +109,14 @@
 			function(qd) {
 				qIinv <- if(.isError(qd)) NA else try(gsiInv(qd$I),silent=TRUE)	  	
 				xdim <- ncol(qd$I)
-				if(.isError(qIinv) || !is.numeric(qIinv) || anyNA(qIinv)) {		
+				if(!is.numeric(qIinv) || anyNA(qIinv) || .isError(qIinv) ) {		
 					msg <- .makeMessage("Failed to invert quasi-information.")
 					message(msg)
 				   .qleError(message=msg,call=sys.call(),error=qIinv)
 				}
 				M <- qIinv%*%qd$Iobs				
-				structure(c("Value"=qd$value,
-							"Minor"=.isPosDef(qd$Iobs),
+				structure(c("minor"=.isPosDef(qd$Iobs),
+							"value"=qd$value,							
 						   	"|det|"=abs(1-det(M)),
 							"|max|"=max(abs(diag(M)-rep(1,xdim))),
 							"|trace|"=abs(1-sum(diag(M))/xdim), 
@@ -109,11 +140,20 @@
 	   row.names(M) <- if(!is.null(par)) row.names(par)
 	   if(nrow(M)>1) {		   
 	   	   dm <- cbind(par[ok,,drop=FALSE],M)
-	   	   row.names(dm) <- .evalBestRoot(M)		   
+		   nms <- .evalBestRoot(M,opts)
+		   id <- attr(nms,"id")
+		   row.names(dm) <- nms
+		   attr(dm,"id") <- id
 	   } else {
-		   dm <- cbind(par[ok,,drop=FALSE],M)		   
+		   id <- 1L
+		   dm <- cbind(par[ok,,drop=FALSE],M)
+		   attr(dm,"id") <- id
 	   }
  	},silent=TRUE)
+	if(!anyNA(id)){
+		stopifnot(length(id)==1L)
+		attr(dm,"par") <- par[id,]
+	} else { message("Cannot select best parameter as a root.") }
 
 	isErr <- which(!(1:length(X) %in% ok))
 	if(length(isErr)>0L){
@@ -135,7 +175,7 @@
 #' @param verbose   logical, \code{TRUE} for intermediate output
 #' 
 #' @return A data frame with columns named corresponding to each component of the investigated parameter,
-#'  `\code{quasi-deviance}`, `\code{Minor}`, `\code{det}`, `\code{max}`,
+#'  `\code{quasi-deviance}`, `\code{minor}`, `\code{det}`, `\code{max}`,
 #'  `\code{trace}` and `\code{score_max}` (see vignette). The second column shows the leading minor of
 #'   the observed QI matrix which is not positive definite. If so, then the corresponding parameter estimate
 #'   cannot be consistent at least in theory. The rows show the corresponding values for each parameter passed by
@@ -210,7 +250,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
     # check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L))
 	if(length(ok) == 0L){
-		stop(.makeMessage("All re-estimations have errors or did not converge, first errors: ","\n"))						
+		stop(.makeMessage("All re-estimations have errors or did not converge.","\n"))						
 	} else if(length(ok) < length(RES)){
 		message(paste0("A total of ",length(RES)-length(ok)," re-estimations have errors or did not converge."))							
 	}	

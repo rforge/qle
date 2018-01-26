@@ -77,7 +77,8 @@ and attributes:
  excluded from the test results and stored in the attribute `\code{info}`. In addition, as part of the returned data frame `\code{param}`
  the empirical standard error, predicted standard error (based on the average inverse quasi-information matrix), the root mean square error,
  the bias and sample mean value of the re-estimated parameters are also available.
- For an example please see the package vignette.
+
+	For an example please see the package vignette.
 }
 \description{
 Monte Carlo hypothesis testing

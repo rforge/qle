@@ -15,7 +15,7 @@ checkMultRoot(est, par = NULL, verbose = FALSE)
 }
 \value{
 A data frame with columns named corresponding to each component of the investigated parameter,
- `\code{quasi-deviance}`, `\code{Minor}`, `\code{det}`, `\code{max}`,
+ `\code{quasi-deviance}`, `\code{minor}`, `\code{det}`, `\code{max}`,
  `\code{trace}` and `\code{score_max}` (see vignette). The second column shows the leading minor of
   the observed QI matrix which is not positive definite. If so, then the corresponding parameter estimate
   cannot be consistent at least in theory. The rows show the corresponding values for each parameter passed by

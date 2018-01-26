@@ -36,9 +36,8 @@ A list as follows
 	  \item{par}{solution vector}
 	  \item{value}{objective value}
 	  \item{method}{applied method}
-	  \item{status}{termination code}
+	  \item{convergence}{termination code}
 	  \item{score}{if applicable, quasi-score vector (or gradient of MD)}
-	  \item{convergence}{logical, indicates numerical convergence}
 }
 \description{
 The function searches for a root of the quasi-score vector or minimizes one of the criterion functions.

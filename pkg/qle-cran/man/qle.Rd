@@ -61,8 +61,7 @@ List of the following objects:
  Attributes: 	 
  
  \item{tracklist}{ an object (list) of class \code{QDtrack} containing the local minimization results,
-    criterion function evaluations (only in case of non-convergence), evaluated sample points and
-		 the status of the corresponding iteration}    
+    evaluated sample points and the status of the corresponding iteration}    
  \item{optInfo}{ a list of arguments related to the estimation procedure:}
  \itemize{
    \item{x0:}{ starting parameter vector}
