@@ -12,6 +12,8 @@ checkMultRoot(est, par = NULL, opts = list(ftol_stop = 1e-07, score_tol =
 
 \item{par}{list or matrix of estimated parameters as roots of the quasi-score vector}
 
+\item{opts}{list of upper bounds for a root of the quasi-score vector, see details}
+
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }
 \value{
@@ -29,7 +31,9 @@ Check out and compare estimated roots of the quasi-score vector
 Only for the quasi-likelihood approach the function inspects the (numerical) consistency of the found
  parameters in `\code{par}` by comparing each observed quasi-information matrix with the expected one.
  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
- and the parameter for which these are smallest is chosen.
+ and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
+ are as follows: `\code{ftol_stop}` for the quasi-deviance criterion value and `\code{score_tol}`  for the maximum of any of
+ the components of the quasi-score vector.
 }
 \examples{
  data(normal)
