@@ -77,7 +77,7 @@ ub <- c("kappa"=35,"R"=0.25,"mu"=5)
 cl <- makeCluster(8)
 clusterSetRNGStream(cl)
 clusterCall(cl,fun=function(x) library("spatstat", character.only=TRUE))
-clusterExport(cl=cl,varlist=c("simStat"), envir=environment())
+clusterExport(cl=cl,varlist=c("simStat","searchMinimizer"), envir=environment())
 
 # simulate design points and statistics
 sim <- simQLdata(sim=simClust,cond=cond,nsim=nsim,
@@ -123,7 +123,21 @@ attr(cvm,"type") <- "max"
 QS0$Qnorm
 quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]
 
+# multistart version of finding a root
+# ... passed to searchMinimizer
+method <- c("qscoring","bobyqa","cobyla")
+opts <-list("ftol_stop"=1e-10,"ftol_rel"=1e-7,
+		    "xtol_rel"=1e-10,"score_tol"=1e-3,
+			"slope_tol"=1e-6) 
 
+roots <- multiSearch(qsd,xstart=NULL,nstart=25,
+		  method,opts,cvm=cvm,cl=cl,verbose=TRUE)
+
+(id <- attr(roots,"id"))
+stopifnot(!is.na(id))
+# best found root
+attr(roots,"par")
+ 
 ## inspect CV errors vs. kriging variances
 # no significant bias in predicting the statistics 
 crossValTx(qsd, cvm, type = "acve")
@@ -157,15 +171,19 @@ crossValTx(qsd, cvm, type = "sigK")
 
 #debug(qle)
 OPT <- qle(qsd, simClust, cond=cond,  
-		qscore.opts=list("pl"=0,"score_tol"=1e-3),
+		qscore.opts=list("pl"=0,
+				         "xtol_rel"=1e-7,
+						 "ftol_rel"=1e-7,
+						 "ftol_abs"=1e-6,
+						 "score_tol"=1e-3),
 		global.opts = list("maxiter"=5,
-				           "maxeval" = 10,
+				           "maxeval" = 5,
 				           "weights"=c(50,10,5,1,0.1),
 						   "NmaxQI"=3),
 		local.opts = list("lam_max"=1e-2,
 				          "nobs"=50,				# number of (bootstrap) generated observations for testing local minimizer
 				          "nextSample"="score",		# sample criterion
-				          "ftol_abs"=1e-7,			# upper bound on 
+				          "ftol_abs"=0.1,			# upper bound on criterion value
 						  "weights"=c(0.55),		# constant weight factor
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
 						  "test"=FALSE),			# testing is enabled
