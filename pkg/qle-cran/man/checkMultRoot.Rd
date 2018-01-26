@@ -4,7 +4,8 @@
 \alias{checkMultRoot}
 \title{Inspect estimated parameters}
 \usage{
-checkMultRoot(est, par = NULL, verbose = FALSE)
+checkMultRoot(est, par = NULL, opts = list(ftol_stop = 1e-07, score_tol =
+  0.001), verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}

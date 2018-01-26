@@ -104,12 +104,12 @@
 }
 
 .addQscoreOptions <- function() {
-	list( "ftol_stop" = 1e-9,
+	list( "ftol_stop" = 1e-9,								# also used to select best roots
 		  "xtol_rel"  = 1e-7,
 		  "grad_tol"  = 1e-4,
 		  "ftol_rel"  = 1e-8,
 		  "ftol_abs"  = 1e-6,								# only for local minima if grad_tol reached as a more restrictive check
-		  "score_tol" = 1e-4,
+		  "score_tol" = 1e-4,								# also used to select best roots
 		  "slope_tol" = 1e-4,
 		  "maxiter"   = 100,
 		  "pl" = 0L)

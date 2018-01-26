@@ -197,7 +197,10 @@
 #' @author M. Baaske
 #' @rdname checkMultRoot
 #' @export
-checkMultRoot <- function(est, par = NULL, verbose = FALSE){			
+checkMultRoot <- function(est, par = NULL,
+					opts=list("ftol_stop"=1e-7,"score_tol"=1e-3),
+					verbose = FALSE)
+{			
    if(est$qsd$criterion != "qle")
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
@@ -219,7 +222,7 @@ checkMultRoot <- function(est, par = NULL, verbose = FALSE){
 	   message(msg)
 	   return(.qleError(message=msg,call=match.call(),error=QD))
    }
-   dm <- try(.evalRoots(QD,par),silent=TRUE)	
+   dm <- try(.evalRoots(QD,par,opts),silent=TRUE)	
    if(.isError(dm)) {
 	   msg <- .makeMessage("Could not check consistency of roots.")
 	   message(msg)
