@@ -5,25 +5,37 @@ Changes with 0.16-8
 -------------------
 
 1) Fixed numerical issues when calculating REML function values for badly conditioned covariance matrices
+
 2) Added bootstrap option for estimating local nugget variances of Cholesky decomposed terms
    during the kriging approximation of variance matrices of statistics
+
 3) Solving linear equations/doing matrix inversions is more robust by `gsiSolve` and `gsiInv` trying a Cholesky decomposition
    first and, if it fails, SVD or finally a Bunch-Kaufman factorization. This may lead to computations of generalized inverse
    matrices or only approximate solutions to the equations.
-4) New rigorous checks of possible `NaN`, `NA` and non finite values
+
+4) New rigorous checks of possible `NaN`, `NA` including non finite values added
 
 Changes with 0.17
 -------------------
 
-1) Local test of approximate root is now done only in case the quasi-deviance/quasi-score is numerically not zero
+1) testing an approximate root is done only in case of no root and if quasi-deviance is less than a user-defined tolerance
+
 2) C function for FD approximation now uses pre-allocated storage
-3) Improved LS in quasi-scoring, now using norm of QS and QD as monitor functions (switching when no progress in LS)
+
+3) Improved LS in quasi-scoring, now using norm of QS and QD as monitor functions (switching when no progress detected);
+   no valid step signals a minimum step length event thus terminates with convergence code and not an error anymore.
+
 4) If local search was successful, then (even during global phase) use it as the current iteration point
+
 5) Start local search from last sample point ( if at global phase) or last local minimum (if at local phase)
+
 6) Use a last local search at maximum iterations if at global phase with highest weight 	
+
 7) Added multistart support if the algorithm is in global phase. The best root found so far (for the criteria see the vigntte)
    is selected and used for minitoring the progress, e.g. whether to switch to the local phase again or termination. 	  
-		  
+
+8) Added scaling option of parameter vector and quasi-score vector used in line search of quasi-scoring to test stopping conditions 		  
+   
 		  
 Current known issues
 --------------------
