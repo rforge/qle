@@ -21,7 +21,6 @@ char C_MSG_BUFFER[1000] = "";
 /* get error message from id*/
 void errorMSG(int errId, const char *name) {
     char msg[100] = "";
-
 	switch (errId) {
       case NO_ERROR : return;
       case NaN_ERROR: std::strcpy(msg,"NaNs detected."); break;

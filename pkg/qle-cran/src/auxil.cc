@@ -204,7 +204,6 @@ double denorm(double *x, int n) {
   double value = 0.0;
   for (int i = 0; i < n; i++ )
     value += x[i] * x[i];
-
   if(!R_FINITE(value)){
   	  WRR("`NaN` detected in `denorm`.")
   	  return R_NaN;

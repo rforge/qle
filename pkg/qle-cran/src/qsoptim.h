@@ -14,8 +14,9 @@
 
 typedef enum {
 	 QFS_ERROR = -10, 				/* generic failure code */
-	 QFS_MAXITER_REACHED = -5,
-     QFS_LINESEARCH_FAILURE = -4,
+	 QFS_EVAL_ERROR = -6,			/* monitor function evaluation */
+	 QFS_LINESEARCH_ERROR = -5,
+	 QFS_MAXITER_REACHED = -4,
      QFS_LINESEARCH_ZEROSLOPE = -3,
      QFS_BAD_DIRECTION = -2,    	/* Calculating Newton direction failed*/
 	 QFS_NO_CONVERGENCE = -1,   	/* no convergence */
@@ -26,6 +27,7 @@ typedef enum {
      QFS_XTOL_REACHED = 4,
      QFS_GRADTOL_REACHED = 5,
 	 QFS_SLOPETOL_REACHED = 6,
+	 QFS_STEPTOL_REACHED = 7,
      QFS_LOCAL_CONVERGENCE = 10
 } qfs_result;
 
@@ -33,7 +35,7 @@ typedef struct qfs_options_s {
   ql_model qlm;
 
   int num_iter, num_eval; /* used */
-  int pl, info, doIobs;	 		  /* print level */
+  int pl, info, doIobs;	  /* print level */
 
   double grad_tol,        /* stopping criteria */
   	     ftol_stop,
@@ -43,10 +45,13 @@ typedef struct qfs_options_s {
 		 slope_tol,
 		 xtol_rel;
 
+  double *typf, *typx;
+
   int max_iter;    /* limits */
 
   qfs_options_s(ql_model _qlm, SEXP R_options) :
-	  qlm(_qlm), num_iter(0), num_eval(0), pl(0), info(0), doIobs(FALSE)
+	  qlm(_qlm), num_iter(0), num_eval(0), pl(0), info(0), doIobs(FALSE),
+	  typf(0), typx(0)
   {
     pl = asInteger(getListElement( R_options, "pl"));
     doIobs = asInteger(getListElement( R_options, "Iobs"));
@@ -58,6 +63,10 @@ typedef struct qfs_options_s {
 	slope_tol = asReal(getListElement( R_options, "slope_tol" ));
 	grad_tol  = asReal(getListElement( R_options, "grad_tol" ));
 	max_iter  = asInteger(getListElement( R_options, "maxiter"));
+
+	// scaling vectors
+	typf = REAL(getListElement( R_options, "fscale" ));
+	typx = REAL(getListElement( R_options, "xscale" ));
   }
 
 } qfs_options_t, *qfs_options;

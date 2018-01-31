@@ -549,22 +549,23 @@ typedef struct ql_model_s {
 
 	double intern_qfTrace(double *x);
     double intern_qfVarStat(double *x);
-	double intern_qfScoreNorm(double *x);
+    double qfValue(double *score, double *varS);
 
-    inline double intern_qfScoreStat(double *x) {
-	  	return qfScoreStat(x,jac,score,qimat);
-	}
+    int intern_qfScore(double *x){ return qfScore(x,jac, score, qimat); }
+
+    inline double intern_qfValue() { return qfValue(score,qimat); }
+    inline double intern_qfScoreStat(double *x) { return qfScoreStat(x,jac,score,qimat); }
 
 	void varMatrix(double *x, double *s, double *vmat, int *err);
 
-	double qfValue(double *score, double *varS);
+	int qfScore(double *x, double *jac, double *score, double *qimat);
 	double qfScoreStat(double *x, double *jac, double *score, double *qimat);
 
 	int intern_quasiInfo(double *jac, double *qimat);
 	void quasiScore(double *mean, double *jac, double *vmat, double *score, int *err);
 
-	double intern_mahalValue(double *x);			//use constant (inverted) variance
-	double intern_mahalVarTrace(double *x);			//use constant (inverted) variance
+	double intern_mahalValue(double *x);			// use constant (inverted) variance
+	double intern_mahalVarTrace(double *x);			// use constant (inverted) variance
 	double intern_mahalValue_theta(double *x);		// computing inverse variance
 
 

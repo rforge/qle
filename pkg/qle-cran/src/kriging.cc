@@ -1071,97 +1071,55 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
       }
 }
 
+/*
+ * Prepare computation of quasi-score statistic
+ * and norm of quasi-score
+ */
+int ql_model_s::qfScore(double *x, double *jac, double *score, double *qimat) {
+	/* kriging statistics */
+	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
+		LOG_ERROR(info,"intern_kriging")
+		return info;
+	}
+	//printVector("krig.mean",glkm->krigr[0]->mean,&dx);
+	//printVector("krig.var",glkm->krigr[0]->sig2,&dx);
+	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
+		LOG_ERROR(info,"intern_jacobian")
+		return info;
+	}
+	//printMatrix("jac",jac,&dx,&nCov);
+	if( (info = intern_cvError(x)) != NO_ERROR){
+		 LOG_ERROR(info,"intern_cvError")
+		 return info;
+	}
+	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,&info);
+	if(info != NO_ERROR) {
+		LOG_ERROR(info,"varMatrix")
+		return info;
+	}
+	//printMatrix("vmat",qld->vmat,&nCov,&nCov);
+	if( (info = intern_quasiScore(jac,score)) != NO_ERROR){
+		 LOG_ERROR(info,"intern_quasi-score")
+		 return info;
+	}
+	//printVector("score",score,&dx);
+	if ( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR){
+		 LOG_ERROR(info,"intern_quasiInfo")
+		 return info;
+	}
+	//printMatrix("Imat",qimat,&dx,&dx);
+	return NO_ERROR;
+}
+
 
 /**
  * \brief Quasi-Fisher score statistic
  *
  */
 double ql_model_s::qfScoreStat(double *x, double *jac, double *score, double *qimat) {
-	/* kriging statistics */
-	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
-		LOG_ERROR(info,"intern_kriging")
-		return R_NaN;
-	}
-
-	//printVector("krig.mean",glkm->krigr[0]->mean,&dx);
-	//printVector("krig.var",glkm->krigr[0]->sig2,&dx);
-
-	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
-		LOG_ERROR(info,"intern_jacobian")
-		return R_NaN;
-	}
-	//printMatrix("jac",jac,&dx,&nCov);
-
-	if( (info = intern_cvError(x)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_cvError")
-		 return R_NaN;
-	}
-
-	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,&info);
-	if(info != NO_ERROR) {
-		LOG_ERROR(info,"varMatrix")
-		return R_NaN;
-	}
-	//printMatrix("vmat",qld->vmat,&nCov,&nCov);
-
-	if( (info = intern_quasiScore(jac,score)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_quasi-score")
-		 return R_NaN;
-	}
-	//printVector("score",score,&dx);
-
-	if ( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_quasiInfo")
-		 return R_NaN;
-	}
-	//printMatrix("Imat",qimat,&dx,&dx);
-
+	if(info != (qfScore(x,jac,score,qimat) != NO_ERROR))
+	 return R_NaN;
 	return qfValue(score,qimat);
-}
-
-
-double ql_model_s::intern_qfScoreNorm(double *x) {
-	/* kriging statistics */
-	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
-		LOG_ERROR(info,"intern_kriging")
-		return R_NaN;
-	}
-	//printVector("krig.mean",glkm->krigr[0]->mean,&dx);
-	//printVector("krig.var",glkm->krigr[0]->sig2,&dx);
-
-	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
-		LOG_ERROR(info,"intern_jacobian")
-		return R_NaN;
-	}
-	//printMatrix("jac",jac,&dx,&nCov);
-
-	if( (info = intern_cvError(x)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_cvError")
-		 return R_NaN;
-	}
-
-	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,&info);
-	if(info != NO_ERROR) {
-		LOG_ERROR(info,"varMatrix")
-		return R_NaN;
-	}
-	//printMatrix("vmat",qld->vmat,&nCov,&nCov);
-
-	if( (info = intern_quasiScore(jac,score)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_quasi-score")
-		 return R_NaN;
-	}
-	//printVector("score",score,&dx);
-
-	if ( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_quasiInfo")
-		 return R_NaN;
-	}
-	//printMatrix("Imat",qimat,&dx,&dx);
-	double sum=0;
-	for(int i=0; i<dx; ++i)
-	  sum += score[i]*score[i];
-	return std::sqrt(sum);
 }
 
 double ql_model_s::intern_qfTrace(double *x) {
@@ -1183,7 +1141,7 @@ double ql_model_s::intern_qfTrace(double *x) {
 	}
 
 	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,&info);
-	if(info>0) {
+	if(info > 0) {
 		LOG_ERROR(info,"varMatrix")
 		return R_NaN;
 	}
