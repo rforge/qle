@@ -91,27 +91,37 @@
 	return (0)
 }
 
-.qsOpts <- function(options = list(),pl = 0L) {
-	opts <- .addQscoreOptions()
+.qsOpts <- function(options = list(), xdim = 1L, pl = 0L) {
+	opts <- .addQscoreOptions(xdim)
 	opts$pl <- pl
 	if(length(options) > 0L) {
 	 .checkOptions(opts,options)
 	 namc <- match.arg(names(options), choices = names(opts), several.ok = TRUE)
 	 if (!is.null(namc))
 	 opts[namc] <- options[namc]
-	}	
+	}
+	# invert scaling constants
+	txid <- which(opts$xscale != 1)
+	if(length(txid)>0L)
+	 opts$xscale[txid] <- 1/opts$xscale[txid] 
+	tfid <- which(opts$fscale != 1)
+	if(length(tfid)>0L)
+	 opts$fscale[tfid] <- 1/opts$fscale[tfid]
+ 
 	return(opts)
 }
 
-.addQscoreOptions <- function() {
-	list( "ftol_stop" = 1e-9,								# also used to select best roots
+.addQscoreOptions <- function(xdim) {
+	list( "ftol_stop" = 1e-10,								# also used to select best roots
 		  "xtol_rel"  = 1e-7,
-		  "grad_tol"  = 1e-4,
+		  "grad_tol"  = 1e-5,
 		  "ftol_rel"  = 1e-8,
 		  "ftol_abs"  = 1e-6,								# only for local minima if grad_tol reached as a more restrictive check
 		  "score_tol" = 1e-4,								# also used to select best roots
 		  "slope_tol" = 1e-4,
 		  "maxiter"   = 100,
+		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
+		  "fscale" = rep(1,xdim),							# and function values, i.e. QS components 
 		  "pl" = 0L)
 }
 
@@ -191,7 +201,7 @@ getDefaultOptions <- function(xdim) {
 	if(!is.numeric(xdim))
 	  stop("`xdim` mus be a numeric value.")
   
-	list("qscoring" = .addQscoreOptions(),
+	list("qscoring" = .addQscoreOptions(xdim),
 		 "qle_local_opts" = .getDefaultLOCoptions(xdim),
 		 "qle_global_opts" = .getDefaultGLoptions(xdim))
 }
@@ -1352,7 +1362,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		c("qscoring",nlopt.fun)
 	 } else nlopt.fun	
 	# quasi-score options
-	qscore.opts <- .qsOpts(qscore.opts)
+	qscore.opts <- .qsOpts(qscore.opts,xdim)
 
 	loc <- pmatch(method,all.local)
 	if(length(loc) == 0L || anyNA(loc)) {
@@ -1514,7 +1524,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				tmplist <- list("S0"=S0)				
 				# Set current iterate to last sampled point in case of no convergence
 				# during the global phase, eventually a sampled point 'Snext' also becomes
-				# a minimizer after a number of steps cycling through the global weights vector						
+				# a minimizer after a number of steps cycling through the vector of global weights						
 				if(!.isError(S0) && S0$convergence >= 0L){					
 					 I <- S0$I
 					xt <- S0$par
@@ -1529,54 +1539,55 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					status[["minimized"]] <- FALSE					
 				}			
 																
-			   # current iteration did not stop 
-			   # choose next type of phase: pure local or global				
-				if(ft < locals$ftol_abs){									# criterion function value is numerically zero!
-					status[["global"]] <- 0L
-				} else if(status[["minimized"]] && locals$test){			# found a local minimizer, testing for approximate root		   
-				   if(pl > 0L)
-					cat("Test of an approximate root...\n")					 
-				   
-				   Stest <-
-					 tryCatch({					    
-						newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=pl>0)
-						if(.isError(newObs))
-						  stop(paste(c("Cannot generate data at approximate root: \n\t ",
-							    format(xt, digits=6, justify="right")),collapse = " "))				  
-					    # test for an approximate root (based on criterion function)
-	                    .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
-							      qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
-							          theta=theta, cvm=cvm, cl=cl)	
-							
-					}, error = function(e){
-							msg <- .makeMessage("Testing approximate root failed: ",
-									   conditionMessage(e))
-							message(msg)
-							.qleError(message=msg,call=match.call(),error=e)
-						}		
-					)
-					# store results in temporary list for failure analysis
-					tmplist <- c(tmplist,list("Stest"=Stest))
-					
-					# set status
-					status[["global"]] <-
-					 if(.isError(Stest)){
-						msg <- paste(c("Cannot test approximate root at: \n\t ",
-								 format(xt, digits=6, justify="right")),collapse = " ")
-						message(msg)
-						2L
-					 } else if(attr(Stest$test,"passed")) {	1L }					# found approximate root  
-			         else 2L														# switch to global phase
-			   
-				  } else {															# no local minimum found					
+			    # current iteration did not stop 
+			    # choose next type of phase: pure local or global				
+				if(status[["minimized"]]){											# found a local minimizer
+					if(S0$convergence == 1L){										# found root of quasi-score
+						status[["global"]] <- 0L									# start local phase
+					} else if(ft < locals$ftol_abs){								# found approximate root
+					   if(locals$test){ 
+						 if(pl > 0L)
+						   cat("Testing local minimizer...\n")
+					     Stest <-
+							  tryCatch({					    
+								  newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=pl>0)
+								  if(.isError(newObs))
+									  stop(paste(c("Cannot generate data at approximate root: \n\t ",
+															  format(xt, digits=6, justify="right")),collapse = " "))				  
+								  # test for an approximate root (based on criterion function)
+								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
+										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
+										  theta=theta, cvm=cvm, cl=cl)	
+								  
+							  }, error = function(e){
+								  msg <- .makeMessage("Testing approximate root failed: ",
+										  conditionMessage(e))
+								  message(msg)
+								  .qleError(message=msg,call=match.call(),error=e)
+							  }		
+						  )
+						  # store results in temporary list for failure analysis
+						  tmplist <- c(tmplist,list("Stest"=Stest))						  
+						  # set status
+						  status[["global"]] <-
+							  if(.isError(Stest)){
+								  msg <- paste(c("Cannot test approximate root at: \n\t ",
+												  format(xt, digits=6, justify="right")),collapse = " ")
+								  message(msg)
+								  2L															# switch to global in case of error
+							  } else if(attr(Stest$test,"passed")) { 1L }						# found approximate root  
+							    else 2L 														# did not pass the test	
+					    } else { status[["global"]] <- 0L } 											
+					} else { status[["global"]] <- 2L }
+				} else {
+					status[["global"]] <- 2L										
 					# Though we might have found a local minimizer, we do not
 					# sample there because we trust the selection criteria
 					# which additionally considers point-interdistances. 
 					# We start the next local search from the current sample point
 					# and thus imitate some kind of random multistart local search.
-					status[["global"]] <- 2L
-				  }	
-																
+				}				
+																				
 				# find new sample point
 				Snext <- 
 					tryCatch({						
@@ -1595,7 +1606,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								perr["val"] <- attr(Stest,"relED")	
 								if(anyNA(perr["val"]))
 								 message("Cannot test stopping conditions while testing local minimizer. `NAs` detected.")
-								else if( any(perr["val"] < perr["cond"]) ){									 	 # can be a vector for each component of the parameter					        
+								else if( any(perr["val"] < perr["cond"]) ){									 # can be a vector for each component of the parameter					        
 									perr["stop"] <- perr["stop"] + as.integer(perr["val"] < perr["cond"])	 # and count separately for each one
 									if(any(perr["stop"] >= globals$NmaxQI))											
 										break																			
@@ -2297,6 +2308,8 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
 #' 		\item{\code{score_tol}:}{ upper bound on the quasi-score vector components, testing for an approximate root}
 #'      \item{\code{maxiter}:}{ maximum allowed number of iterations}
+#' 		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. order of upper bounds of the parameter space}
+#'      \item{\code{fscale}:}{ numeric, default is vector of 1, typical magnitudes of quasi-score components}
 #' 	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual
 #' 							 iterates and further values}
 #'  } 
@@ -2321,8 +2334,9 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
  
   	if(qsd$criterion!="qle")
 	  stop("Quasi-scoring is only valid for criterion `qle`.")
-  	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
-  		
+  
+    xdim <- attr(qsd$qldata,"xdim")
+  	X <- as.matrix(qsd$qldata[seq(xdim)])  		
 	if(qsd$var.type != "kriging" && is.null(Sigma)){
 		# Only mean covariance matrix is estimated here. 
 		# Adding prediction variances (kriging/CV) at C level		
@@ -2335,7 +2349,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 	} 
 	
 	# set quasi-scoring options
-	opts <- .qsOpts(opts,pl)
+	opts <- .qsOpts(opts,xdim,pl)
 	qlopts <- list("varType"=qsd$var.type,					  
 				   "useCV"=!is.null(cvm),
 				   "useSigma"=FALSE,
