@@ -13,6 +13,6 @@ data(normal)
 qsd$var.type <- "cholMean"
 
 qscoring(qsd,
-		x0=c("mu"=3.5,"sigma"=1.5), 
-		opts=list("pl"=10, "slope_tol"=1e-7,"score_tol"=1e-4),
-	verbose=TRUE)
+  x0=c("mu"=3.5,"sigma"=1.5), 
+  opts=list("pl"=10, "slope_tol"=1e-7,"score_tol"=1e-4),
+ verbose=TRUE)
