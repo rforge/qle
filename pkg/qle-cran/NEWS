@@ -27,12 +27,15 @@ Changes with 0.17
 
 4) If local search was successful, then (even during global phase) use it as the current iteration point
 
-5) Start local search from last sample point ( if at global phase) or last local minimum (if at local phase)
+5) Start local search from last sample point (if at global phase) or last local minimum (if at local phase)
+  unless multistart option is used, see below.
 
 6) Use a last local search at maximum iterations if at global phase with highest weight 	
 
 7) Added multistart support if the algorithm is in global phase. The best root found so far (for the criteria see the vigntte)
-   is selected and used for minitoring the progress, e.g. whether to switch to the local phase again or termination. 	  
+   is selected and used for minitoring the progress, e.g. whether to switch to the local phase again or termination. 
+   COMMENT: Consistency checks and best root selection are now done only for "real" roots, e.i. quasi-score vector/quasi-deviance
+   when these are zero in finite precision (acc. to given tolerances)	  
 
 8) Added scaling option of parameter vector and quasi-score vector used in line search of quasi-scoring to test stopping conditions 		  
    
@@ -50,4 +53,3 @@ TODO
 ----
 	o qleTest: modify with new arguments, par, obs  
 	
-	o Scaling free variables, objectives 
