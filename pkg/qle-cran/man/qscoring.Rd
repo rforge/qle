@@ -78,6 +78,8 @@ The function implements a step-length controlled quasi-scoring iteration with si
 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
 		\item{\code{score_tol}:}{ upper bound on the quasi-score vector components, testing for an approximate root}
      \item{\code{maxiter}:}{ maximum allowed number of iterations}
+		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. order of upper bounds of the parameter space}
+     \item{\code{fscale}:}{ numeric, default is vector of 1, typical magnitudes of quasi-score components}
 	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual
 							 iterates and further values}
  }
