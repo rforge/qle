@@ -11,7 +11,6 @@
 
 # collect test results
 .qleTest <- function(obj,alpha = 0.05) {	
-	degf <- nrow(obj)
 	sb <- attr(obj,"sb")
 	Sb <- attr(obj,"Sb")	
 	pb <- (1+sum(Sb>=sb))/(length(Sb)+1)  # similar to : 1-ecdf(Sb)(sb)
@@ -26,10 +25,10 @@
 	
 	tname <- attr(obj,"test")
 	nm <- ifelse(tname=="mahal", "LS criterion", "Score-test")
-	Stest <- noquote(paste("Monte Carlo Test (",nm,"):\n\n  Df: ",degf,sep=""))	
+	Stest <- noquote(paste("Monte Carlo Test (",nm,")",sep=""))	
 	
 	ans$test <- noquote(cbind(sb, pb))# , ifelse(degf>0,pchisq(sb, degf, lower.tail = FALSE),"****")))	
-	dimnames(ans$test) <- list("Test E(Q)=0:  ", c("S > 0", "P-value")) #, "Pr(>Chisq)"))
+	dimnames(ans$test) <- list("Test E(Q)=0:  ", c("S > 0", "P( > s_obs)")) #, "Pr(>Chisq)"))
 	ans$Stest <- Stest	
 	ans$tname <- tname
 	attr(ans$test,"Sb") <- Sb
@@ -672,7 +671,7 @@ print.qleTest <- function(x, pl = 1, digits = 5,...) {
 		print(format(signif(chk,digits=digits)),print.gap=2,right=FALSE,quote=FALSE)
 		cat("\n\n")		
 	}	
-	cat("Coefficients:\n")	
+	cat("Coefficients:\n\n")	
 	print(format(x$param, digits=digits),
 			print.gap = 2, right=FALSE, quote = FALSE)	
 	cat("\n\n")

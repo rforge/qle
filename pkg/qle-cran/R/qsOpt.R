@@ -1513,7 +1513,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					} 
 				}					
 				# either start a (multistart) local search				
-				if(multistart && status[["global"]] > 1L){
+				if(status[["global"]] > 1L && multistart){
 					if(pl > 0L)
 					 cat("Search local search by multistart root finding....\n")
 					# always include last sample point `x` as a starting point
@@ -1545,7 +1545,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					
 					if(S0$convergence == 1L){										# found root of quasi-score
 						status[["global"]] <- 0L									# start local phase
-					} else if(locals$test && ft > locals$ftol_abs) { 
+					} else if(locals$test && ft > locals$ftol_abs) { 				# quasi-deviance can be distinguished from zero
 					     if(pl > 0L)
 						   cat("Testing local minimizer...\n")
 					     Stest <-
