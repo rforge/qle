@@ -14,7 +14,7 @@
 
 typedef enum {
 	 QFS_ERROR = -10, 				/* generic failure code */
-	 QFS_EVAL_ERROR = -6,			/* monitor function evaluation */
+	 QFS_EVAL_ERROR = -8,			/* monitor function evaluation */
 	 QFS_LINESEARCH_ERROR = -5,
 	 QFS_MAXITER_REACHED = -4,
      QFS_LINESEARCH_ZEROSLOPE = -3,
@@ -27,8 +27,9 @@ typedef enum {
      QFS_XTOL_REACHED = 4,
      QFS_GRADTOL_REACHED = 5,
 	 QFS_SLOPETOL_REACHED = 6,
-	 QFS_STEPTOL_REACHED = 7,
-     QFS_LOCAL_CONVERGENCE = 10
+	 QFS_STEPMIN_REACHED = 7,		/* relative length of Newton direction is near zero */
+	 QFS_STEPTOL_REACHED = 8,		/* minimum step length reached */
+	 QFS_LOCAL_CONVERGENCE = 10
 } qfs_result;
 
 typedef struct qfs_options_s {

@@ -42,7 +42,7 @@ int chol2var(double *x, double *z, int nx, double *y) {
   	  }
    	  if(info > 0)
    		WRR("`NaN` detected in `chol2var`.");
-  	  matmult_trans(y,nx,nx,y,nx,nx,z,&info);
+  	  matmult_trans(y,nx,nx,y,nx,nx,z,info);
   	  if(info > 0)
   		WRR("`NaN` detected in matrix multiplication in `chol2var`.");
   } else {
@@ -75,7 +75,7 @@ int chol2var(double *x, double *z, int nx, double *y) {
  * @return void
  */
 void fdJacobian(double *x, int dx, double *fval, int m, double *jac, double *fdwork,
-	  fnCompare_wrap func, void *data, double eps, int to_negative, int *info) {
+	  fnCompare_wrap func, void *data, double eps, int to_negative, int &info) {
 
 	int j, k, have_na=0;
 	double h, tmp, y;
@@ -88,9 +88,9 @@ void fdJacobian(double *x, int dx, double *fval, int m, double *jac, double *fdw
 		x[j]=tmp+h;
 		if (ISNAN(x[j]) || !R_FINITE(x[j]))
 		  {have_na = 1; break; }
-	    h=x[j]-tmp;
+	    h=x[j]-tmp;										/* finite precision improvement trick */
 		func(x,data,fdwork,info);
-		if(*info > 0)
+		if(info > 0)
 		  { have_na=1; break;}
 		x[j]=tmp;
 		if(to_negative)
@@ -103,7 +103,7 @@ void fdJacobian(double *x, int dx, double *fval, int m, double *jac, double *fdw
 		  jac[k*dx+j] = y;    // transposed: n rows (parameters) \times m values, e. i. statistics or something else
 		}
 	}
-	*info = have_na;
+	info = have_na;
 }
 
 void isPositiveDefinite(double *C, int *dim, int *info) {
@@ -202,7 +202,7 @@ double norm_2( double *x1, double *x2, int dx1, int dx2, int xdim) {
 
 double denorm(double *x, int n) {
   double value = 0.0;
-  for (int i = 0; i < n; i++ )
+  for (int i = 0; i < n; ++i )
     value += x[i] * x[i];
   if(!R_FINITE(value)){
   	  WRR("`NaN` detected in `denorm`.")
@@ -341,27 +341,27 @@ void matrix_col_sum(double *x, int *nx, int *y) {
  * @param pncx col X
  * @param y diagonal matrix stored as a vector
  */
-void matmult_diag(double *x, int nrx, int ncx, double *y, int *info) {
+void matmult_diag(double *x, int nrx, int ncx, double *y, int &info) {
 	int have_na=0;
 	for(int i=0;i<nrx*ncx;i++){
       x[i] *= y[ i%nrx ];
       if(!R_FINITE(x[i]))
         {have_na=1; break; }
     }
-	*info=have_na;
+	info=have_na;
 }
 
-void matmult_diag_sqrt(double *x, int nrx, int ncx, double *y,int *info) {
+void matmult_diag_sqrt(double *x, int nrx, int ncx, double *y,int &info) {
     int have_na=0;
 	for(int i=0;i<nrx*ncx;i++) {
       x[i] *= std::sqrt(y[ i%nrx ]);
       if(!R_FINITE(x[i]))
         {have_na=1; break; }
     }
-	*info=have_na;
+	info=have_na;
 }
 
-void matmult(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z, int *info) {
+void matmult(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z, int &info) {
     int i, j, k,
 		have_na = 0;
     long double sum = 0;
@@ -389,7 +389,7 @@ void matmult(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z
 		}
 	} else /* zero-extent operations should return zeroes */
 		for(i = 0; i < nrx*ncy; i++) z[i] = 0;
-    *info = have_na;
+    info = have_na;
 }
 
 /** \brief Matrix multiplication
@@ -402,7 +402,7 @@ void matmult(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z
  * @param pncy   columns of y
  * @param z      result matrix
  */
-void matmult_trans(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z, int *info)
+void matmult_trans(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z, int &info)
 {
 	int i, j, k,
 		have_na = 0;
@@ -425,8 +425,7 @@ void matmult_trans(double *x, int nrx, int ncx, double *y, int nry, int ncy, dou
 		}
     } else /* zero-extent operations should return zeroes */
 		for(i = 0; i < nrx*ncy; i++) z[i] = 0;
-
-	*info = have_na;
+	info = have_na;
 }
 
 int check_Lapack_error(int info, const char* name, int line, const char *file)
@@ -447,7 +446,7 @@ int check_Lapack_error(int info, const char* name, int line, const char *file)
  * @return qr_data object
  */
 
-qr_data qr_dgeqrf(double *a, int m, int n, int *err)
+qr_data qr_dgeqrf(double *a, int m, int n, int &err)
 {
     int info=0, lwork = -1;
     double *work=0, tmp=0;
@@ -462,13 +461,13 @@ qr_data qr_dgeqrf(double *a, int m, int n, int *err)
     qr->tau = CALLOC( qr->ntau, double);
 
     F77_CALL(dgeqrf)(&(qr->nrow), &(qr->ncol), qr->qr, &(qr->nrow), qr->tau, &tmp, &lwork, &info);
-    if( (*err=check_Lapack_error(info,"first call to `dgeqrf` failed",__LINE__, __FILE__)) != NO_ERROR )
+    if( (err=check_Lapack_error(info,"first call to `dgeqrf` failed",__LINE__, __FILE__)) != NO_ERROR )
       goto ErrHandler;
 
     lwork = (int) tmp;
     work = CALLOC(lwork, double);
     F77_CALL(dgeqrf)(&(qr->nrow), &(qr->ncol), qr->qr, &(qr->nrow), qr->tau, work, &lwork, &info);
-    if( (*err=check_Lapack_error(info,"second call to `dgeqrf` failed.",__LINE__, __FILE__)) != NO_ERROR )
+    if( (err=check_Lapack_error(info,"second call to `dgeqrf` failed.",__LINE__, __FILE__)) != NO_ERROR )
       goto ErrHandler;
 
     FREE(work);
@@ -477,7 +476,7 @@ qr_data qr_dgeqrf(double *a, int m, int n, int *err)
 ErrHandler:
    FREE(work);
    qrFree(qr);
-   *err=LAPACK_QR_ERROR;
+   err=LAPACK_QR_ERROR;
    LOG_ERROR(LAPACK_QR_ERROR, " `qr_dgeqrf` failed");
    return qr;
 }
@@ -496,7 +495,7 @@ void qrFree(qr_data qr) {
  * @param x (allocated) matrix, on exit the projection matrix
  */
 
-void nullSpaceMat(qr_data qr, double *x, int *err) {
+void nullSpaceMat(qr_data qr, double *x, int &err) {
    int i, j, k,
 	info = 0, have_na = 0,
       n = qr->ncol,  // cols F
@@ -511,14 +510,14 @@ void nullSpaceMat(qr_data qr, double *x, int *err) {
     double tmp = 0.0;
     F77_CALL(dormqr)("L", "N", &m, &m, &n_tau, qr->qr, &m, qr->tau, Q, &m, &tmp, &lwork, &info);
 
-    if( (*err=check_Lapack_error(info,"first call to `dormqr` failed.",__LINE__, __FILE__)) != NO_ERROR )
+    if( (err=check_Lapack_error(info,"first call to `dormqr` failed.",__LINE__, __FILE__)) != NO_ERROR )
        goto ErrHandler;
 
     lwork = (int) tmp;
     CALLOCX(work,lwork, double);
     F77_CALL(dormqr)("L", "N", &m, &m, &n_tau, qr->qr, &m, qr->tau, Q, &m,  work, &lwork, &info);
 
-    if( (*err=check_Lapack_error(info,"second call to `dormqr`",__LINE__, __FILE__)) != NO_ERROR )
+    if( (err=check_Lapack_error(info,"second call to `dormqr`",__LINE__, __FILE__)) != NO_ERROR )
        goto ErrHandler;
 
     //size(x) = m x (m-n)
@@ -530,9 +529,9 @@ void nullSpaceMat(qr_data qr, double *x, int *err) {
           { have_na = 1; break; }
       }
 
-    *err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
+    err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
 	if(have_na > 0)
-	   LOG_WARNING(*err, " `nullSpaceMat` failed: detected `NaN` in matrix `x`");
+	   LOG_WARNING(err, " `nullSpaceMat` failed: detected `NaN` in matrix `x`");
 
     FREE(Q);
     FREE(work);
@@ -541,11 +540,11 @@ void nullSpaceMat(qr_data qr, double *x, int *err) {
 ErrHandler:
   FREE(Q);
   FREE(work);
-  *err=LAPACK_PMAT_ERROR;
-  LOG_ERROR(LAPACK_PMAT_ERROR, " `nullSpaceMat` failed");
+  err=LAPACK_PMAT_ERROR;
+  LOG_ERROR(err, " `nullSpaceMat` failed");
 }
 
-void solveLU(double *A, int nA, double *B, int nB, int *err) {
+void solveLU(double *A, int nA, double *B, int nB, int &err) {
   int info = 0;
   int lda = nA, ldb = nA;
 
@@ -553,14 +552,14 @@ void solveLU(double *A, int nA, double *B, int nB, int *err) {
   F77_NAME(dgesv)(&nA, &nB, A, &lda, ipiv, B, &ldb, &info);
   FREE(ipiv);
 
-  if((*err=check_Lapack_error(info,"`dgesv`failed.",__LINE__, __FILE__)) != NO_ERROR){
-	  *err=LAPACK_SOLVE_ERROR;
-	  LOG_ERROR(LAPACK_SOLVE_ERROR, " `solveLU` failed.");
+  if((err=check_Lapack_error(info,"`dgesv`failed.",__LINE__, __FILE__)) != NO_ERROR){
+	  err=LAPACK_SOLVE_ERROR;
+	  LOG_ERROR(err, " `solveLU` failed.");
   }
 
 }
 
-void solveQR(double *X, int *nrx, int *ncx, double *y, int *ncy, int *err) {
+void solveQR(double *X, int *nrx, int *ncx, double *y, int *ncy, int &err) {
   int info = 0, lwork=-1;
   int  nrowx = *nrx, ncolx = *ncx, ncoly = *ncy;
   double *work=0, *Xtmp=0, wtmp=0;
@@ -571,7 +570,7 @@ void solveQR(double *X, int *nrx, int *ncx, double *y, int *ncy, int *err) {
   F77_CALL(dgels)("N", &nrowx, &ncolx, &ncoly, Xtmp,
                   &nrowx, y, &nrowx, &wtmp, &lwork, &info);
 
-  if( (*err=check_Lapack_error(info," first call to `dgels failed!",__LINE__, __FILE__)) != NO_ERROR)
+  if( (err=check_Lapack_error(info," first call to `dgels failed!",__LINE__, __FILE__)) != NO_ERROR)
      goto ErrHandler;
 
   lwork = (int) wtmp;
@@ -579,7 +578,7 @@ void solveQR(double *X, int *nrx, int *ncx, double *y, int *ncy, int *err) {
   F77_CALL(dgels)("N", &nrowx, &ncolx, &ncoly, Xtmp,
                   &nrowx, y, &nrowx, work, &lwork, &info);
 
-  if( (*err=check_Lapack_error(info,"second call to `dgels` failed!",__LINE__, __FILE__)) != NO_ERROR)
+  if( (err=check_Lapack_error(info,"second call to `dgels` failed!",__LINE__, __FILE__)) != NO_ERROR)
     goto ErrHandler;
 
   FREE(work);
@@ -589,60 +588,60 @@ void solveQR(double *X, int *nrx, int *ncx, double *y, int *ncy, int *err) {
 ErrHandler:
    FREE(Xtmp);
    FREE(work);
-   *err=LAPACK_QR_ERROR;
-   LOG_ERROR(LAPACK_QR_ERROR, " `solveQR` failed");
+   err=LAPACK_QR_ERROR;
+   LOG_ERROR(err, " `solveQR` failed");
 }
 
 /**
  *  \brief Cholesky solve
  *   Comment: A is overwritten here!
  */
-void solveCH(double *A, int n, double *y, int ncoly, int *err) {
+void solveCH(double *A, int n, double *y, int ncoly, int &err) {
     int info=0;
     /* factorization */
 	F77_NAME(dpotrf)("U",&n,A,&n,&info);
-	if((*err=check_Lapack_error(info," Cholesky factorization `dpotrf` failed.", __LINE__,__FILE__)) != NO_ERROR){
-		*err=LAPACK_FACTORIZE_ERROR;
-		LOG_ERROR(LAPACK_FACTORIZE_ERROR, " `solveCH` failed: matrix is probably not positive (semi)definite.");
+	if((err=check_Lapack_error(info," Cholesky factorization `dpotrf` failed.", __LINE__,__FILE__)) != NO_ERROR){
+		err=LAPACK_FACTORIZE_ERROR;
+		LOG_ERROR(err, " `solveCH` failed: matrix is probably not positive (semi)definite.");
 		return;
 	}
 
 	F77_NAME(dpotrs)("U", &n, &ncoly, A, &n, y, &n, &info);
-	if((*err=check_Lapack_error(info," `dpotrs` failed!",__LINE__, __FILE__)) != NO_ERROR){
-		*err=LAPACK_SOLVE_ERROR;
-		LOG_ERROR(LAPACK_SOLVE_ERROR, " `solveCH` failed: solving for solution matrix failed.");
+	if((err=check_Lapack_error(info," `dpotrs` failed!",__LINE__, __FILE__)) != NO_ERROR){
+		err=LAPACK_SOLVE_ERROR;
+		LOG_ERROR(err, " `solveCH` failed: solving for solution matrix failed.");
 	}
 }
 
 
-void solveDSPTRS(double *A, int n, double *B, int nrhs, int *err) {
+void solveDSPTRS(double *A, int n, double *B, int nrhs, int &err) {
   int info = 0,
 	  nAP = n*(n+1)/2;
   double *AP = CALLOC(nAP, double);
 
   /* Maybe we make use of packed storage pattern later? */
-  triangMat_U(A,n,AP, &info);
+  triangMat_U(A,n,AP, info);
   if(info > 0){
     FREE(AP);
-    *err = NaN_WARNING;
-  	LOG_WARNING(*err," `solveDSPTRS` failed: `NaNs` detected in `triangMat_U`.")
+    err = NaN_WARNING;
+  	LOG_WARNING(err," `solveDSPTRS` failed: `NaNs` detected in `triangMat_U`.")
     return;
   }
 
   /* Matrix factorization Bunch-Kaufmann */
   int *ipiv = CALLOC(n,int);
   F77_NAME(dsptrf)("U",&n,AP,ipiv,&info);
-  if((*err=check_Lapack_error(info," `dsptrf` failed!",__LINE__, __FILE__)) != NO_ERROR){
-	  *err=LAPACK_FACTORIZE_ERROR;
-	  LOG_ERROR(*err, " `solveDSPTRS` failed");
+  if((err=check_Lapack_error(info," `dsptrf` failed!",__LINE__, __FILE__)) != NO_ERROR){
+	  err=LAPACK_FACTORIZE_ERROR;
+	  LOG_ERROR(err, " `solveDSPTRS` failed");
 	  goto ErrHandler;
   }
 
   /* Solving the linear equation */
   F77_NAME(dsptrs)("U",&n,&nrhs,AP,ipiv,B,&n,&info);
-  if((*err=check_Lapack_error(info," `dsptrs` failed!",__LINE__, __FILE__)) != NO_ERROR){
-	  *err=LAPACK_SOLVE_ERROR;
-	  LOG_ERROR(*err, " `solveDSPTRS` failed");
+  if((err=check_Lapack_error(info," `dsptrs` failed!",__LINE__, __FILE__)) != NO_ERROR){
+	  err=LAPACK_SOLVE_ERROR;
+	  LOG_ERROR(err, " `solveDSPTRS` failed");
 	  goto ErrHandler;
   }
 
@@ -658,7 +657,7 @@ ErrHandler:
 
 
 void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
-				int *err, inversion_type type) {
+				int &err, inversion_type type) {
 
 	int i=0, have_na=0,
 		info=0, n2=SQR(n);
@@ -669,25 +668,24 @@ void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
 		  if(!R_FINITE(A[i])) { have_na=1; break; }
 		  Awork[i] = A[i];
 		}
-		*err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
+		err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
 		if(have_na > 0){
-		  LOG_WARNING(*err, " `gsiSolve` failed  by `dpotrs`: detected `NaN` in matrix `A`.");
+		  LOG_WARNING(err, " `gsiSolve` failed  by `dpotrs`: detected `NaN` in matrix `A`.");
 		  return;
 		}
 
 		// factorization
 		F77_NAME(dpotrf)("U",&n,Awork,&n,&info);
-		if((*err=check_Lapack_error(info," `dpotrf` failed.", __LINE__,__FILE__)) == NO_ERROR) {
+		if((err=check_Lapack_error(info," `dpotrf` failed.", __LINE__,__FILE__)) == NO_ERROR) {
 			F77_NAME(dpotrs)("U", &n, &nrhs, Awork, &n, B, &n, &info);
-			// check errors
-			*err=check_Lapack_error(info," `dpotrs` failed.", __LINE__,__FILE__);
+			err=check_Lapack_error(info," `dpotrs` failed.", __LINE__,__FILE__);
 		}
 		// try `SVD` if `Chol` has failed
-		if(*err != NO_ERROR) {
+		if(err != NO_ERROR) {
 			type = SVD;
-			*err = LAPACK_SOLVE_ERROR;
+			err = LAPACK_SOLVE_ERROR;
 			if(PL > INTERNAL_ERROR)
-			  LOG_WARNING(*err, " `gsiSolve` failed by Cholesky factorization. Matrix is probably not positive (semi)definite.");
+			  LOG_WARNING(err, " `gsiSolve` failed by Cholesky factorization. Matrix is probably not positive (semi)definite.");
 		}
 	}
 
@@ -703,9 +701,9 @@ void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
 		    { have_na=1; break; }
 		  Awork[i] = A[i];
 		}
-		*err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
+		err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
 		if(have_na > 0){
-		   LOG_WARNING(*err, " `gsiSolve` failed: detected `NaN` in matrix `A`");
+		   LOG_WARNING(err, " `gsiSolve` failed: detected `NaN` in matrix `A`");
 		   return;
 		}
 
@@ -716,16 +714,16 @@ void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
 
 		int lwork = -1;
 		F77_CALL(dgesdd)("A", &n, &n, Awork, &n, s, u, &n, vt, &n, work, &lwork, iwork, &info);
-		if((*err=check_Lapack_error(info," first call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
+		if((err=check_Lapack_error(info," first call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
 			lwork = (int) wkopt;
 			CALLOCX(work,lwork,double);
 
 			F77_CALL(dgesdd)("A", &n, &n, Awork, &n, s, u, &n, vt, &n, work, &lwork, iwork, &info);
-			if((*err=check_Lapack_error(info," second call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
+			if((err=check_Lapack_error(info," second call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
 				CALLOCX(vwork,n*nrhs,double);
-				matmult(vt,n,n,B,n,nrhs,vwork,&info);
+				matmult(vt,n,n,B,n,nrhs,vwork,info);
 				if(info > 0){
-					*err=NaN_WARNING;
+					err=NaN_WARNING;
 					WRR("`NaN` detected in matrix multiplication.")
 				}
 
@@ -742,14 +740,14 @@ void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
 				  }
 				}
 
-				*err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
+				err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
 				if(have_na > 0)
-					LOG_WARNING(*err," `gsiSolve` failed by `dgesdd`: detected `NaN` in matrix `vwork`.");
+					LOG_WARNING(err," `gsiSolve` failed by `dgesdd`: detected `NaN` in matrix `vwork`.");
 
 				/** and multiply from right by D*U */
-				matmult(u,n,n,vwork,n,nrhs,B,&info);
+				matmult(u,n,n,vwork,n,nrhs,B,info);
 				if(info > 0){
-				  *err=NaN_WARNING;
+				  err=NaN_WARNING;
 			      WRR("`NaN` detected in matrix multiplication.")
 				}
 				FREE(vwork);
@@ -761,21 +759,21 @@ void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
 		FREE(vt);
 		FREE(iwork);
 
-		if(*err != NO_ERROR){
+		if(err != NO_ERROR){
 			type = Bunch;
-			*err = LAPACK_SOLVE_ERROR;
+			err = LAPACK_SOLVE_ERROR;
 			if(PL > INTERNAL_ERROR)
-			  LOG_ERROR(*err, " `gsiSolve` failed by SVD.");
+			  LOG_ERROR(err, " `gsiSolve` failed by SVD.");
 		}
 	}
 
 	if(type == Bunch) {
-		*err = NO_ERROR;
+		err = NO_ERROR;
 		solveDSPTRS(A,n,B,nrhs,err);
-		if(*err != NO_ERROR){
-			*err = LAPACK_SOLVE_ERROR;
+		if(err != NO_ERROR){
+			err = LAPACK_SOLVE_ERROR;
 			if(PL > 0)
-			  LOG_ERROR(*err, " `gsiSolve` finally failed by Bunch.");
+			 LOG_ERROR(err, " `gsiSolve` finally failed by Bunch.");
 		}
 	}
 
@@ -792,15 +790,15 @@ void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
 //  F77_NAME(dpotrf)("L",nA,A,nA,err);
 //}
 
-void factorize_chol_L(double *A, int *nA, int *err) {
+void factorize_chol_L(double *A, int *nA, int &err) {
    int info = 0, n = *nA;
    const char *uplo = "L";
 
    /* factorize */
    F77_NAME(dpotrf)(uplo,&n,A,&n,&info);
-   if((*err=check_Lapack_error(info,"call to 'dpotrf' failed!",__LINE__, __FILE__)) != NO_ERROR ){
-	   *err=LAPACK_FACTORIZE_ERROR;
-	   LOG_ERROR(LAPACK_FACTORIZE_ERROR, "'factorize_chol_L' failed");
+   if((err=check_Lapack_error(info,"call to 'dpotrf' failed!",__LINE__, __FILE__)) != NO_ERROR ){
+	   err=LAPACK_FACTORIZE_ERROR;
+	   LOG_ERROR(err, "'factorize_chol_L' failed");
    }
 }
 
@@ -813,34 +811,34 @@ void factorize_chol_L(double *A, int *nA, int *err) {
  * @param nB    columns of B, number of right hand sides (nrhs)
  * @param err   error indicator
  */
-void solve_chol_factorized(double *A, int *nA, double *B, int *nB, int *err) {
+void solve_chol_factorized(double *A, int *nA, double *B, int *nB, int &err) {
   int info = 0,  n = *nA, nrhs = *nB;  // B has dimension:  n x nrhs, where nrhs= #cols
   const char *uplo = "L";
 
   /* solve with factorized matrix A=LL^T */
   F77_NAME(dpotrs)(uplo,&n,&nrhs,A,&n,B,&n,&info);
-  if((*err=check_Lapack_error(info,"call to 'dpotrs' failed! ",__LINE__, __FILE__)) != NO_ERROR ){
-	  *err=LAPACK_SOLVE_ERROR;
-	  LOG_ERROR(*err, " 'solve_chol_factorized' failed!");
+  if((err=check_Lapack_error(info,"call to 'dpotrs' failed! ",__LINE__, __FILE__)) != NO_ERROR ){
+	  err=LAPACK_SOLVE_ERROR;
+	  LOG_ERROR(err, " 'solve_chol_factorized' failed!");
   }
 
 }
 
 
-void solve_chol_triangular(double *A, int *nA, double *B, int *nB, int *err) {
+void solve_chol_triangular(double *A, int *nA, double *B, int *nB, int &err) {
   int info = 0,  n = *nA, nrhs = *nB;  // B has dimension:  n x nrhs, where nrhs= #cols
   const char *diag = "N";
   const char *tran = "N";
   const char *uplo = "L";
 
   F77_NAME(dtrtrs)(uplo,tran,diag,&n,&nrhs,A,&n,B,&n,&info);
-  if((*err=check_Lapack_error(info,"call to 'dtrtrs' failed! ",__LINE__, __FILE__)) != NO_ERROR ){
-	  *err=LAPACK_SOLVE_ERROR;
-	  LOG_ERROR(*err, " 'solve_chol_factorized' failed!");
+  if((err=check_Lapack_error(info,"call to 'dtrtrs' failed! ",__LINE__, __FILE__)) != NO_ERROR ){
+	  err=LAPACK_SOLVE_ERROR;
+	  LOG_ERROR(err, " 'solve_chol_factorized' failed!");
   }
 }
 
-void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
+void invMatrix(double *A, int n, double *ans, int &err, inversion_type type) {
 	const char *uplo="U";
 	int info=0, have_na=0, n2=SQR(n);
 
@@ -850,10 +848,10 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
 
 		// factorization
 		F77_NAME(dpotrf)(uplo,&n,ans,&n,&info);
-		if((*err=check_Lapack_error(info," `dpotrf` failed.", __LINE__,__FILE__)) == NO_ERROR) {
+		if((err=check_Lapack_error(info," `dpotrf` failed.", __LINE__,__FILE__)) == NO_ERROR) {
 			/* invert */
 			F77_NAME(dpotri)(uplo, &n, ans, &n, &info);
-			if((*err=check_Lapack_error(info," `dpotri` failed.", __LINE__,__FILE__)) == NO_ERROR){
+			if((err=check_Lapack_error(info," `dpotri` failed.", __LINE__,__FILE__)) == NO_ERROR){
 				int i2, i3, j, i;
 				for (i2 = i = 0; i<n; i++, i2 += n+1) {
 				  for (i3 = i2+1, j = i2+n; j < n2; j += n){
@@ -862,17 +860,17 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
 					  ans[i3++] = ans[j];
 				  }
 				}
-				*err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
+				err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
 				if(have_na > 0)
-				  LOG_WARNING(*err," `invMatrix` failed.");
+				  LOG_WARNING(err," `invMatrix` failed.");
 			}
 		}
 		/// try `SVD` if `Chol` has failed
-		if(*err != NO_ERROR) {
+		if(err != NO_ERROR) {
 			type = SVD;
-			*err = LAPACK_INVERSION_ERROR;
+			err = LAPACK_INVERSION_ERROR;
 			if(PL > INTERNAL_ERROR)
-			  LOG_ERROR(*err, " `invMatrix` failed by Cholesky factorization. Matrix is probably not positive (semi)definite.");
+			  LOG_ERROR(err, " `invMatrix` failed by Cholesky factorization. Matrix is probably not positive (semi)definite.");
 		}
 	}
 
@@ -891,12 +889,12 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
 
 		int lwork = -1;
 		F77_CALL(dgesdd)("A", &n, &n, ans, &n, s, u, &n, vt, &n, work, &lwork, iwork, &info);
-		if((*err=check_Lapack_error(info," first call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
+		if((err=check_Lapack_error(info," first call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
 			lwork = (int) wkopt;
 			CALLOCX(work,lwork,double);
 
 			F77_CALL(dgesdd)("A", &n, &n, ans, &n, s, u, &n, vt, &n, work, &lwork, iwork, &info);
-			if((*err=check_Lapack_error(info," second call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
+			if((err=check_Lapack_error(info," second call to `dgesdd` failed.",__LINE__, __FILE__)) == NO_ERROR ){
 				/* invert diagonal terms in matrix Vt */
 				for(int i=0; i < n; i++){
 				  if(s[i] < SVD_TOL) {
@@ -909,14 +907,14 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
 					}
 				  }
 				}
-				*err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
+				err = (have_na > 0 ? NaN_WARNING : NO_ERROR);
 				if(have_na > 0)
-				  LOG_WARNING(*err," in `invMatrix`.");
+				  LOG_WARNING(err," in `invMatrix`.");
 
 				/** and multiply from right by D*U */
-				matmult(u,n,n,vt,n,n,ans,&info);
+				matmult(u,n,n,vt,n,n,ans,info);
 				if(info > 0){
-					*err=NaN_WARNING;
+					err=NaN_WARNING;
 					WRR("`NaN` detected in matrix multiplication.")
 				}
 			}
@@ -927,11 +925,11 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
 		FREE(vt);
 		FREE(iwork);
 
-		if(*err != NO_ERROR){
+		if(err != NO_ERROR){
 			type = Bunch;
-			*err = LAPACK_INVERSION_ERROR;
+			err = LAPACK_INVERSION_ERROR;
 			if(PL > INTERNAL_ERROR)
-				LOG_ERROR(*err, " `invMatrix` failed by SVD.");
+				LOG_ERROR(err, " `invMatrix` failed by SVD.");
 		}
 	}
 
@@ -942,11 +940,11 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
 		CALLOCX(AP,nAP,double);
 
 		have_na = 0;
-		triangMat_U(A,n,AP,&info);
+		triangMat_U(A,n,AP,info);
 		if(info > 0){
 		  FREE(AP);
-		  *err = NaN_WARNING;
-		  LOG_WARNING(*err,"`invMatrix` failed: `NaNs` detected in `triangMat_U`.")
+		  err = NaN_WARNING;
+		  LOG_WARNING(err,"`invMatrix` failed: `NaNs` detected in `triangMat_U`.")
 		}
 
 		int *ipiv = NULL;
@@ -954,25 +952,25 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
 
 		/* Matrix factorization */
 		F77_NAME(dsptrf)(uplo,&n,AP,ipiv,&info);
-		if((*err=check_Lapack_error(info," matrix factorization `dsptrf` failed.",__LINE__, __FILE__)) == NO_ERROR ){
+		if((err=check_Lapack_error(info," matrix factorization `dsptrf` failed.",__LINE__, __FILE__)) == NO_ERROR ){
 			double *work = NULL;
 			CALLOCX(work,n,double);
 
 			/* Inverse, possibly indefinite */
 			F77_NAME(dsptri)(uplo,&n,AP,ipiv,work,&info);
-			if((*err=check_Lapack_error(info," Inversion by `dsptri` failed!", __LINE__,__FILE__)) == NO_ERROR){
-				triangMat_U_back(ans,n,AP,&info); // result in ans
+			if((err=check_Lapack_error(info," Inversion by `dsptri` failed!", __LINE__,__FILE__)) == NO_ERROR){
+				triangMat_U_back(ans,n,AP,info); // result in ans
 				if(info > 0){
-					*err =  NaN_WARNING;
-					LOG_WARNING(*err," `invMatrix` failed: `NaNs` detected in `triangMat_U_back`.");
+					err =  NaN_WARNING;
+					LOG_WARNING(err," `invMatrix` failed: `NaNs` detected in `triangMat_U_back`.");
 				}
 			}
 			FREE(work);
 		}
 
-		if(*err != NO_ERROR) {
-			*err = LAPACK_INVERSION_ERROR;
-			LOG_ERROR(*err, " `invMatrix` failed by Bunch-Kaufman factorization.");
+		if(err != NO_ERROR) {
+			err = LAPACK_INVERSION_ERROR;
+			LOG_ERROR(err, " `invMatrix` failed by Bunch-Kaufman factorization.");
 		}
 
 		FREE(AP);
@@ -991,35 +989,35 @@ void invMatrix(double *A, int n, double *ans, int *err, inversion_type type) {
  * @param nr
  * @param nc
  */
-void mat_trans(double *y, int ldy, double *x, int ldx, int nrow, int ncol, int *info){
+void mat_trans(double *y, int ldy, double *x, int ldx, int nrow, int ncol, int &info){
   for (int i=0; i<nrow; i++) {
     for (int j=0;j<ncol; j++) {
        y[j] = x[i + j * ldx]; // column of x to row of y
        if (ISNAN(y[i]))
-        { *info = 1; break; }
+        { info = 1; break; }
     }
     y += ldy;
   }
 }
 
-void triangMat_U(double *A, int nA, double *AP, int *info) {
+void triangMat_U(double *A, int nA, double *AP, int &info) {
     int n1 = nA, i, j, k;
 
-    for(*info=k=j=0; j<n1; j++)
+    for(info=k=j=0; j<n1; j++)
     	for(i=0;i<j+1; i++,k++){
     		if (ISNAN(A[i]))
-    		  { *info = 1; break; }
+    		  { info = 1; break; }
     		AP[k] = A[j*n1+i];
     	}
 }
 
-void triangMat_U_back(double *A, int nA, double *AP, int *info) {
+void triangMat_U_back(double *A, int nA, double *AP, int &info) {
     int n1 = nA, i, j, k;
 
-    for(*info=k=j=0; j<n1; j++)
+    for(info=k=j=0; j<n1; j++)
     	for(i=0;i<j+1; i++,k++){
     		if (ISNAN(AP[i]))
-    		 { *info = 1; break; }
+    		 { info = 1; break; }
     		A[i*n1+j] = A[j*n1+i] = AP[k];
     	}
 }

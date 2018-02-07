@@ -158,9 +158,9 @@ typedef struct krig_model_s {
 
   void setup(double *data);
 
-  void dualKriging(double *x, int nx, double *m, int *err);
+  void dualKriging(double *x, int nx, double *m, int &err);
 
-  void univarKriging(double *x, int nx, double *m, double *s, double *w, int *err);
+  void univarKriging(double *x, int nx, double *m, double *s, double *w, int &err);
 
 
 } krig_model_t, *krig_model;
@@ -271,15 +271,17 @@ typedef struct glkrig_models_s
 	   FREE(Xmat)
    }
 
-  void kriging(double *x, double *m, double *s, double *w, int *err);
+  void kriging(double *x, double *m, double *s, double *w, int &err);
+
   inline int intern_kriging(double *x) {
-	  kriging(x, krigr[0]->mean, krigr[0]->sig2, krigr[0]->w, &info);
+	  kriging(x, krigr[0]->mean, krigr[0]->sig2, krigr[0]->w, info);
 	  return info;
    }
 
-  void jacobian(double *x, double *mean, double *jac, double *fdwork, int *err);
+  void jacobian(double *x, double *mean, double *jac, double *fdwork, int &err);
+
   inline int intern_jacobian(double *x, double *jac, double *fdwork) {
-	  jacobian(x, krigr[0]->mean, jac, fdwork, &info);
+	  jacobian(x, krigr[0]->mean, jac, fdwork, info);
 	  return info;
   }
 
@@ -318,7 +320,7 @@ typedef struct cv_model_s {
 
 	void set(SEXP R_Xmat, SEXP R_data, SEXP R_cm);
 
-	void cvError(double *x, krig_model *km, double *cv, int *info);
+	void cvError(double *x, krig_model *km, double *cv, int &info);
 
 } cv_model_t, *CVKM;
 
@@ -514,7 +516,7 @@ typedef struct ql_model_s {
 
 	inline int intern_cvError(double *x) {
 		  if(glkm->krigType && qld->qlopts.useCV) {
-		  	 cvmod->cvError(x,glkm->km,glkm->krigr[0]->sig2,&info);
+		  	 cvmod->cvError(x,glkm->km,glkm->krigr[0]->sig2,info);
 		  	 if(info != NO_ERROR)
 		  	   LOG_ERROR(info," in `cvError`.")
 		  }
@@ -524,10 +526,10 @@ typedef struct ql_model_s {
 	 /* variance score vector, only for krigType `var` !!! */
 	inline int intern_varScore(double *vars)
 	{
-   		 matmult_diag_sqrt(qld->Atmp,nCov,dx,glkm->krigr[0]->sig2,&info);
+   		 matmult_diag_sqrt(qld->Atmp,nCov,dx,glkm->krigr[0]->sig2,info);
    		 if(info > 0)
    			LOG_WARNING(info, "`NaN` detected in `matmult_diag_sqrt`.")
-		 matmult_trans(qld->Atmp,nCov,dx,qld->Atmp,nCov,dx,vars,&info);
+		 matmult_trans(qld->Atmp,nCov,dx,qld->Atmp,nCov,dx,vars,info);
 		 if(info > 0)
 			LOG_WARNING(info," `NaN` detected in `matmult_trans`.")
 
@@ -543,7 +545,7 @@ typedef struct ql_model_s {
 	int intern_quasiObs(double *x, double *score, double *qiobs);
 
 	inline int intern_quasiScore(double *jac, double *score) {
-		 quasiScore(glkm->krigr[0]->mean,jac,qld->vmat,score,&info);
+		 quasiScore(glkm->krigr[0]->mean,jac,qld->vmat,score,info);
 		 return info;
 	}
 
@@ -556,13 +558,13 @@ typedef struct ql_model_s {
     inline double intern_qfValue() { return qfValue(score,qimat); }
     inline double intern_qfScoreStat(double *x) { return qfScoreStat(x,jac,score,qimat); }
 
-	void varMatrix(double *x, double *s, double *vmat, int *err);
+	void varMatrix(double *x, double *s, double *vmat, int &err);
 
 	int qfScore(double *x, double *jac, double *score, double *qimat);
 	double qfScoreStat(double *x, double *jac, double *score, double *qimat);
 
 	int intern_quasiInfo(double *jac, double *qimat);
-	void quasiScore(double *mean, double *jac, double *vmat, double *score, int *err);
+	void quasiScore(double *mean, double *jac, double *vmat, double *score, int &err);
 
 	double intern_mahalValue(double *x);			// use constant (inverted) variance
 	double intern_mahalVarTrace(double *x);			// use constant (inverted) variance

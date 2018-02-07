@@ -99,8 +99,8 @@ qsd <- getQLmodel(sim,lb,ub,obs0,
 		intrinsic=TRUE, Nb = 100,	# use bootstrap option, number of bootstrap samples
 		verbose=TRUE)
 
-qsd$covT
-qsd$covL
+#qsd$covT
+#qsd$covL
 
 # cross-validation: fitting CV covariance models
 cvm <- prefitCV(qsd, reduce=FALSE, verbose=TRUE)
@@ -111,34 +111,51 @@ x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
 # use the maximum of kriging and CV-based variances
 attr(cvm,"type") <- "max"
 
-# first try quasi-scoring with CV errors (type=max)
-(QS0 <- qscoring(qsd,x0,
-		 opts=list("pl"=10,
-				   "ftol_rel"=1e-7,
-				   "xtol_rel"=1e-7,
-				   "score_tol"=1e-7,
-				   "slope_tol"=1e-7),
-		 cvm=cvm,pl=10,verbose=TRUE))
+# random sample
+#Xc <- multiDimLHS(N=100,qsd$lower,qsd$upper,type="matrix")
+#D <- quasiDeviance(Xc,qsd,cvm=cvm,verbose=TRUE)
+#S <- t(sapply(D,"[[","score"))
+#colMeans(S)
+
+opts <- list("pl"=100,"xscale"=c(10,0.1,1),
+		 "slope_tol"=1e-7,"ftol_stop"=1e-10,
+		 "xtol_rel"=1e-10)
  
-QS0$Qnorm
-quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]
+(QS0 <- qscoring(qsd,x0,opts=opts,														,
+		 cvm=cvm,pl=10,verbose=TRUE))
+
+quasiDeviance(x0,qsd,cvm=cvm,verbose=TRUE)[[1]]$value
+
+#print(QS0$Qnorm,digits=12)
+#print(QS0$value,digits=12)
+#quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]
 
 # multistart version of finding a root
 # ... passed to searchMinimizer
 method <- c("qscoring","bobyqa","cobyla")
-opts <-list("ftol_stop"=1e-10,"ftol_rel"=1e-7,
-		    "xtol_rel"=1e-10,"score_tol"=1e-3,
-			"slope_tol"=1e-6) 
-
 S0 <- multiSearch(xstart=x0,qsd,method,opts,check=FALSE,
-		cvm=cvm,nstart=25,optInfo=TRUE,cl=cl,verbose=TRUE)
+		cvm=cvm,nstart=50,optInfo=TRUE,cl=cl,verbose=TRUE)
 
 # best found root
-roots <- attr(S0,"roots")
+(roots <- attr(S0,"roots"))
 (id <- attr(roots,"id"))
 stopifnot(!is.na(id))
 attr(roots,"par")
-roots
+attr(S0,"optRes")
+
+# try a single one 
+id <- 15
+RES <- attr(S0,"optRes")[[id]]
+x <- RES$start
+quasiDeviance(x,qsd,cvm=cvm,verbose=TRUE)[[1]]$value
+
+(QSF <- qscoring(qsd,x,opts=opts,														,
+		 cvm=cvm,pl=100,verbose=TRUE))
+
+(S2 <- searchMinimizer(x,qsd,method="bobyqa",
+		 cvm=cvm,verbose=TRUE))
+
+rbind(QSF$par,S2$par)
 
 ## inspect CV errors vs. kriging variances
 # no significant bias in predicting the statistics 
@@ -171,25 +188,49 @@ crossValTx(qsd, cvm, type = "sigK")
 # in order to accouont for the prediction uncertainty
 # of sample means of the statistics
 
+qs.opts <- list("pl"=0,"xscale"=c(10,0.1,1),"xtol_rel"=1e-10,
+		        "ftol_rel"=1e-7,"ftol_abs"=1e-4,"score_tol"=1e-4)
+
+#debug(qle)		
+
 OPT <- qle(qsd, simClust, cond=cond,  
-		qscore.opts = list("pl"=0,"xtol_rel"=1e-7,"ftol_rel"=1e-7,"ftol_abs"=1e-6,"score_tol"=1e-3),
-		global.opts = list("maxiter"=10,"maxeval" = 20,"weights"=c(50,10,5,1,0.1),"NmaxQI"=3,"nstart"=25),
+		qscore.opts = qs.opts,
+		global.opts = list("maxiter"=10,"maxeval" = 10,
+				"weights"=c(50,10,5,1,0.1),
+				"NmaxQI"=5,"nstart"=100,
+				"xscale"=c(10,0.1,1)),
 		local.opts = list("lam_max"=1e-2,
-				          "nobs"=50,				# number of (bootstrap) observations for testing local minimizer
+				          "nobs"=100,				# number of (bootstrap) observations for testing local minimizer
 				          "nextSample"="score",		# sample criterion
-				          "ftol_abs"=1e-4,			# upper bound on criterion value
+				          "ftol_abs"=0,			# upper bound on criterion value
 						  "weights"=c(0.55),		# constant weight factor
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
 						  "test"=FALSE),			# testing is enabled
 		method = c("qscoring","bobyqa","direct"),		
+		#method = c("cobyla"),
 		errType="max", iseed=297, multistart=TRUE,cl=cl, pl=10)								
 
 print(OPT,pl=10)
+
+OPT$ctls
+OPT$why
 
 # extract information of parameter estimation
 local <- OPT$final
 info <- attr(OPT,"optInfo")
 track <- attr(OPT,"tracklist")
+
+#multistart
+method <- c("qscoring","bobyqa","cobyla")
+S0 <- multiSearch(xstart=OPT$par,OPT$qsd,method,opts,check=FALSE,
+		cvm=OPT$cvm,nstart=25,optInfo=TRUE,cl=cl,verbose=TRUE)
+
+# best found root
+(roots <- attr(S0,"roots"))
+(id <- attr(roots,"id"))
+stopifnot(!is.na(id))
+attr(roots,"par")
+attr(S0,"optRes")
 
 # last message from local minimization
 local$message
@@ -202,18 +243,39 @@ S0 <- searchMinimizer(OPT$par, OPT$qsd,
 
 # quas-scoring again more precise results
 QS <- qscoring(OPT$qsd,OPT$par,
-		opts=list("score_tol"=1e-3),
-		cvm=OPT$cvm,pl=10)
+		opts=list("score_tol"=1e-5),
+		cvm=OPT$cvm,pl=100)
 
 # compare the different estimates
 checkMultRoot(OPT,par=rbind("QS"=QS$par,"S0"=S0$par))
 
 # MC hypothesis testing 
-Stest <- qleTest(OPT,QS,sim=simClust,cond=cond,nsim=200,
+debug(qleTest)
+Stest <- qleTest(OPT,QS,sim=simClust,cond=cond,nsim=500,
 		  method=c("qscoring","bobyqa","direct"),
 		  cl=cl, verbose=TRUE)
 
 print(Stest)
+Stest$par
+QS$par
+msem <- attr(Stest,"msem")
+aiqm <- attr(Stest,"aiqm")
+1-sqrt(diag(msem))/sqrt(diag(attr(Stest,"qi")))
+
+# Stest
+Sb <- attr(Stest$test,"Sb")
+sb <- as.numeric(Stest$test[1])
+alpha <- 0.1
+try(quantile(Sb,1-alpha,na.rm=TRUE),silent=TRUE)
+(1+sum(Sb>=sb))/(length(Sb)+1)
+
+Sb <- sort(Sb)
+e_cdf <- 1:length(Sb) / length(Sb)
+plot(Sb, e_cdf, type = "s")
+abline(h = alpha, lty = 3)
+Sb[which(e_cdf >= alpha)[1]]
+
+try(quantile(Sb,c(0.05,0.5,0.95),na.rm=TRUE),silent=TRUE)
 
 # show envelopes for K,G,F function
 plotGraphs(OPT$par,nsim=1000)
@@ -223,6 +285,7 @@ plotGraphs(OPT$par,nsim=1000)
 #data(redwood)
 #fitM <- kppm(redwood, ~1, "MatClust")
 #fitM$modelpar
+#OPT$par
 #QS$par
 
 # do not forget

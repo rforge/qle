@@ -18,7 +18,8 @@ Changes with 0.16-8
 Changes with 0.17
 -------------------
 
-1) testing an approximate root is done only in case of no root and if quasi-deviance is less than a user-defined tolerance
+1) testing an approximate root is done only in case of no root and if quasi-deviance is significantly greater than zero by a
+   user-defined tolerance, i.e. `ftol_abs`.
 
 2) C function for FD approximation now uses pre-allocated storage
 
@@ -52,4 +53,7 @@ Current known issues
 TODO
 ----
 	o qleTest: modify with new arguments, par, obs  
+	
+	o nlm: (Quasi-)Newton for Mahalanobis criterion function with constant variance matrix,
+	 	gradient as quasi-score and quasi-information as Hessian    
 	

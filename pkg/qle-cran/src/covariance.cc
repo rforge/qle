@@ -227,8 +227,8 @@ SEXP Pmat(SEXP R_Fmat){
     SEXP R_Pmat = R_NilValue;
     PROTECT(R_Pmat = allocMatrix(REALSXP, lx, lx-fddim));   	// nullspace matrix
 
-    qr_data qr = qr_dgeqrf(REAL(R_Fmat), lx, fddim, &info);
-    nullSpaceMat(qr,REAL(R_Pmat), &info);
+    qr_data qr = qr_dgeqrf(REAL(R_Fmat), lx, fddim, info);
+    nullSpaceMat(qr,REAL(R_Pmat), info);
     qrFree(qr);
 
     UNPROTECT(1);
