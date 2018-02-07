@@ -53,7 +53,7 @@ and attributes:
       the re-estimated parameters have \code{NA} values, criterion function minimizations have errors or did not
       converge numerically, the integer seed value `\code{iseed}`}
 }
- \details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
+\details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
  model w.r.t. to the estimated parameter is true, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} by testing based
  on a Monte Carlo approach (see vignette). Due to the approximate nature of the assumed statistical model for the observed data the
  exact distribution of the test statistics, that is, the Mahalanobis distance or quasi-deviance, is generally unknown and therefore

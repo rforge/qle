@@ -188,9 +188,9 @@ The function sequentially estimates the unknown model parameter. Basically, the 
    treating the current minimzer as an approximate root otherwise forces the algorithm to switch to the global phase and vice versa.}
   \item{\code{eta}:}{ values for decrease and increase of the local weights, which is intended to faciliate convergence
 		 while sampling new points more and more around the current best parameter estimate.} 
-	 \item{\code{alpha}:}{ significance level for computation of empirical quantiles of one of the test statistics, that is,
+  \item{\code{alpha}:}{ significance level for computation of empirical quantiles of one of the test statistics, that is,
          testing a parameter to be a	root of the quasi-score vector in probability.}
-  \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
+  \item{perr_tol}{ lower bound on the relative difference of the empirical and predicted error of an approximate root}
   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
   \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{var}" (see details)} 
@@ -202,16 +202,18 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 				     as soon as the criterion function value drops below this value. This might be preferable to a time consuming
 					 sampling procedure if one whishes to simply minimize the criterion function or find a first
 					 approximation to the unknown model parameter.}
-  \item{\code{C_max}:}{ upper bound on the relative maximum quasi-score interpolation error. The algorithm terminates
-					its value drops below after a number of `\code{global.opts$NmaxCV}` consecutive iterations.}
+  \item{\code{lam_rel}:}{ upper bound on the relative change of `\code{lam_max}`, see `\code{local.opts}`
+        The algorithm terminates	its value drops below after a number of `\code{global.opts$NmaxCV}` 
+        consecutive iterations.}
 	 \item{\code{xtol_rel}:}{ relative change of found minimizer of the criterion function or root of quasi-score.}
-	 \item{\code{maxiter}:}{ maximum allowed global phase iterations }
+	 \item{xscale}{ scaling factors for `\code{x0}`, default set to \code{rep(1,length(x0))}, i.e. typical magnitude of parameter components}	
+ \item{\code{maxiter}:}{ maximum allowed global phase iterations }
 	 \item{\code{maxeval}:}{ maximum allowed global and local iterations }
 	 \item{\code{sampleTol}:}{ minimum allowed distance between sampled locations at global phase}	
 	 \item{\code{weights}:}{ vector of \eqn{\code{weights}>0} for global sampling}
   \item{\code{nsample}:}{ sampling size of candidate locations at the global phase}
   \item{\code{NmaxRel}:}{ maximum number of consecutive iterates until stopping according to `\code{xtol_rel}`}
-  \item{\code{NmaxCV}:}{ maximum number of consecutive iterates until stopping according to `\code{C_max}`}
+  \item{\code{NmaxCV}:}{ maximum number of consecutive iterates until stopping according to `\code{lam_rel}`}
   \item{\code{NmaxSample}:}{ maximum number of consecutive iterations until stopping according to `\code{sampleTol}`}
   \item{\code{NmaxLam}:}{ maximum number of consecutive iterations until stopping for which the generalized eigenvalue of the variance
 		 of the quasi-score vector within the kriging approximation model and its total variance measured by the quasi-information matrix

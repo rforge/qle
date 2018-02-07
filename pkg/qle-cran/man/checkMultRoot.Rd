@@ -4,7 +4,7 @@
 \alias{checkMultRoot}
 \title{Inspect estimated parameters}
 \usage{
-checkMultRoot(est, par = NULL, opts = list(ftol_stop = 1e-07, score_tol =
+checkMultRoot(est, par = NULL, opts = list(ftol_abs = 1e-06, score_tol =
   0.001), verbose = FALSE)
 }
 \arguments{
@@ -32,7 +32,7 @@ Only for the quasi-likelihood approach the function inspects the (numerical) con
  parameters in `\code{par}` by comparing each observed quasi-information matrix with the expected one.
  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
  and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
- are as follows: `\code{ftol_stop}` for the quasi-deviance criterion value and `\code{score_tol}`  for the maximum of any of
+ are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}`  for the maximum of any of
  the components of the quasi-score vector.
 }
 \examples{
