@@ -45,23 +45,26 @@
 # choose the best root, if any, according to the  
 # criteria (see vignette) and the smallest value
 # of the maximum of the quasi-score vector
-.evalBestRoot <- function(dm,opts) {
+.evalBestRoot <- function(dm,opts)
+{
 	stopifnot(is.data.frame(dm))	
 	notNa <- !(apply(dm,1,anyNA))
+	
 	if(sum(notNa) < nrow(dm)){		
 	  message("`NA` values removed from estimated parameters.")
 	} else if(sum(notNa) == 0L) {
 	  warning("Cannot find best root. All rows in data frame of estimated parameters contain `NA`s.")
 	  return( structure(row.names(dm),"id"=NA))
     }
+	
 	A <- matrix(FALSE,nrow(dm),3)
 	A[notNa,] <- cbind(as.numeric(dm[notNa,"minor"]) == 0, 
-		  as.numeric(dm[notNa,"value"]) < opts$ftol_stop,
+		  as.numeric(dm[notNa,"value"]) < opts$ftol_abs,
 		  as.numeric(dm[notNa,"|score_max|"]) < opts$score_tol)
 	
   	ok <- which(A[,1]==TRUE & apply(A[,2:3],1,any))
   	if(length(ok) == 0L){
-	    message(.makeMessage("None of the estimates seems match `ftol_stop` or `score_tol` condition.\nSelect the one which has smallest criterion value."))
+	    message(.makeMessage("None of the estimates seems to match `ftol_abs` or `score_tol` condition.\nSelect the one which has smallest criterion value."))
 		id <- try(which.min(dm[,"value"]),silent=TRUE)
 		if(!inherits(id,"try-error") && length(id)>0L)
 		  dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
@@ -71,7 +74,8 @@
 		}
 	  	return( structure(row.names(dm),"id"=id))
     }
-    stopifnot(length(ok)>0L)
+    
+	stopifnot(length(ok)>0L)
 	nm <- apply(dm[ok,-1],2,which.min)	
 	id <- sapply(1:length(nm),function(x) sum(nm[1:x] == nm[x]))
 	maxid <- cbind(nm, id)[,2]
@@ -90,8 +94,7 @@
 
 
 .evalRoots <- function(QD, par = NULL,
-		        opts=list("ftol_stop"=1e-7,
-						  "score_tol"=1e-3))
+	            opts=list("ftol_abs"=1e-6, "score_tol"=1e-3))
 {	
 	if(length(opts) == 0L)
 	 stop("Options `opts` should not be empty for evaluation of roots.") 	
@@ -103,12 +106,13 @@
 	   par <- try(do.call(rbind,lapply(QD,"[[","par")),silent=TRUE)
 	   stopifnot(is.matrix(par))
     } 
-	
+	xdim <- ncol(par)
 	X <- try(
 	      lapply(QD,
 			function(qd) {
-				qIinv <- if(.isError(qd)) NA else try(gsiInv(qd$I),silent=TRUE)	  	
-				xdim <- ncol(qd$I)
+				if(.isError(qd)) 
+				  return (qd)
+			   	qIinv <- try(gsiInv(qd$I),silent=TRUE)			
 				if(!is.numeric(qIinv) || anyNA(qIinv) || .isError(qIinv) ) {		
 					msg <- .makeMessage("Failed to invert quasi-information.")
 					message(msg)
@@ -186,7 +190,7 @@
 #'  parameters in `\code{par}` by comparing each observed quasi-information matrix with the expected one.
 #'  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
 #'  and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
-#'  are as follows: `\code{ftol_stop}` for the quasi-deviance criterion value and `\code{score_tol}`  for the maximum of any of
+#'  are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}`  for the maximum of any of
 #'  the components of the quasi-score vector.  
 #'  
 #' @examples 
@@ -201,7 +205,7 @@
 #' @rdname checkMultRoot
 #' @export
 checkMultRoot <- function(est, par = NULL,
-					opts=list("ftol_stop"=1e-7,"score_tol"=1e-3),
+					opts=list("ftol_abs"=1e-6,"score_tol"=1e-3),
 					verbose = FALSE)
 {			
    if(est$qsd$criterion != "qle")
@@ -319,7 +323,7 @@ checkMultRoot <- function(est, par = NULL,
 	
 	relED <-
 	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {
-		 abs(1-sqrt(diag(msem))/sqrt(diag(qi)))
+		 try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
 	} else {
 		message("Failed to compute relative difference of empirical and predicted error.")
 		NULL
@@ -330,8 +334,11 @@ checkMultRoot <- function(est, par = NULL,
 	if(length(hasError) > 0L)	
 		message(paste0("A total of ",length(hasError)," re-estimations failed."))
 		
+	res <- .qleTest(B,alpha)					# test results
+	res$par <- par
+	
 	# results
-	structure(.qleTest(B,alpha),				# test results
+	structure(res,				
 			msem=msem,							# mean square error matrix
 			aiqm=aiqm,							# average inverse QI (re-estimated parameters)
 			qi=qi,								# inverse QI at estimated theta
@@ -612,9 +619,11 @@ qleTest <- function(est, local = NULL, sim, ...,
 		message(.makeMessage("Detected `NAs` values (for relative differences) in quasi-information or MSE matrix while testing."))		
 		NA
 	 }
+	res <- .qleTest(B,alpha)					# test results
+	res$par <- est$par
 	
 	# results
-	structure(.qleTest(B,alpha),				# test results
+	structure(res,				
 		    msem=msem,							# mean square error matrix
 	    	aiqm=aiqm,							# average inverse QI (re-estimated parameters)
 			qi=qi,								# inverse QI at estimated theta
