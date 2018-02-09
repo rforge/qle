@@ -5,8 +5,8 @@
 \title{Monte Carlo testing}
 \usage{
 qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
-  check.root = FALSE, alpha = 0.05, na.rm = TRUE, cl = NULL,
-  iseed = NULL, verbose = FALSE)
+  check.root = FALSE, alpha = 0.05, multi.start = FALSE, na.rm = TRUE,
+  cl = NULL, iseed = NULL, verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
@@ -24,6 +24,8 @@ qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
 \item{check.root}{logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})}
 
 \item{alpha}{significance level for testing the hypothesis}
+
+\item{multi.start}{logical, \code{FALSE} (default), whether to perform a multistart local search for each generated observation if the initial local search did not converge}
 
 \item{na.rm}{logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 re-estimated parameters}
@@ -53,7 +55,7 @@ and attributes:
       the re-estimated parameters have \code{NA} values, criterion function minimizations have errors or did not
       converge numerically, the integer seed value `\code{iseed}`}
 }
-\details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
+ \details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
  model w.r.t. to the estimated parameter is true, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} by testing based
  on a Monte Carlo approach (see vignette). Due to the approximate nature of the assumed statistical model for the observed data the
  exact distribution of the test statistics, that is, the Mahalanobis distance or quasi-deviance, is generally unknown and therefore

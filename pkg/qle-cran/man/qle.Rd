@@ -7,8 +7,7 @@
 qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
   global.opts = list(), local.opts = list(), method = c("qscoring",
   "bobyqa", "direct"), qscore.opts = list(), control = list(),
-  errType = "kv", multistart = FALSE, pl = 0, cl = NULL, iseed = NULL,
-  plot = FALSE)
+  errType = "kv", pl = 0, cl = NULL, iseed = NULL, plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -37,8 +36,6 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \item{control}{list of control arguments passed to any of the routines defined in `\code{method}`}
 
 \item{errType}{type of prediction variances, choose one of "\code{kv,cv,max}" (see details)}
-
-\item{multistart}{logical, \code{FALSE} (default), whether to search for local minimia or roots from multiple starting points at global phase}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 

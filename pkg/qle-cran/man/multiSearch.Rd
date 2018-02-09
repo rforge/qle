@@ -4,23 +4,28 @@
 \alias{multiSearch}
 \title{A multistart version of local searches for parameter estimation}
 \usage{
-multiSearch(xstart = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
-  cl = NULL, verbose = FALSE)
+multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
+  multi.start = FALSE, cl = NULL, verbose = FALSE,
+  cores = getOption("mc.cores", 1L))
 }
 \arguments{
-\item{xstart}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
+\item{x0}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
 \item{...}{arguments passed to \code{\link{searchMinimizer}}}
 
-\item{nstart}{number of random samples from which to start local searches (if `\code{xstart}`=\code{NULL}, then ignored)}
+\item{nstart}{number of random samples from which to start local searches (if `\code{x0}`=\code{NULL}, then ignored)}
 
 \item{optInfo}{logical, \code{FALSE} (default), whether to store original local search results}
+
+\item{multi.start}{logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge}
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{verbose}{if \code{TRUE} (default), print intermediate output}
+
+\item{cores}{integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}}
 }
 \value{
 Object of class \code{QSResult} and attribute `\code{roots}`, e.t. the matrix of estimated parameters for which any of
@@ -33,14 +38,14 @@ The function is multistart version of \code{\link{searchMinimizer}} which select
 }
 \details{
 The function performs a number of local searches depending which local method `\code{method}` was passed to
- \code{\link{searchMinimizer}}. Either the starting points are given by `\code{xstart}` or are generated as an augmented 
+ \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
  design based on the sample set stored in `\code{qsd}`. The function evaluates all found solutions and selects the one which 
  is best according to the criteria defined in the vignette.
 }
 \examples{
  data(normal)
  x0 <- c("mu"=3.5,"sigma"=1.5)
- S0 <- multiSearch(xstart=x0,qsd,method=c("qscoring","bobyqa"),
+ S0 <- multiSearch(x0=x0,qsd,method=c("qscoring","bobyqa"),
            opts=list("ftol_stop"=1e-9,"score_tol"=1e-3),nstart=4,
             optInfo=TRUE,verbose=TRUE)
 

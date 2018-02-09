@@ -6,7 +6,7 @@
 \usage{
 searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
   opts = list(), control = list(), ..., obs = NULL, info = TRUE,
-  check = TRUE, pl = 0L, verbose = FALSE)
+  check = TRUE, restart = TRUE, pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{x0}{(named) numeric vector, the starting point}
@@ -26,6 +26,8 @@ searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
 \item{info}{additional information at found minimizer}
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
+
+\item{restart}{logical, \code{TRUE} (default), whether to restart optimization in case of non convergence}
 
 \item{pl}{numeric value (>=0), the print level}
 
