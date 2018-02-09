@@ -112,11 +112,11 @@
 }
 
 .addQscoreOptions <- function(xdim) {
-	list( "ftol_stop" = 1e-9,								# also used to select best roots
+	list( "ftol_stop" = 1e-7,								# also used to select best roots
 		  "xtol_rel"  = 1e-10,
 		  "grad_tol"  = 1e-5,
-		  "ftol_rel"  = 1e-8,
-		  "ftol_abs"  = 1e-5,								# only for local minima if grad_tol reached as a more restrictive check
+		  "ftol_rel"  = 1e-6,
+		  "ftol_abs"  = 1e-4,								# only for local minima if grad_tol reached as a more restrictive check
 		  "score_tol" = 1e-5,								# also used to select best roots
 		  "slope_tol" = 1e-7,
 		  "maxiter"   = 100,
@@ -621,6 +621,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' @param obs		  numeric vector of observed statistics, overwrites `\code{qsd$obs}`
 #' @param info		  additional information at found minimizer
 #' @param check		  logical, \code{TRUE} (default), whether to check input arguments
+#' @param restart 	  logical, \code{TRUE} (default), whether to restart optimization in case of non convergence
 #' @param pl		  numeric value (>=0), the print level 
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #'
@@ -693,7 +694,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					 opts = list(), control = list(), ...,  
 					   obs = NULL, info = TRUE, check = TRUE, 
-					     pl = 0L, verbose = FALSE)
+					     restart = TRUE, pl = 0L, verbose = FALSE)
 {
 	if(check)
 	 .checkArguments(qsd,x0,...)
@@ -760,13 +761,14 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		   cat("\n\n")
 	   }
 	   method <- method[-1]
-	   if(is.na(method[1])){
-			message("No convergence and only one method supplied.")
+	   if(is.na(method[1]) || !restart){
+			if(pl > 0L) 
+			  message("No convergence and only one method supplied.")
 			return(S0)	
 	   }		
     }
 	
-	if(is.null(S0) || S0$convergence < 0L) {	  	
+	if(is.null(S0) || (restart && S0$convergence < 0L)) {	  	
 	  S0 <- 
 		tryCatch({			
 			if(length(control) == 0L){
@@ -909,16 +911,18 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @description  The function is multistart version of \code{\link{searchMinimizer}} which selects the best
 #' 	root of the quasi-score (if there is any) or a local minimum from all found minima according to the criteria described in the vignette.
 #' 
-#' @param xstart 	numeric, \code{NULL} default, list, vector or matrix of starting parameters
-#' @param qsd		object of class \code{\link{QLmodel}}
-#' @param ...    	arguments passed to \code{\link{searchMinimizer}} 
-#' @param nstart 	number of random samples from which to start local searches (if `\code{xstart}`=\code{NULL}, then ignored)
-#' @param optInfo 	logical, \code{FALSE} (default), whether to store original local search results
-#' @param cl 	 	cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
-#' @param verbose	if \code{TRUE} (default), print intermediate output
+#' @param x0	 	  numeric, \code{NULL} default, list, vector or matrix of starting parameters
+#' @param qsd		  object of class \code{\link{QLmodel}}
+#' @param ...    	  arguments passed to \code{\link{searchMinimizer}} 
+#' @param nstart 	  number of random samples from which to start local searches (if `\code{x0}`=\code{NULL}, then ignored)
+#' @param optInfo 	  logical, \code{FALSE} (default), whether to store original local search results
+#' @param multi.start logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge 
+#' @param cl 	 	  cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
+#' @param verbose	  if \code{TRUE} (default), print intermediate output
+#' @param cores		  integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}
 #' 
 #' @details The function performs a number of local searches depending which local method `\code{method}` was passed to
-#'  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{xstart}` or are generated as an augmented 
+#'  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
 #'  design based on the sample set stored in `\code{qsd}`. The function evaluates all found solutions and selects the one which 
 #'  is best according to the criteria defined in the vignette.
 #' 
@@ -931,7 +935,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @examples 
 #'  data(normal)
 #'  x0 <- c("mu"=3.5,"sigma"=1.5)
-#'  S0 <- multiSearch(xstart=x0,qsd,method=c("qscoring","bobyqa"),
+#'  S0 <- multiSearch(x0=x0,qsd,method=c("qscoring","bobyqa"),
 #'            opts=list("ftol_stop"=1e-9,"score_tol"=1e-3),nstart=4,
 #'             optInfo=TRUE,verbose=TRUE)
 #' 
@@ -944,38 +948,58 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @rdname multiSearch
 #' @author M. Baaske 
 #' @export 
-multiSearch <- function(xstart=NULL, qsd, ..., nstart=10, optInfo=FALSE, cl=NULL, verbose=FALSE){
-	if(nstart>0L){		
-		X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
-		Xs <- try(multiDimLHS(N=nstart,qsd$lower,qsd$upper,X=X,
-				   method="augmentLHS",type="matrix"),silent=TRUE)
-   		if(inherits(Xs,"try-error")) 
-		  message("Could not generate random starting points in function `multiDimLHS`.")
-	    else if(!is.null(xstart))
-		 xstart <- rbind(xstart,Xs)
-	    else xstart <- Xs
-	} 
-	if(is.null(xstart))
-	 stop("No starting points given for local searches.")
-	if(!is.list(xstart))
-	 xstart <- .ROW2LIST(xstart)
+multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
+		         		 multi.start=FALSE, cl=NULL, verbose=FALSE,
+						 	cores=getOption("mc.cores",1L))
+{	 	
+	if(!(nstart > 0L))
+	 stop("Number of multistart points must be greater than zero!")
+ 	
+    args <- list(...)
+	args$restart <- NULL
+	S0 <- if(!is.null(x0)){
+	   if(!is.list(x0))
+		 x0 <- .ROW2LIST(x0)
+	   # use only first provided method, usually `qscoring`
+	   # if non convergence then do a multistart search
+	   do.call(searchMinimizer,c(list(x0=x0[[1]],qsd=qsd,restart=FALSE),args))
+	 } else NULL
 	
-	opt.args <- list(...)
-	RES <- do.call(doInParallel,
-			c(list(X=xstart,
-				FUN=function(xstart,...){
-					searchMinimizer(xstart,...)
-				},
-				cl=cl, qsd=qsd), opt.args)) 
+    if(is.null(S0) && !multi.start){
+		stop("No starting `x0` given. Argument `multi.start` should be set TRUE.")
+	} else if(multi.start || .isError(S0) || 
+			  S0$convergence < 0L || S0$convergence == 10){		 # more restrictive: do not accept convergence by `xtol_rel`
+ 		
+		 X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
+		 Xs <- try(multiDimLHS(N=nstart,qsd$lower,qsd$upper,X=X,
+						 method="augmentLHS",type="list"),silent=TRUE)
+		 
+		 if(inherits(Xs,"try-error")) {
+			 msg <- .makeMessage("Could not generate random starting points in function `multiDimLHS`.")
+			 if(!is.null(x0)){
+				 warning(msg)
+				 return ( structure(S0, message=msg, error=Xs) )
+			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
+		 }
+		 if(verbose)
+		  cat("Estimate parameters...\n")
+	     RES <- do.call(doInParallel,
+				 c(list(X=Xs,
+					FUN=function(x,...){
+						searchMinimizer(x,...)						# including a restart by default
+					},
+					cl=cl,cores=cores,qsd=qsd), args))		
+		 if(!is.null(S0))
+		   RES <- c(RES,list(S0))
+	   	
+	} else { RES <- list(S0) }	
 	
 	if(.isError(RES))
-	 return(RES)
+	  return(RES)
  	# do not evaluate solution for just a single parameter
-    if(length(RES) == 1L){
-		if(verbose)
-		  message("We do not compare or evaluate the root criteria when only a single solution is available.")
-		return (RES[[1]])
-	}
+    if(length(RES) == 1L)
+      return (RES[[1]])
+	
 	# check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) & x$convergence >= 0L))
 	if(length(ok) == 0L){
@@ -987,27 +1011,26 @@ multiSearch <- function(xstart=NULL, qsd, ..., nstart=10, optInfo=FALSE, cl=NULL
 	}
 	
 	hasError <- which(!(1:length(RES) %in% ok))
-	if(length(hasError) > 0L)	
-	 message(paste0("A total of ",length(hasError)," local searches failed."))
-		
 	roots <- .evalRoots(RES[ok])
 	if(.isError(roots)) {
 		msg <- .makeMessage("Could not evaluate best results of local searches")
 		message(msg)
-		attr(roots,"optInfo") <- RES
+		attr(roots,"optRes") <- RES
+		attr(roots,"hasError") <- hasError
 		return(.qleError(message=msg,call=match.call(),error=roots))	   
 	}
 	id <- attr(roots,"id")
 	if(anyNA(id)){
 		msg <- .makeMessage("Could not find any root.")
 		message(msg)
-		attr(roots,"optInfo") <- RES
+		attr(roots,"optRes") <- RES
+		attr(roots,"hasError") <- hasError
 		return(.qleError(message=msg,call=match.call(),error=roots))
  	}
-	stopifnot(length(id)==1L)
-	structure(RES[[id]],
-		"roots"=if(optInfo) roots else NULL,
-		"optRes"=if(optInfo) RES else NULL,				
+
+	structure(RES[[ok[id]]],						# best choice
+		"roots"=if(optInfo) roots else NULL,        # successful optimizations
+		"optRes"=if(optInfo) RES else NULL,			# all results
 		"hasError"=hasError) 	
 }
 
@@ -1030,8 +1053,7 @@ multiSearch <- function(xstart=NULL, qsd, ..., nstart=10, optInfo=FALSE, cl=NULL
 #' @param method		vector of names of local search methods	
 #' @param qscore.opts   list of control arguments passed to \code{\link{qscoring}}
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
-#' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)
-#' @param multistart	logical, \code{FALSE} (default), whether to search for local minimia or roots from multiple starting points at global phase  
+#' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}" 
 #' @param iseed			integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster
@@ -1234,7 +1256,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"),
 				   qscore.opts = list(), control = list(),
-				    errType = "kv", multistart=FALSE, pl = 0, 
+				    errType = "kv", pl = 0, 
 					 cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
@@ -1512,22 +1534,15 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 						message("Prefit of CV models failed during final surrogate minimization.")			
 					} 
 				}					
-				# either start a (multistart) local search				
-				if(status[["global"]] > 1L && multistart){
-					if(pl > 0L)
-					 cat("Search local search by multistart root finding....\n")
-					# always include last sample point `x` as a starting point
-					S0 <- multiSearch(x, qsd, method, qscore.opts, control,
+				# start a (multistart) local search	and an additional multistart
+				# search only at local phase in case optimization from `x` failed
+				# Otherwise at global phase always do a multistart search if any of
+				# the methods given in `method` does not converge or has errors
+				S0 <- multiSearch(x, qsd, method, qscore.opts, control,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-							 check=FALSE, pl=0L, nstart=globals$nstart,
-							  cl=cl, verbose=pl>0L)
-					if(.isError(S0))		
-					 message("Could not complete multistart local search.")										
-				} else {
-				    S0 <- searchMinimizer(x, qsd, method, qscore.opts, control,
-					    	Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-								check=FALSE, pl=pl, verbose=pl>0L)
-				}
+							 check=FALSE, pl=0L, nstart=max(globals$nstart,2L*nrow(X)),
+							  multi.start=status[["global"]]>1L, cl=cl, verbose=pl>0L)
+				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
 
@@ -1535,7 +1550,12 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				# during the global phase, eventually a sampled point 'Snext' also becomes
 				# a minimizer after a number of steps cycling through the vector of global weights								
 				status[["minimized"]] <-
-				  (!.isError(S0) && S0$convergence >= 0L)
+				  if(!.isError(S0) && S0$convergence >= 0L)
+					  TRUE 
+		  		  else {
+					  message("Could not complete multistart local search.")
+					  FALSE
+				  }
 			    				
 				if(status[["minimized"]]){								
 					I <- S0$I
@@ -1955,24 +1975,19 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	# small for high (global) weights or by a multistart approach.
 	
  	if(status[["global"]] == 2L){
-		if(multistart){
-			# always include last sample point `x` as a starting point
-			S0 <- multiSearch(x, qsd, method, qscore.opts, control,
+		# always multistart and include last sample point `x` as a starting point
+		S0 <- multiSearch(x, qsd, method, qscore.opts, control,
 					Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-					 check=FALSE, pl=0L, nstart=globals$nstart,
-					cl=cl, verbose=pl>0L)
-			if(.isError(S0))		
-				message("Could not complete multistart local search.")										
-		} else {
-			S0 <- searchMinimizer(x, qsd, method, qscore.opts, control,
-					Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-					 check=FALSE, pl=pl, verbose=pl>0L)
-		}
-	   	# overwrite last sample point if local minimization was successful
+					 check=FALSE, pl=0L, nstart=max(globals$nstart,2L*nrow(X))+10,
+					  multi.start=TRUE, cl=cl, verbose=pl>0L)
+		
+		# overwrite last sample point if local minimization was successful
 		if(!.isError(S0) && S0$convergence >= 0L){					
 			xt <- S0$par
 			ft <- S0$value					 
 			status[["minimized"]] <- TRUE					
+		} else {
+			message("Could not complete multistart local search.")	
 		}
 		# store local minimization results as these are overwritten now
 		# where `Snext` does not change anymore, however, add it
@@ -1996,7 +2011,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	   ctls[1:8,-3]
 	 } else {	  	
 		val <- max(abs(S0$score))
-		ctls <- rbind(ctls[1:8,-3],   												# remove `tmp` column
+		ctls <- rbind(ctls[1:8,-3],   										# remove `tmp` column
 		    	as.data.frame(cbind("cond" = qscore.opts$score_tol,
 			 				        "val" = val ,
 									"stop" = as.integer(val < qscore.opts$score_tol),

@@ -28,7 +28,7 @@
 	Stest <- noquote(paste("Monte Carlo Test (",nm,")",sep=""))	
 	
 	ans$test <- noquote(cbind(sb, pb))# , ifelse(degf>0,pchisq(sb, degf, lower.tail = FALSE),"****")))	
-	dimnames(ans$test) <- list("Test E(Q)=0:  ", c("S > 0", "P( > s_obs)")) #, "Pr(>Chisq)"))
+	dimnames(ans$test) <- list("Test E(Q)=0:  ", c("S > 0", "P(> s_obs)")) #, "Pr(>Chisq)"))
 	ans$Stest <- Stest	
 	ans$tname <- tname
 	attr(ans$test,"Sb") <- Sb
@@ -366,6 +366,7 @@ checkMultRoot <- function(est, par = NULL,
 #' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesized parameter
 #' @param check.root    logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})  						
 #' @param alpha			significance level for testing the hypothesis
+#' @param multi.start   logical, \code{FALSE} (default), whether to perform a multistart local search for each generated observation if the initial local search did not converge
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 #' 						re-estimated parameters
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
@@ -422,7 +423,8 @@ checkMultRoot <- function(est, par = NULL,
 #' @export
 qleTest <- function(est, local = NULL, sim, ...,
 			 		 nsim = 100, obs = NULL, check.root = FALSE, alpha = 0.05,
-					  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
+					  multi.start = FALSE, na.rm = TRUE, cl = NULL, iseed = NULL,
+					   verbose = FALSE)
 {				  
 	if(.isError(est))
 	  stop("Estimation result has errors. Please see attribute `error`.")    
@@ -435,14 +437,15 @@ qleTest <- function(est, local = NULL, sim, ...,
 	stopifnot(class(est) == "qle")
   	stopifnot(class(est$qsd)=="QLmodel")
 	xdim <- attr(est$qsd$qldata,"xdim")
-	
+	Npoints <- nrow(est$qsd$qldata)
+			
 	# estimated parameter	 
 	if(is.null(local)){		
 		local <- est$final
 		if(.isError(local) || !attr(est,"optInfo")$minimized)
 		 stop("Final optimization result has errors. Please check attribute `final` and `optInfo`.")
 	 	else if( local$convergence < 0)
-		  warning(paste0("Local search did not converge by method: ",local$method))
+		  warning(paste0("Last local search did not converge by method: ",local$method))
     } else {
        stopifnot(class(local)=="QSResult")	 
 	   # set current test statistic
@@ -485,19 +488,17 @@ qleTest <- function(est, local = NULL, sim, ...,
 		if(verbose)
 		 cat("Simulating observed statistics...","\n")
  		
-		obs <-
-			tryCatch(
+		obs <- tryCatch(
 				do.call(simQLdata,sim.args),
 				error = function(e) {
-					msg <- paste0("Monte Carlo simulating observed statistics failed: ",
+					msg <- paste0("Simulating observed statistics failed: ",
 							 conditionMessage(e))
 					message(msg) 
 					.qleError(message=msg,call=match.call(),error=e)		   
 				}
 			)
 		if(.isError(obs)) {			
-			message("Simulating the observed statistics failed.")
-			return(obs)
+		 return(obs)
 	 	}
 		
 	} else {
@@ -511,16 +512,33 @@ qleTest <- function(est, local = NULL, sim, ...,
 	if(verbose)
 	 cat("Estimating parameters...","\n")
 	
- 	RES <- do.call(doInParallel,
+ 	RES <- 
+ 	 if(multi.start){
+		# multi start root finding, no nested parallel execution
+		# including restart if more than one method is given 
+		if(is.null(opt.args$nstart))
+			opt.args$nstart <- 2L*Npoints
+		do.call(doInParallel,
+			c(list(X=obs[[1]],
+					FUN=function(obs,...) {
+						# not in parallel!
+						multiSearch(x0=local$par,qsd=est$qsd,...,   		
+						 cvm=est$cvm,obs=obs,inverted=TRUE,check=FALSE,
+						  cl=NULL,verbose=FALSE,cores=1L)
+					},
+					cl=cl), opt.args))
+	} else {
+		#including restart if more than one method is given
+		do.call(doInParallel,
 			  c(list(X=obs[[1]],
-					FUN=function(obs,...)	{
+					FUN=function(obs,...) {
 						searchMinimizer(x0=local$par,qsd=est$qsd,...,    
 							cvm=est$cvm,obs=obs,info=TRUE,inverted=TRUE,
-								check=FALSE,verbose=verbose)
-					},
-				cl=cl), opt.args))    		
-	
-	if(inherits(RES,"error")) {
+							  check=FALSE,verbose=verbose)
+				},
+				cl=cl), opt.args))   
+	}
+    if(inherits(RES,"error")) {
 	  msg <- paste0("Could not find MC replicated parameters: ",
 			  conditionMessage(RES))
 	  message(msg)
@@ -533,7 +551,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 		warning(msg)
 		return(.qleError(message=msg,call=match.call(),error=RES))	   
 	} else if(length(ok) < length(RES))
-		message("Errors in re-estimating the parameters. Check attribute `optInfo` and `info`.")
+		message("Errors in re-estimating the parameters. Check attribute `optRes` and `info`.")
   
 	# also check H_0?
 	# because sampling MC theta
@@ -573,7 +591,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 		warning("Removed `NA` values from quasi-scores.")
   	}
 	mScore <- try(colMeans(mScore),silent=TRUE)		
-	if(nrow(mpars) < 11L)
+	if(nrow(mpars) <= 10L)
 	 warning("Only a small number of 10 or less parameters could be re-estimated.")	
     
  	# some (empirical) measures	
@@ -605,7 +623,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	  message(paste0("A total of ",length(hasError)," re-estimations failed."))
   
     chk <- NULL
-    if(check.root && est$qsd$criterion=="qle") {
+    if(check.root && est$qsd$criterion == "qle") {
 		chk <- checkMultRoot(est,verbose=verbose)
 		if(.isError(chk))
 		 message(.makeMessage("Consistency check for the estimated model parameter failed."))		

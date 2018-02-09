@@ -10,7 +10,8 @@
 # internal
 #' @importFrom digest digest
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
-							cache = getOption("qle.cache",FALSE) )
+					cores = getOption("mc.cores",1L), 
+					  cache = getOption("qle.cache",FALSE))
 {
 	SIM <- if(cache) {
 			for(i in 1:length(X))
@@ -37,8 +38,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 		   } else FUN	    
     
    tryCatch({
-		noCluster <- is.null(cl)
-		cores <- getOption("mc.cores",1L)
+		noCluster <- is.null(cl)		
 	    if(noCluster && (length(X)==1L || cores==1L)){
 			noCluster <- FALSE
 			lapply(X, SIM, ...)		  
@@ -205,12 +205,12 @@ simQLdata <-
 								  if(na.rm)
 								   na.omit(as.data.frame(do.call(rbind,x[ok])))
 								  else do.call(rbind,x[ok]))
-		 					  }),
-					 error = if(sum(err) > 0L) {
+		 					  }
+			  		 ), error = if(sum(err) > 0L) {
 								 id <- which(err)
 								 message(.makeMessage("A total of ",length(id), " errors detected in user defined simulation function."))
 								 structure(x[id],nErr = length(id))								 
-							 } else NULL)				
+						} else NULL)				
 			 }
 		  )
 	names(RES) <- NULL
