@@ -379,10 +379,10 @@ qfs_result qfscoring(double *x,			 	/* start */
         		FREE_WORK
 				qfs->num_iter=niter;
         		if(check == 1)
-        		 fnQS(x,qfs,f,fntype,bounds,info);      /* re-compute objective  */
-        		return (stepmax < 1e-4 ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);
+        		 fnQS(x,qfs,f,fntype,bounds,info);      								/* re-compute objective  */
+        		return (stepmax < 1.e-3 ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	/* stepmax is now length of scaled direction */
            	 } else {
-        		fntype = (fntype > 0 ? 0 : 1);			/* type of monitor function */
+        		fntype = (fntype > 0 ? 0 : 1);											/* type of monitor function */
         		fnQS(x,qfs,f,fntype,bounds,info);
         		if(info) break;
         		fnGrad(qfs,g,d,fntype,info);
@@ -603,11 +603,7 @@ SEXP getStatus( qfs_result status ) {
        case QFS_XTOL_REACHED:
            SET_STRING_ELT(R_message, 0, mkChar("QFS_XTOL_REACHED: Optimization stopped because xtol_rel was reached."));
            break;
-       // (= +5)
-       case QFS_GRADTOL_REACHED:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_GRAD_TOL_REACHED: Optimization stopped because grad_tol was reached."));
-            break;
-	   // (= +6)
+   	   // (= +5)
 	   case QFS_SLOPETOL_REACHED:
 			SET_STRING_ELT(R_message, 0, mkChar("QFS_SLOPETOL_REACHED: Optimization stopped because slope_tol was reached."));
 			break;
@@ -619,8 +615,6 @@ SEXP getStatus( qfs_result status ) {
 	   case QFS_STEPTOL_REACHED:
 	        SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPTOL_REACHED: Optimization stopped because minimum step length was reached in line search."));
 	        break;
-
-
        // (= +10)
        case QFS_LOCAL_CONVERGENCE:
             SET_STRING_ELT(R_message, 0, mkChar("QFS_LOCAL_CONVERGENCE: Optimization stopped because of local convergence."));
