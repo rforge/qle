@@ -21,7 +21,7 @@ qfs_result qfscoring(double *x, int n, double &f, int &fntype,
 
 void backtr(int n, double *xold, double &fold, double *d, double *g, double *x,
 			double &f, int &check, int &fntype, double &stepmax, double &slope,
-			 double &delta, qfs_options qfs, int &bounds, int pl, int &info);
+			 double &delta, double &rellen, qfs_options qfs, int &bounds, int pl, int &info);
 
 // projection into box constraints
 double med(double x, double y, double z, int &info);
@@ -277,8 +277,9 @@ qfs_result qfscoring(double *x,			 	/* start */
 
    // temp pointers
    ql_model qlm = qfs->qlm;
-   double test=0.0, tmp=0.0, fold=0, delta=1.0,
-		  slope=0, den=0, *d=0, *xold=0, *g=0,
+   double test=0.0, tmp=0.0, fold=0,
+		  delta=1.0, slope=0.0, den=0.0, rellen=0.0,
+		  *d=0, *xold=0, *g=0,
 		  *typx=qfs->typx, *typf=qfs->typf,
 		  *qimat=qlm->qimat, *score=qlm->score;
 
@@ -347,7 +348,7 @@ qfs_result qfscoring(double *x,			 	/* start */
          }
          /* Line search:
           *  dynamically switch between both monitor functions */
-         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,slope,delta,qfs,bounds,pl,info);
+         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,slope,delta,rellen,qfs,bounds,pl,info);
          if(info > 0){
         	 FREE_WORK
 			 qfs->num_iter=niter;
@@ -380,7 +381,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 				qfs->num_iter=niter;
         		if(check == 1)
         		 fnQS(x,qfs,f,fntype,bounds,info);      								/* re-compute objective  */
-        		return (stepmax < 1.e-3 ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	/* stepmax is now length of scaled direction */
+        		return (rellen < 1.5e-3 ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	/* rellen is length of scaled direction */
            	 } else {
         		fntype = (fntype > 0 ? 0 : 1);											/* type of monitor function */
         		fnQS(x,qfs,f,fntype,bounds,info);
@@ -481,10 +482,10 @@ qfs_result qfscoring(double *x,			 	/* start */
 
 void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		double &f, int &check,  int &fntype, double &stepmax, double &slope,
-		 double &delta, qfs_options qfs, int &bounds, int pl, int &info) {
+		 double &delta, double &rellen, qfs_options qfs, int &bounds, int pl, int &info) {
 
   int i=0;
-  double s=1., tmp=0., rellen=0., dirlen=0.,
+  double s=1., tmp=0., dirlen=0.,
 		 stepmin=0., alpha=1e-4, *typx=qfs->typx;
 
   info=0;
@@ -508,6 +509,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   	check=1;
   	return;
   }
+  rellen=0.0;
   for (i=0; i<n; ++i) {
   	tmp=std::fabs(d[i])/MAX(std::fabs(xold[i]),1./typx[i]);
   	if (tmp > rellen) rellen = tmp;
@@ -525,8 +527,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   /* scaled direction length already too small */
   if(rellen < stepmin) {
 	  check=2;
-	  stepmax=rellen;
-	  return;
+      return;
   }
 
   for(;;) {

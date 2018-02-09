@@ -1229,7 +1229,8 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #'      and predicted error of an approximate root drops below `\code{perr_tol}`}
 #'   \item{\code{Nmaxftol}:}{ maximum number of consecutive iterations until stopping for which the relative change in the values
 #'    of the criterion function drops below `\code{local.opts$ftol_rel}`}
-#'  }
+#'   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
+#' 	}
 #'  
 #' 
 #' @seealso \code{\link{mahalDist}}, \code{\link{quasiDeviance}}, \code{\link{qleTest}} 
