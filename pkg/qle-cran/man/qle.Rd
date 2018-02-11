@@ -187,7 +187,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 		 while sampling new points more and more around the current best parameter estimate.} 
   \item{\code{alpha}:}{ significance level for computation of empirical quantiles of one of the test statistics, that is,
          testing a parameter to be a	root of the quasi-score vector in probability.}
-  \item{perr_tol}{ lower bound on the relative difference of the empirical and predicted error of an approximate root}
+  \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
   \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{var}" (see details)} 
@@ -219,7 +219,8 @@ The function sequentially estimates the unknown model parameter. Basically, the 
      and predicted error of an approximate root drops below `\code{perr_tol}`}
   \item{\code{Nmaxftol}:}{ maximum number of consecutive iterations until stopping for which the relative change in the values
    of the criterion function drops below `\code{local.opts$ftol_rel}`}
- }
+  \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
+	}
 }
 \examples{
 data(normal)

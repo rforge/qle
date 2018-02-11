@@ -5,7 +5,7 @@
 \title{Monte Carlo testing}
 \usage{
 qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
-  check.root = FALSE, alpha = 0.05, multi.start = FALSE, na.rm = TRUE,
+  check.root = FALSE, alpha = 0.05, multi.start = 0L, na.rm = TRUE,
   cl = NULL, iseed = NULL, verbose = FALSE)
 }
 \arguments{
@@ -15,7 +15,7 @@ qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
 
 \item{sim}{user supplied simulation function (see \code{\link{qle}})}
 
-\item{...}{arguments passed to the simulation function `\code{sim}`}
+\item{...}{arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}}
 
 \item{nsim}{number of model replications to generate the simulated statistics}
 
@@ -25,7 +25,7 @@ qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
 
 \item{alpha}{significance level for testing the hypothesis}
 
-\item{multi.start}{logical, \code{FALSE} (default), whether to perform a multistart local search for each generated observation if the initial local search did not converge}
+\item{multi.start}{integer, \code{=0,1,2}, level of multi start root finding (see details)}
 
 \item{na.rm}{logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 re-estimated parameters}
@@ -52,10 +52,9 @@ and attributes:
 	 \item{criterion}{always equal to "\code{qle}"}  
   \item{solInfo}{ results of the numerical consistency checks for each re-estimated parameter} 
 	 \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
-      the re-estimated parameters have \code{NA} values, criterion function minimizations have errors or did not
-      converge numerically, the integer seed value `\code{iseed}`}
+      the re-estimated parameters have NA values, criterion function minimizations have errors or did not converge numerically, the integer seed value `\code{iseed}`}
 }
- \details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
+\details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
  model w.r.t. to the estimated parameter is true, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} by testing based
  on a Monte Carlo approach (see vignette). Due to the approximate nature of the assumed statistical model for the observed data the
  exact distribution of the test statistics, that is, the Mahalanobis distance or quasi-deviance, is generally unknown and therefore
@@ -63,6 +62,10 @@ and attributes:
  P-value for testing, we generate (pseudo-)observations from the outcome of the model replications and re-estimate the model
  parameter for each realization in the same way as done before when estimating the model parameter. This includes all possible types
  of variance approximations (by kriging or average approximation) and types of prediction variance (kriging or the CV-based variance).
+ In order to efficiently find the roots of the quasi-score vector we implement a multi start concept for minimizing the criterion function.
+ If `\code{multi.start=0}` no single root finding is initiated from the estimated parameter (as a starting point) for each newly generated observation.
+ Using `\code{multi.start=1}` starts a multi start root finding only in case the local optimization gets stuck into a local minimum or does not
+ converge and setting `\code{multi.start=2}` always triggers a multi start local search for each generated observation.
 
  The function expects an estimation result as returned from \code{\link{qle}}. If any generated observations are readily available
  at the final parameter estimate, then these can be passed by `\code{obs}`. Otherwise the function first generates those
