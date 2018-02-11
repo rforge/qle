@@ -151,8 +151,8 @@
 		 "pmin" = 0.05,									   # minimum accepted probability of coverage of sample points within search domain
 		 "weights" = c(0.005,0.1,0.2,0.4,0.6,0.8,0.995),   # only for sampling with criterion `score`
 		 "nsample" = 1000*(xdim+1),						   # number of local random samples
-		 "perr_tol" = rep(0.5,xdim),					   # empirical error is more than half of predicted error (by inverse QI) smaller 
-		 "nobs"=100,									   # sampling size (root testing)
+		 "perr_tol" = rep(0.1,xdim),					   # upper bound on the relative change of empirical error and predicted error (by inverse QI) 
+		 "nobs"=100,									   # number of boottrap observations to generate (used for approximate root testing)
 		 "alpha" = 0.05,							       # significance level testing a root		 
 		 "eta" = c(0.025,0.05),							   # c("decrease"=0.05,"increase"=0.075) additive step size	
 		 "nfail" = 3,									   # number of failed (not yet improved) iterations until next decrease of weights 
@@ -968,7 +968,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
     if(is.null(S0) && !multi.start){
 		stop("No starting `x0` given. Argument `multi.start` should be set TRUE.")
 	} else if(multi.start || .isError(S0) || 
-			  S0$convergence < 0L || S0$convergence == 10){		 # more restrictive: do not accept convergence by `xtol_rel`
+			  S0$convergence < 0L || S0$convergence == 10) {		 # more restrictive: do not accept convergence by `xtol_rel`
  		
 		 X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
 		 Xs <- try(multiDimLHS(N=nstart,qsd$lower,qsd$upper,X=X,
@@ -982,7 +982,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		  cat("Estimate parameters...\n")
+		  cat("Multi-start local searches...\n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
@@ -1011,7 +1011,8 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 	}
 	
 	hasError <- which(!(1:length(RES) %in% ok))
-	roots <- .evalRoots(RES[ok])
+	# get the best roots
+	roots <- .evalRoots(RES[ok],opts=args$opts)
 	if(.isError(roots)) {
 		msg <- .makeMessage("Could not evaluate best results of local searches")
 		message(msg)
@@ -1197,7 +1198,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' 		 while sampling new points more and more around the current best parameter estimate.} 
 #'   \item{\code{alpha}:}{ significance level for computation of empirical quantiles of one of the test statistics, that is,
 #'          testing a parameter to be a	root of the quasi-score vector in probability.}
-#'   \item{perr_tol}{ lower bound on the relative difference of the empirical and predicted error of an approximate root}
+#'   \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
 #'   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
 #'   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
 #'   \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{var}" (see details)} 
@@ -1322,7 +1323,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 			if(pl > 2L) {
 				if(!is.null(Stest) && !.isError(Stest)){
 				   cat("\n\n")
-				   cat("MC testing: \n\n")
+				   cat("Testing local minimizer: \n\n")
 				   print(Stest)
 				}
 				cat("\n")
@@ -1539,7 +1540,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				# search only at local phase in case optimization from `x` failed
 				# Otherwise at global phase always do a multistart search if any of
 				# the methods given in `method` does not converge or has errors
-				S0 <- multiSearch(x, qsd, method, qscore.opts, control,
+				S0 <- multiSearch(x, qsd=qsd, method=method, opts=qscore.opts, control=control,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, pl=0L, nstart=max(globals$nstart,2L*nrow(X)),
 							  multi.start=status[["global"]]>1L, cl=cl, verbose=pl>0L)
@@ -1574,11 +1575,13 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								  newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=pl>0)
 								  if(.isError(newObs))
 									  stop(paste(c("Cannot generate data at approximate root: \n\t ",
-													 format(xt, digits=6, justify="right")),collapse = " "))				  
+											 format(xt, digits=6, justify="right")),collapse = " "))				  
 								  # test for an approximate root (based on criterion function)
+							      # use multistart and select best root if first root finding
+							      # from `xt` fails to converge
 								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
-										  theta=theta, cvm=cvm, cl=cl)	
+										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X), cl=cl)	
 								  
 							  }, error = function(e){
 								  msg <- .makeMessage("Testing approximate root failed: ",
@@ -1598,10 +1601,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								  2L															# switch to global in case of error
 							} else if(attr(Stest$test,"passed")) { 1L }						    # found approximate root  
 							  else 2L 
-				  	 } else if(ft < locals$ftol_abs) {
+				  	 } else if(ft < locals$ftol_abs) {											# second approximate root criterion
 						 status[["global"]] <- 0L 
-					 } else { status[["global"]] <- 2L }
-				} else {
+					 } else { status[["global"]] <- 2L }										# no root at all switch to global sampling
+				} else {																		
 					status[["global"]] <- 2L										
 					# Though we might have found a local minimizer, we do not
 					# sample there because we trust the selection criteria
@@ -1622,7 +1625,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								perr["val"] <- attr(Stest,"relED")	
 								if(anyNA(perr["val"]))
 								 message("Cannot test stopping conditions while testing local minimizer. `NAs` detected.")
-								else if( any(perr["val"] > perr["cond"]) ){									 # can be a vector for each component of the parameter					        
+								else if( any(perr["val"] < perr["cond"]) ){									 # can be a vector for each component of the parameter					        
 									perr["stop"] <- perr["stop"] + as.integer(perr["val"] > perr["cond"])	 # and count separately for each one
 									if(any(perr["stop"] >= globals$NmaxQI))											
 										break																			
@@ -1977,7 +1980,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	
  	if(status[["global"]] == 2L){
 		# always multistart and include last sample point `x` as a starting point
-		S0 <- multiSearch(x, qsd, method, qscore.opts, control,
+		S0 <- multiSearch(x, qsd=qsd, method=method, opts=qscore.opts, contorl=control,
 					Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 					 check=FALSE, pl=0L, nstart=max(globals$nstart,2L*nrow(X))+10,
 					  multi.start=TRUE, cl=cl, verbose=pl>0L)

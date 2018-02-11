@@ -23,13 +23,10 @@
 	dimnames(ans$param) <- list(row.names(obj),
 			c("Estimate", "Std. Error", "RMSE", "Bias", "Mean"))
 	
-	tname <- attr(obj,"test")
-	nm <- ifelse(tname=="mahal", "LS criterion", "Score-test")
-	Stest <- noquote(paste("Monte Carlo Test (",nm,")",sep=""))	
-	
+	tname <- attr(obj,"test")	
 	ans$test <- noquote(cbind(sb, pb))# , ifelse(degf>0,pchisq(sb, degf, lower.tail = FALSE),"****")))	
-	dimnames(ans$test) <- list("Test E(Q)=0:  ", c("S > 0", "P(> s_obs)")) #, "Pr(>Chisq)"))
-	ans$Stest <- Stest	
+	dimnames(ans$test) <- list("Test E(Q)=0:  ", c("s value", "Pr(>s)")) #, "Pr(>Chisq)"))
+	ans$Stest <- noquote(paste0("Bootstrap ",ifelse(tname=="mahal", "LS criterion test:", "Score-test:"))) 	
 	ans$tname <- tname
 	attr(ans$test,"Sb") <- Sb
 	attr(ans$test,"qt") <- qt
@@ -91,13 +88,12 @@
 	return( structure(row.names(dm),"id"=ok[id[mi]]) )
 }
 
-
-.evalRoots <- function(QD, par = NULL,
-	            opts=list("ftol_abs"=1e-6, "score_tol"=1e-3))
-{	
-	if(length(opts) == 0L)
-	 stop("Options `opts` should not be empty for evaluation of roots.") 	
-	if(.isError(QD)){	  	
+.evalRoots <- function(QD, par = NULL, opts = NULL)
+{		
+	if(is.null(opts) || anyNA(pmatch(c("ftol_abs", "score_tol"),names(opts))))
+	 opts <- list("ftol_abs"=1e-6, "score_tol"=1e-3)		
+	
+    if(.isError(QD)){	  	
 		return(.qleError(message=.makeMessage("Evaluation of roots failed."),
 					call=sys.call(),error=QD))
  	}
@@ -203,14 +199,14 @@
 #' @author M. Baaske
 #' @rdname checkMultRoot
 #' @export
-checkMultRoot <- function(est, par = NULL,
-					opts=list("ftol_abs"=1e-6,"score_tol"=1e-3),
-					verbose = FALSE)
+checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 {			
    if(est$qsd$criterion != "qle")
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
+   if(is.null(opts) || anyNA(pmatch(c("ftol_abs", "score_tol"),names(opts))))
+	  opts <- list("ftol_abs"=1e-6, "score_tol"=1e-3)
   
    # always use estimate from est first
    if(!is.null(par)){
@@ -238,20 +234,42 @@ checkMultRoot <- function(est, par = NULL,
 }
 
 # intern use only!
-.rootTest <- function(par, value, I, obs, alpha, test, ..., cl = NULL, na.rm = TRUE){	
+.rootTest <- function(par, value, I, obs, alpha, test, ...,
+		       multi.start = 0L, Npoints = 10, cl = NULL, na.rm = TRUE, verbose = FALSE){	
 	aiqm <- NULL
 	mScore <- NULL	
 	xdim <- length(par)
 	hasError <- integer(0)
-	  	  
-	# re-estimate roots
 	opt.args <- list(...)
-	RES <- do.call(doInParallel,
-			c(list(X=obs,
-				FUN=function(obs,...)	{
-					searchMinimizer(x0=par,...,obs=obs,check=FALSE)
-				},
-				cl=cl), opt.args)) 
+	
+	RES <- 
+	 if(multi.start > 0L){
+		if(verbose)
+		   cat("Re-estimate parameters (possibly use multi-start approach):","\n")
+		# multi start root finding, no nested parallel execution
+		# including restart if more than one method is given 
+		if(is.null(opt.args$nstart))
+			opt.args$nstart <- 2L*Npoints
+		do.call(doInParallel,
+				c(list(X=obs,
+					FUN=function(obs,...) {
+						# not in parallel!
+						multiSearch(x0=par,...,obs=obs,inverted=TRUE,check=FALSE,
+							multi.start=(multi.start > 1L),cl=NULL,verbose=FALSE,cores=1L)
+					},
+					cl=cl), opt.args))
+	 } else {
+		#including restart if more than one method is given
+		if(verbose)
+		  cat("Re-estimate parameters:","\n")
+		do.call(doInParallel,
+				c(list(X=obs,
+						FUN=function(obs,...) {
+							searchMinimizer(x0=par,...,obs=obs,
+								inverted=TRUE,check=FALSE,verbose=verbose)
+						},
+					cl=cl), opt.args))   
+	 }
 
 	if(.isError(RES))
 	  return(RES)
@@ -361,12 +379,12 @@ checkMultRoot <- function(est, par = NULL,
 #' @param est			object of class \code{qle}, the estimation results from function \code{\link{qle}}
 #' @param local	    	optional, object of class \code{QSResult}, \code{NULL} (default), local estimation results 
 #' @param sim			user supplied simulation function (see \code{\link{qle}})
-#' @param ...			arguments passed to the simulation function `\code{sim}`
+#' @param ...			arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}
 #' @param nsim			number of model replications to generate the simulated statistics
 #' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesized parameter
 #' @param check.root    logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})  						
 #' @param alpha			significance level for testing the hypothesis
-#' @param multi.start   logical, \code{FALSE} (default), whether to perform a multistart local search for each generated observation if the initial local search did not converge
+#' @param multi.start   integer, \code{=0,1,2}, level of multi start root finding (see details)
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
 #' 						re-estimated parameters
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
@@ -388,8 +406,7 @@ checkMultRoot <- function(est, par = NULL,
 #' 	 \item{criterion}{always equal to "\code{qle}"}  
 #'   \item{solInfo}{ results of the numerical consistency checks for each re-estimated parameter} 
 #' 	 \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
-#'       the re-estimated parameters have \code{NA} values, criterion function minimizations have errors or did not
-#'       converge numerically, the integer seed value `\code{iseed}`}
+#'       the re-estimated parameters have NA values, criterion function minimizations have errors or did not converge numerically, the integer seed value `\code{iseed}`}
 #' 
 #'  @details The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
 #'  model w.r.t. to the estimated parameter is true, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} by testing based
@@ -399,6 +416,10 @@ checkMultRoot <- function(est, par = NULL,
 #'  P-value for testing, we generate (pseudo-)observations from the outcome of the model replications and re-estimate the model
 #'  parameter for each realization in the same way as done before when estimating the model parameter. This includes all possible types
 #'  of variance approximations (by kriging or average approximation) and types of prediction variance (kriging or the CV-based variance).
+#'  In order to efficiently find the roots of the quasi-score vector we implement a multi start concept for minimizing the criterion function.
+#'  If `\code{multi.start=0}` no single root finding is initiated from the estimated parameter (as a starting point) for each newly generated observation.
+#'  Using `\code{multi.start=1}` starts a multi start root finding only in case the local optimization gets stuck into a local minimum or does not
+#'  converge and setting `\code{multi.start=2}` always triggers a multi start local search for each generated observation.
 #' 
 #'  The function expects an estimation result as returned from \code{\link{qle}}. If any generated observations are readily available
 #'  at the final parameter estimate, then these can be passed by `\code{obs}`. Otherwise the function first generates those
@@ -423,7 +444,7 @@ checkMultRoot <- function(est, par = NULL,
 #' @export
 qleTest <- function(est, local = NULL, sim, ...,
 			 		 nsim = 100, obs = NULL, check.root = FALSE, alpha = 0.05,
-					  multi.start = FALSE, na.rm = TRUE, cl = NULL, iseed = NULL,
+					  multi.start = 0L, na.rm = TRUE, cl = NULL, iseed = NULL,
 					   verbose = FALSE)
 {				  
 	if(.isError(est))
@@ -513,34 +534,37 @@ qleTest <- function(est, local = NULL, sim, ...,
 	 cat("Estimating parameters...","\n")
 	
  	RES <- 
- 	 if(multi.start){
+ 	 if(multi.start > 0L){
+		if(verbose)
+		 cat("Re-estimate parameters (possibly use multi-start approach):","\n")
 		# multi start root finding, no nested parallel execution
 		# including restart if more than one method is given 
 		if(is.null(opt.args$nstart))
-			opt.args$nstart <- 2L*Npoints
+		  opt.args$nstart <- 2L*Npoints
 		do.call(doInParallel,
 			c(list(X=obs[[1]],
 					FUN=function(obs,...) {
 						# not in parallel!
 						multiSearch(x0=local$par,qsd=est$qsd,...,   		
 						 cvm=est$cvm,obs=obs,inverted=TRUE,check=FALSE,
-						  cl=NULL,verbose=FALSE,cores=1L)
+						   multi.start=(multi.start > 1L),cl=NULL,verbose=FALSE,cores=1L)
 					},
 					cl=cl), opt.args))
 	} else {
+		if(verbose)
+			cat("Re-estimate parameters:","\n")
 		#including restart if more than one method is given
 		do.call(doInParallel,
 			  c(list(X=obs[[1]],
 					FUN=function(obs,...) {
 						searchMinimizer(x0=local$par,qsd=est$qsd,...,    
-							cvm=est$cvm,obs=obs,info=TRUE,inverted=TRUE,
+							cvm=est$cvm,obs=obs,inverted=TRUE,
 							  check=FALSE,verbose=verbose)
 				},
 				cl=cl), opt.args))   
 	}
-    if(inherits(RES,"error")) {
-	  msg <- paste0("Could not find MC replicated parameters: ",
-			  conditionMessage(RES))
+    if(.isError(RES)) {
+	  msg <- paste0("Could not find MC replicated parameters.")
 	  message(msg)
 	  return(.qleError(message=msg,call=match.call(),error=RES))	
 	}
@@ -711,8 +735,8 @@ print.qleTest <- function(x, pl = 1, digits = 5,...) {
 	  aiqm <- attr(x,"aiqm")
 	  if(!is.null(aiqm) && !.isError(aiqm) && !is.null(qi) && !.isError(qi) && !is.null(attr(x,"relED")))
 		  pse <- as.data.frame( cbind(sqrt(diag(aiqm)), sqrt(diag(qi)), attr(x,"relED") ) )
-	  	  dimnames(pse) <- list(row.names(x$param),c("Average","Estimate", "|1-RMSE/Estimate|"))
-		  cat("Predicted std. errors: \n\n")
+	  	  dimnames(pse) <- list(row.names(x$param),c("Average", "Estimate", "|1-RMSE/Estimate|"))
+		  cat("Predicted Std. Errors: \n\n")
 		  print(format(pse, digits=digits),
 				  print.gap = 2, right=FALSE, quote = FALSE)			  
     }	
