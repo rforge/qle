@@ -53,7 +53,7 @@ extern "C" {
 void R_init_qle(DllInfo *info)
 {
   R_registerRoutines(info, CEntries, CallEntries, FEntries, NULL);
-  R_useDynamicSymbols(info, FALSE);
+  R_useDynamicSymbols(info, TRUE);
 }
 
 

@@ -918,6 +918,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param optInfo 	  logical, \code{FALSE} (default), whether to store original local search results
 #' @param multi.start logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge 
 #' @param cl 	 	  cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
+#' @param pl		  print level, use \code{pl}>0 to print intermediate results
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #' @param cores		  integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}
 #' 
@@ -949,7 +950,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @author M. Baaske 
 #' @export 
 multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
-		         		 multi.start=FALSE, cl=NULL, verbose=FALSE,
+		         		 multi.start=FALSE, cl=NULL, pl = 0L, verbose=FALSE,
 						 	cores=getOption("mc.cores",1L))
 {	 	
 	if(!(nstart > 0L))
@@ -957,6 +958,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
  	
     args <- list(...)
 	args$restart <- NULL
+	
 	S0 <- if(!is.null(x0)){
 	   if(!is.list(x0))
 		 x0 <- .ROW2LIST(x0)
@@ -965,11 +967,23 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 	   do.call(searchMinimizer,c(list(x0=x0[[1]],qsd=qsd,restart=FALSE),args))
 	 } else NULL
 	
+	if(!is.null(S0)){
+		if(.isError(S0))
+		 message("First local search has errors.")
+	    else if(S0$convergence < 0L || S0$convergence == 10) {
+			if(pl > 0L){
+				cat("First local search did not converge. See attribute `optRes`. \n\n")
+				print(S0)
+			}  
+		}
+	}
+
     if(is.null(S0) && !multi.start){
 		stop("No starting `x0` given. Argument `multi.start` should be set TRUE.")
 	} else if(multi.start || .isError(S0) || 
-			  S0$convergence < 0L || S0$convergence == 10) {		 # more restrictive: do not accept convergence by `xtol_rel`
- 		
+			  S0$convergence < 0L || S0$convergence == 10) {		 
+		 # use more restrictive termination condition (see above),
+		 # do not accept convergence by `xtol_rel`
 		 X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
 		 Xs <- try(multiDimLHS(N=nstart,qsd$lower,qsd$upper,X=X,
 						 method="augmentLHS",type="list"),silent=TRUE)
@@ -982,16 +996,14 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		  cat("Multi-start local searches...\n")
+		   cat("Multi-start local search...\n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
 						searchMinimizer(x,...)						# including a restart by default
 					},
 					cl=cl,cores=cores,qsd=qsd), args))		
-		 if(!is.null(S0))
-		   RES <- c(RES,list(S0))
-	   	
+   	
 	} else { RES <- list(S0) }	
 	
 	if(.isError(RES))
@@ -1003,11 +1015,11 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 	# check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) & x$convergence >= 0L))
 	if(length(ok) == 0L){
-		msg <- .makeMessage("All local searches have errors or did not converge.")
+		msg <- .makeMessage("All local searches did not converge.")
 		message(msg)
 		return(.qleError(message=msg,call=match.call(),error=RES))							
 	} else if(length(ok) < length(RES)){
-		message(paste0("A total of ",length(RES)-length(ok)," local searches have errors or did not converge."))							
+		message(paste0("A total of ",length(RES)-length(ok)," local searches did not converge."))							
 	}
 	
 	hasError <- which(!(1:length(RES) %in% ok))
@@ -1029,9 +1041,9 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 		return(.qleError(message=msg,call=match.call(),error=roots))
  	}
 
-	structure(RES[[ok[id]]],						# best choice
-		"roots"=if(optInfo) roots else NULL,        # successful optimizations
-		"optRes"=if(optInfo) RES else NULL,			# all results
+	structure(RES[[ok[id]]],									# best choice
+		"roots"=if(optInfo) roots else NULL,        			# successful optimizations
+		"optRes"=if(optInfo) c(RES,list(S0)) else NULL,			# all results
 		"hasError"=hasError) 	
 }
 
@@ -1543,7 +1555,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(x, qsd=qsd, method=method, opts=qscore.opts, control=control,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, pl=0L, nstart=max(globals$nstart,2L*nrow(X)),
-							  multi.start=status[["global"]]>1L, cl=cl, verbose=pl>0L)
+							  multi.start=status[["global"]]>1L, cl=cl, pl=pl, verbose=pl>0L)
 				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
@@ -1983,7 +1995,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		S0 <- multiSearch(x, qsd=qsd, method=method, opts=qscore.opts, contorl=control,
 					Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 					 check=FALSE, pl=0L, nstart=max(globals$nstart,2L*nrow(X))+10,
-					  multi.start=TRUE, cl=cl, verbose=pl>0L)
+					  multi.start=TRUE, cl=cl, pl=pl, verbose=pl>0L)
 		
 		# overwrite last sample point if local minimization was successful
 		if(!.isError(S0) && S0$convergence >= 0L){					

@@ -89,13 +89,21 @@
 }
 
 .evalRoots <- function(QD, par = NULL, opts = NULL)
-{		
-	if(is.null(opts) || anyNA(pmatch(c("ftol_abs", "score_tol"),names(opts))))
-	 opts <- list("ftol_abs"=1e-6, "score_tol"=1e-3)		
-	
+{			
+	 
+	 opts <-
+	  if(is.null(opts))
+	   list("ftol_abs"=1e-6, "score_tol"=1e-3)  		
+	  else {		 
+		  options <- list("ftol_abs"=1e-6, "score_tol"=1e-3)
+		  id <- which(!is.na(pmatch(names(opts),names(options))))
+		  if (length(id)>0L)
+			  options[names(opts[id])] <- opts[id]	
+		  options
+	}
     if(.isError(QD)){	  	
 		return(.qleError(message=.makeMessage("Evaluation of roots failed."),
-					call=sys.call(),error=QD))
+				 call=sys.call(),error=QD))
  	}
 	if(is.null(par)){
 	   par <- try(do.call(rbind,lapply(QD,"[[","par")),silent=TRUE)
@@ -205,9 +213,18 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
-   if(is.null(opts) || anyNA(pmatch(c("ftol_abs", "score_tol"),names(opts))))
-	  opts <- list("ftol_abs"=1e-6, "score_tol"=1e-3)
-  
+   
+   opts <-
+    if(is.null(opts))
+	  list("ftol_abs"=1e-6, "score_tol"=1e-3)  		
+    else {		 
+	  # check defaults
+	  options <- list("ftol_abs"=1e-6, "score_tol"=1e-3)
+	  id <- which(!is.na(pmatch(names(opts),names(options))))
+	  if (length(id)>0L)
+		options[names(opts[id])] <- opts[id]	
+	  options
+   }  
    # always use estimate from est first
    if(!is.null(par)){
 	   par <- .LIST2ROW(par)
@@ -277,9 +294,9 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
     # check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L))
 	if(length(ok) == 0L){
-		stop(.makeMessage("All re-estimations have errors or did not converge.","\n"))						
+		stop(.makeMessage("All re-estimations failed or did not converge.","\n"))						
 	} else if(length(ok) < length(RES)){
-		message(paste0("A total of ",length(RES)-length(ok)," re-estimations have errors or did not converge."))							
+		message(paste0("A total of ",length(RES)-length(ok)," re-estimations failed or did not converge."))							
 	}	
 	# average inverse QI
 	invI <- 
@@ -451,7 +468,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	  stop("Estimation result has errors. Please see attribute `error`.")    
     # last evaluation of criterion function  	
 	if(.isError(est$final))
-	  stop("Final criterion function evaluation has errors. Please check attribute `error`.")
+	  stop("Final criterion function evaluation failed. Please check attribute `error`.")
 		
     args <- list(...)
 	# basic checks
@@ -464,7 +481,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	if(is.null(local)){		
 		local <- est$final
 		if(.isError(local) || !attr(est,"optInfo")$minimized)
-		 stop("Final optimization result has errors. Please check attribute `final` and `optInfo`.")
+		 stop("Final optimization failed. Please check attribute `final` and `optInfo`.")
 	 	else if( local$convergence < 0)
 		  warning(paste0("Last local search did not converge by method: ",local$method))
     } else {
@@ -571,7 +588,7 @@ qleTest <- function(est, local = NULL, sim, ...,
 	# check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L ))
 	if(length(ok) == 0L){
-		msg <- paste("All re-estimations have errors or did not converge: ")
+		msg <- paste("All re-estimations failed or did not converge: ")
 		warning(msg)
 		return(.qleError(message=msg,call=match.call(),error=RES))	   
 	} else if(length(ok) < length(RES))
