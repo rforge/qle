@@ -4,22 +4,27 @@
 \alias{qleTest}
 \title{Monte Carlo testing}
 \usage{
-qleTest(est, local = NULL, sim, ..., nsim = 100, obs = NULL,
-  check.root = FALSE, alpha = 0.05, multi.start = 0L, na.rm = TRUE,
-  cl = NULL, iseed = NULL, verbose = FALSE)
+qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = "qle",
+  nsim = 100, obs = NULL, check.root = FALSE, alpha = 0.05,
+  multi.start = 0L, na.rm = TRUE, cl = NULL, iseed = NULL,
+  verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
 
-\item{local}{optional, object of class \code{QSResult}, \code{NULL} (default), local estimation results}
+\item{par0}{optional, vector of parameter for the null hypothesis}
 
-\item{sim}{user supplied simulation function (see \code{\link{qle}})}
+\item{obs0}{optional, vector of observed statistics corresponding to `\code{par0}`}
 
 \item{...}{arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}}
 
+\item{sim}{user supplied simulation function (see \code{\link{qle}})}
+
+\item{criterion}{optional, name of criterion function, here test statistic, either "\code{qle}" (default) or "\code{mahal}", only if `\code{local}` is a parameter vector to test and ignored otherwise}
+
 \item{nsim}{number of model replications to generate the simulated statistics}
 
-\item{obs}{optional, \code{NULL} (default), simulated statistics at the hypothesized parameter}
+\item{obs}{optional, \code{NULL} (default), simulated statistics at the hypothesized parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` if also \code{NULL}}
 
 \item{check.root}{logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})}
 
@@ -54,7 +59,7 @@ and attributes:
 	 \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
       the re-estimated parameters have NA values, criterion function minimizations have errors or did not converge numerically, the integer seed value `\code{iseed}`}
 }
-\details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
+ \details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
  model w.r.t. to the estimated parameter is true, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} by testing based
  on a Monte Carlo approach (see vignette). Due to the approximate nature of the assumed statistical model for the observed data the
  exact distribution of the test statistics, that is, the Mahalanobis distance or quasi-deviance, is generally unknown and therefore
@@ -72,11 +77,11 @@ and attributes:
  using `\code{nsim}` model replications at the estimated parameter as part of `\code{est}` or `\code{local}`. The criterion
  function approximations are used as it (specified in the object `\code{qsd}`) and will not be further improved by
  additional samples during the test.
- The value of the test statistic is either chosen as the current criterion function value in `\code{OPT}`
- (see  argument `\code{criterion}` in \code{\link{getQLmodel}}) or is taken from the optional argument `\code{local}`. Given the local results
- `\code{local}` of class \code{QSResult}, the user can also select a different criterion function as a test statistic than before when
- estimating the parameter itself. Apart from the quasi-deviance as a test statistic, in principle, any supported type of a least squares criterion,
- more generally, the Mahalanobis distance, can be used depending on the prefered type of variance matrix approximation, see \code{\link{covarTx}}.
+ The value of the test statistic is either chosen as the current criterion function value in `\code{OPT}` or newly computed at the
+ parameter `\code{par0}` using the raw observed statistics `\code{obs0}` in the quasi-score vector. The user can also select a different criterion function
+ (which can be set by argument `\code{criterion}`) as a test statistic as used for estimating the model parameter before. Apart from
+ the quasi-deviance as a test statistic, in principle, any supported type of a least squares criterion, more generally, the
+ Mahalanobis distance, can be used depending on the prefered type of variance matrix approximation, see \code{\link{covarTx}}.
  Practically, the re-estimations might fail to converge, however, then the user can control the convergence conditions of the local solvers
  (including quasi-scoring) by the corresponding control parameters (see \code{\link{searchMinimizer}}). Any failed re-estimations are
  excluded from the test results and stored in the attribute `\code{info}`. In addition, as part of the returned data frame `\code{param}`

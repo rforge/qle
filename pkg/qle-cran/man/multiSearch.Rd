@@ -5,7 +5,7 @@
 \title{A multistart version of local searches for parameter estimation}
 \usage{
 multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
-  multi.start = FALSE, cl = NULL, verbose = FALSE,
+  multi.start = FALSE, cl = NULL, pl = 0L, verbose = FALSE,
   cores = getOption("mc.cores", 1L))
 }
 \arguments{
@@ -22,6 +22,8 @@ multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 \item{multi.start}{logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge}
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
+
+\item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
 \item{verbose}{if \code{TRUE} (default), print intermediate output}
 

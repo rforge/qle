@@ -21,7 +21,7 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 
 \item{obs}{numeric vector of observed statistics, this overwrites `\code{qsd$obs}` if supplied}
 
-\item{inverted}{currently ignored}
+\item{inverted}{logical, \code{FALSE} (default), currently ignored}
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 
