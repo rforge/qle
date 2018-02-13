@@ -378,22 +378,17 @@ typedef struct ql_data_s {
 		 tmp[i]=obs[i]=_obs[i];
 	 }
 
-	 if(!isNull(R_Vmat))
-	 {
-		if(!isMatrix(R_Vmat))
-		  ERR("Variance is not of type matrix `R_Vmat`.");
+	 if(qlopts.useSigma || qlopts.varType == MEAN) {
+		if(isNull(R_Vmat) || !isMatrix(R_Vmat))
+		  ERR("Variance `R_Vmat` is either NULL or not a matrix.");
+		double *_vmat = REAL(R_Vmat);
+		MEMCPY(vmat,_vmat,nCov2);
+		MEMCPY(vmat_work,_vmat,nCov2);
 
-		 if(qlopts.useSigma || qlopts.varType == MEAN) {
-		    double *_vmat = REAL(R_Vmat);
-		    MEMCPY(vmat,_vmat,nCov2);
-		    MEMCPY(vmat_work,_vmat,nCov2);
-
-		    if(qlopts.varType == MEAN) {
-		      CALLOCX(work,nCov,double);
-		      splitDiag(vmat_work,nCov,work);
-		    }
-		 }
-
+		if(qlopts.varType == MEAN) {
+		  CALLOCX(work,nCov,double);
+		  splitDiag(vmat_work,nCov,work);
+		}
 	 } else {
 		 CALLOCX(workx,nCov2,double);
 	 }
@@ -466,8 +461,6 @@ typedef struct ql_model_s {
 
 		 if(!qld->qlopts.useSigma && qld->qlopts.varType)
 		 {
-			 if(!isNull(R_Vmat))
-			   ERR("R_Vmat is not NULL but should be if using kriging approximation of variance.");
 			 if(isNull(R_covL))
 			   ERR("Covariance model for kriging variance matrix is not set (Null).");
 

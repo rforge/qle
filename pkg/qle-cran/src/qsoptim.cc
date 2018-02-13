@@ -610,11 +610,11 @@ SEXP getStatus( qfs_result status ) {
 			break;
 	   // (= +7)
 	   case QFS_STEPMIN_REACHED:
-	   	   	SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPMIN_REACHED: Optimization stopped because minimum relative direction length was reached in line search."));
+	   	   	SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPMIN_REACHED: Optimization stopped because minimum relative direction length was reached."));
 	   	   	break;
 	   // (= +8)
 	   case QFS_STEPTOL_REACHED:
-	        SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPTOL_REACHED: Optimization stopped because minimum step length was reached in line search."));
+	        SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPTOL_REACHED: Optimization stopped because minimum step length was reached."));
 	        break;
        // (= +10)
        case QFS_LOCAL_CONVERGENCE:
@@ -632,10 +632,10 @@ SEXP getStatus( qfs_result status ) {
            SET_STRING_ELT(R_message, 0, mkChar("QFS_FAILURE: Could not calculate search direction."));
            break;
        case QFS_LINESEARCH_ERROR:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ERROR: Optimization stopped because of line search failure."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ERROR: Optimization stopped because sufficient decrease could not be found."));
             break;
        case QFS_LINESEARCH_ZEROSLOPE:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ZEROSLOPE: Optimization stopped because of nearly zero slope during line search."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ZEROSLOPE: Optimization stopped because of nearly zero slope."));
             break;
        case QFS_ERROR:
 		    SET_STRING_ELT(R_message, 0, mkChar("QFS_FAILURE: Generic failure code."));
