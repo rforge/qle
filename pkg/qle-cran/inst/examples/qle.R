@@ -27,11 +27,15 @@ OPT <- qle(qsd,qsd$simfn,nsim=10,
 		global.opts=list("maxeval"=10),
 		local.opts=list("weights"=c(0.5),"useWeights"=FALSE),pl=10)
 
-# intermediate results
-attr(OPT,"tracklist")
-# compare final with quasi-deviance at solution
-OPT$final
-quasiDeviance(OPT$par,OPT$qsd,verbose=TRUE)[[1]]
+## intermediate results
+# attr(OPT,"tracklist")
+
+# check final result with quasi-deviance at solution
+local <- OPT$final
+info <- attr(OPT,"optInfo")
+QD <- quasiDeviance(OPT$par,OPT$qsd,W=info$W,theta=info$theta,verbose=TRUE)[[1]]
+QD$value
+local$value
 
 ## here no quasi-scoring, therefore search on criterion function only
 #OPT <- qle(qsd,qsd$simfn,nsim=10,		
@@ -85,3 +89,9 @@ quasiDeviance(OPT$par,OPT$qsd,verbose=TRUE)[[1]]
 #contour(x, y, z1, col = "black", lty = "solid",
 #		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
 #try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
+
+# sampling
+#S <- attr(OPT,"optInfo")$W
+#Y <- nextLOCsample(S, OPT$par,100,qsd$lower,qsd$upper, invert=TRUE)
+#points(Y,cex=0.8,col="red")
+

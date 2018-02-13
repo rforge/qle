@@ -36,7 +36,7 @@ OPT <- qle(qsd,simfn,cond=cond,
 		global.opts = list("maxeval"=5, "NmaxLam"=5),
 		local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,
 				"lam_max"=1e-5,"test"=TRUE),
-		method = c("qscoring","bobyqa","direct"), iseed=1356) 
+		method = c("qscoring","bobyqa","direct"), iseed=1356, pl=10) 
 
 #plot statistics
 op <- par(xaxs='i', yaxs='i')
@@ -101,3 +101,23 @@ QD <- quasiDeviance(X,OPT$qsd,value.only=TRUE)
 points(X,QD,pch=3,cex=1)
 points(OPT$par,OPT$val,col="magenta",pch=5)
 par(op)
+
+OPT$par
+# testing
+
+W <- attr(OPT,"optInfo")$W
+theta <- attr(OPT,"optInfo")$theta
+par0 <- c("rho"=0.5)
+(QD <- quasiDeviance(OPT$par,OPT$qsd,W=W,theta=theta)[[1]])
+(QD <- quasiDeviance(OPT$par,OPT$qsd)[[1]])
+QD$value
+OPT$value
+
+debug(qleTest)
+Stest <- qleTest(OPT,par0=par0,obs0=c("N"=1),
+		   sim=simfn,cond=cond,nsim=500,check.root=TRUE)
+Stest
+attr(Stest,"solInfo")
+
+Stest2 <- qleTest(OPT,sim=simfn,cond=cond,nsim=500,check.root=TRUE)   
+Stest2
