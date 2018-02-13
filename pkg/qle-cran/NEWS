@@ -40,6 +40,8 @@ Changes with 0.17
 
 8) Added scaling option of parameter vector and quasi-score vector used in line search of quasi-scoring to test stopping conditions 		  
    
+9) Function `qleTest` now additionally can be used to test a different parameter than the estimated one (including another observed
+   vector of statistics)
 		  
 Current known issues
 --------------------
@@ -47,8 +49,7 @@ Current known issues
 		The implementation of the quasi-scoring iteration has some trouble with the correct
 		sign of the quasi-score components for values near zero mostly due to finite precision problems
 		
-	o function `qleTest` is not yet much meaningful in the final estimated model parameter
-	
+		
 	
 TODO
 ----
