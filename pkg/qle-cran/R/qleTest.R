@@ -394,11 +394,13 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @description Monte Carlo hypothesis testing 
 #'
 #' @param est			object of class \code{qle}, the estimation results from function \code{\link{qle}}
-#' @param local	    	optional, object of class \code{QSResult}, \code{NULL} (default), local estimation results 
-#' @param sim			user supplied simulation function (see \code{\link{qle}})
+#' @param par0			optional, vector of parameter for the null hypothesis 
+#' @param obs0			optional, vector of observed statistics corresponding to `\code{par0}`
 #' @param ...			arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}
+#' @param sim			user supplied simulation function (see \code{\link{qle}})
+#' @param criterion		optional, name of criterion function, here test statistic, either "\code{qle}" (default) or "\code{mahal}", only if `\code{local}` is a parameter vector to test and ignored otherwise
 #' @param nsim			number of model replications to generate the simulated statistics
-#' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesized parameter
+#' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesized parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` if also \code{NULL} 
 #' @param check.root    logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})  						
 #' @param alpha			significance level for testing the hypothesis
 #' @param multi.start   integer, \code{=0,1,2}, level of multi start root finding (see details)
@@ -443,11 +445,11 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #'  using `\code{nsim}` model replications at the estimated parameter as part of `\code{est}` or `\code{local}`. The criterion
 #'  function approximations are used as it (specified in the object `\code{qsd}`) and will not be further improved by
 #'  additional samples during the test.
-#'  The value of the test statistic is either chosen as the current criterion function value in `\code{OPT}`
-#'  (see  argument `\code{criterion}` in \code{\link{getQLmodel}}) or is taken from the optional argument `\code{local}`. Given the local results
-#'  `\code{local}` of class \code{QSResult}, the user can also select a different criterion function as a test statistic than before when
-#'  estimating the parameter itself. Apart from the quasi-deviance as a test statistic, in principle, any supported type of a least squares criterion,
-#'  more generally, the Mahalanobis distance, can be used depending on the prefered type of variance matrix approximation, see \code{\link{covarTx}}.
+#'  The value of the test statistic is either chosen as the current criterion function value in `\code{OPT}` or newly computed at the
+#'  parameter `\code{par0}` using the raw observed statistics `\code{obs0}` in the quasi-score vector. The user can also select a different criterion function
+#'  (which can be set by argument `\code{criterion}`) as a test statistic as used for estimating the model parameter before. Apart from
+#'  the quasi-deviance as a test statistic, in principle, any supported type of a least squares criterion, more generally, the
+#'  Mahalanobis distance, can be used depending on the prefered type of variance matrix approximation, see \code{\link{covarTx}}.
 #'  Practically, the re-estimations might fail to converge, however, then the user can control the convergence conditions of the local solvers
 #'  (including quasi-scoring) by the corresponding control parameters (see \code{\link{searchMinimizer}}). Any failed re-estimations are
 #'  excluded from the test results and stored in the attribute `\code{info}`. In addition, as part of the returned data frame `\code{param}`
@@ -459,10 +461,9 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @author M. Baaske
 #' @rdname qleTest
 #' @export
-qleTest <- function(est, local = NULL, sim, ...,
-			 		 nsim = 100, obs = NULL, check.root = FALSE, alpha = 0.05,
-					  multi.start = 0L, na.rm = TRUE, cl = NULL, iseed = NULL,
-					   verbose = FALSE)
+qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", nsim = 100,
+		             obs = NULL, check.root = FALSE, alpha = 0.05, multi.start = 0L,
+					  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
 	if(.isError(est))
 	  stop("Estimation result has errors. Please see attribute `error`.")    
@@ -474,40 +475,69 @@ qleTest <- function(est, local = NULL, sim, ...,
 	# basic checks
 	stopifnot(class(est) == "qle")
   	stopifnot(class(est$qsd)=="QLmodel")
-	xdim <- attr(est$qsd$qldata,"xdim")
-	Npoints <- nrow(est$qsd$qldata)
+	Npoints <- nrow(est$qsd$qldata)						# number of multi-start points
+	xdim <- attr(est$qsd$qldata,"xdim")					# dimension of the parameter
 			
-	# estimated parameter	 
-	if(is.null(local)){		
-		local <- est$final
-		if(.isError(local) || !attr(est,"optInfo")$minimized)
-		 stop("Final optimization failed. Please check attribute `final` and `optInfo`.")
-	 	else if( local$convergence < 0)
-		  warning(paste0("Last local search did not converge by method: ",local$method))
-    } else {
-       stopifnot(class(local)=="QSResult")	 
-	   # set current test statistic
-	   est$qsd$criterion <- local$criterion		
-	}	
-	# argument ids
+	# check arguments for local searches
 	id <- pmatch(names(args),names(formals(searchMinimizer)))
 	# check `searchMinimizer' args 
 	opt.args <- args[which(!is.na(id))]	
 	
 	# check with qsd hidden	
 	.checkfun(searchMinimizer,opt.args,
-		hide.args=c("x0","qsd"),check.default=FALSE)
-		
+			hide.args=c("x0","qsd"),check.default=FALSE)
+	
 	# use last Sigma (unless kriging variance matrix)  
-	if(est$qsd$var.type != "kriging"){
-		info <- attr(est,"optInfo")
-		opt.args <- c(opt.args,list(W=info$W,theta=info$theta)) 
-  	}
-	# use final (local) method by default
-	# if not given as an input argument
-	if(!("method" %in% names(opt.args)))
-	 opt.args$method <- local$method
-    
+	info <- attr(est,"optInfo")
+	if(est$qsd$var.type != "kriging")		
+	  opt.args <- c(opt.args,list(W=info$W,theta=info$theta))
+	
+	# test at estimated parameter: simply overwrite `est$final`
+	# with something of class QSResult for testing another parameter
+	if(is.null(par0)){		
+		local <- est$final
+		if(.isError(local) || !attr(est,"optInfo")$minimized)
+		 stop("Final optimization failed. Please check attribute `final` and `optInfo`.")
+	 	else if(local$convergence < 0)
+		  warning(paste0("Last local search did not converge by method: ",local$method))    
+    } else {
+		stopifnot(length(par0) == xdim)
+		if(!is.null(criterion))
+		  est$qsd$criterion  <- criterion
+	    # check input observed statistics
+		# default: use original data (statistics)
+	    if(!is.null(obs0)){
+		  obs0 <- unlist(obs0)
+		  if(anyNA(obs0) | any(!is.finite(obs0)))
+			  warning("`NA` or `Inf` values detected in `obs0`.")
+		  if(!is.numeric(obs0) || length(obs0) != length(est$qsd$covT))
+			  stop("`obs0` must be a (named) `numeric` vector or list of length equal to the number of caoariance models `qsd`.")
+		  # set observed statistics
+		  est$qsd$obs <- obs0
+	    }		
+		
+        local <-
+		 tryCatch({				
+			 if(est$qsd$criterion == "qle"){
+				 quasiDeviance(par0,est$qsd,Sigma=attr(est$final,"Sigma"),
+						 W=info$W,theta=info$theta,cvm=est$cvm,verbose=verbose)						 
+			 } else {
+				 mahalDist(par0,est$qsd,Sigma=attr(est$final,"Sigma"),
+						 W=info$W,theta=info$theta,inverted=TRUE,cvm=est$cvm,
+						  verbose=verbose)
+			 }
+		 }, error = function(e) {
+			  msg <- .makeMessage("Error in criterion function: ",conditionMessage(e))				 
+			 .qleError(message=msg,call=sys.call(),error=e)		
+		 })
+		 if(!.isError(local)){			
+			 local <- local[[1]]
+		 } else {
+			 message(local$message)
+			 return(local)
+		 }			
+	} 
+		
     # MC simulation of observed `data`
 	# if no observations supplied	
 	if(is.null(obs)){		
@@ -529,16 +559,14 @@ qleTest <- function(est, local = NULL, sim, ...,
 		obs <- tryCatch(
 				do.call(simQLdata,sim.args),
 				error = function(e) {
-					msg <- paste0("Simulating observed statistics failed: ",
-							 conditionMessage(e))
+					msg <- paste0("Simulating observed statistics failed: ",conditionMessage(e))
 					message(msg) 
 					.qleError(message=msg,call=match.call(),error=e)		   
 				}
 			)
-		if(.isError(obs)) {			
+		if(.isError(obs))			
 		 return(obs)
-	 	}
-		
+	 	
 	} else {
 		if(.isError(obs))
 		  stop("Argument `obs` has errors.")

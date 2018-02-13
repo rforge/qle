@@ -360,7 +360,8 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
 			if(var.type=="cholMean" || is.null(W) || is.null(theta))
 			  return (varCHOLmerge(rbind(colMeans(dataL)),sig2,var.type,doInvert,Tnames))	
 			
-			# weighting matrix has to be inverted!		
+			# weighting matrix has to be inverted!
+			# but inverse of QI as variance of theta inverted is QI, thus W = I.
 			d <- try(exp(-.distX(Xs,rbind(theta),W)*0.5),silent=TRUE)
 			if(inherits(d,"try-error") || !is.numeric(d) || any(is.na(d))) {
 				msg <- paste0("Weighted distances calculation error: NAs values possibly produced.")
@@ -498,7 +499,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param ...		    further arguments passed to \code{\link{covarTx}}
 #' @param cvm			list of cross-validation models (see \code{\link{prefitCV}})
 #' @param obs	 	    numeric vector of observed statistics, this overwrites `\code{qsd$obs}` if supplied
-#' @param inverted 		currently ignored
+#' @param inverted 		logical, \code{FALSE} (default), currently ignored
 #' @param check			logical, \code{TRUE} (default), whether to check input arguments
 #' @param value.only  	if \code{TRUE} only the values of the QD are returned
 #' @param na.rm 		logical, if \code{TRUE} (default) remove `Na` values from the results
@@ -567,35 +568,37 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 					  cl = NULL, verbose=FALSE)
 {		
 	if(check)
-	 .checkArguments(qsd,Sigma=Sigma)
- 
+	 .checkArguments(qsd,Sigma=Sigma) 
 	if(!is.list(points))
-	 points <- .ROW2LIST(points)
- 	
+	 points <- .ROW2LIST(points) 	
  	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
  	
 	# overwrite (observed) statistics	
 	if(!is.null(obs)) {
 		obs <- unlist(obs)
 		if(anyNA(obs) | any(!is.finite(obs)))
-			warning("`NA` or `Inf`values detected in `obs.")
-		if(!is.numeric(obs) || length(obs)!=length(qsd$covT))
+			warning("`NA` or `Inf` values detected in `obs`.")
+		if(!is.numeric(obs) || length(obs) != length(qsd$covT))
 			stop("`obs` must be a (named) `numeric` vector or list \n
 					of length equal to the given statistics in `qsd`.")
 		qsd$obs <- obs
 	}
-	# Unless Sigma is given always continuously update.
+	# Unless Sigma is given always continuously update variance matrix.
 	# If using W, theta or Sigma for average approximation, then
-	# at least update prediction variances at each point
+	# at least update prediction variances at each point.
 	tryCatch({
-		# use Sigma but add prediction variances
-		if(qsd$var.type != "kriging" && is.null(Sigma)){
-			# Sigma is inverted at C level
+		# use `Sigma` but add prediction variances
+		useSigma <- (qsd$var.type == "const")
+		if(qsd$var.type != "kriging" && !useSigma){
+			# Here: `Sigma` is inverted at C level
 			Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX
-		}			
-		qlopts <- list("varType"=qsd$var.type,			   
+		}
+		if(useSigma && is.null(Sigma))
+		 stop("`Sigma` cannot be NULL if used as a constant variance matrix.")
+		
+	    qlopts <- list("varType"=qsd$var.type,			   
 				       "useCV"=!is.null(cvm),
-					   "useSigma"=FALSE) # there is no constant Sigma 
+					   "useSigma"=FALSE) 			# there is no constant Sigma for quasi-deviance computation 
 
 		# somehow complicated but this is a load ballancing 
 		# (for a cluster) parallized version of quasiDeviance
@@ -632,8 +635,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 		return(ret)
 
 	}, error = function(e) {
-		message(.makeMessage("Calculation of quasi-deviance failed: ",
-				   conditionMessage(e)))
+		message(.makeMessage("Calculation of quasi-deviance failed: ",conditionMessage(e)))
 	 	stop(e)  # re-throw error
 	})
 }
@@ -740,8 +742,8 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 	  #  2. Average approx. computed by W and at theta; or by kriging
 	  #  3. Sigma constant
 	  tryCatch({		
-		   useSigma <- (!is.null(Sigma) && qsd$var.type == "const")
-		   if(qsd$var.type != "kriging" && is.null(Sigma)){			   
+		   useSigma <- (qsd$var.type == "const")
+		   if(qsd$var.type != "kriging" && !useSigma){			   
 			   # Sigma is inverted at C level
 			   Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX			   
 		   } else if(useSigma && !inverted){
@@ -753,8 +755,10 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 				  message(msg)
 				  return(.qleError(message = msg,error=Sigma))
 			    }
-			}		  
-				
+			}
+			if(useSigma && is.null(Sigma))
+			 stop("`Sigma` cannot be NULL if used as a constant variance matrix.")
+							
 			qlopts <- list("varType"=qsd$var.type,
 						   "useCV"=!is.null(cvm),
 						   "useSigma"=useSigma)  			# use as constant Sigma 
