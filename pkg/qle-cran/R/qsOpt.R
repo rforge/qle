@@ -1621,11 +1621,11 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 							# stopping conditions for
 							# relative estimation error deviation (see qleTest)							
 							if(locals$test && !is.null(Stest) && !.isError(Stest)) {
-								perr["val"] <- attr(Stest,"relED")	
+								perr["val"] <- attr(Stest,"relEF")	
 								if(anyNA(perr["val"]))
 								 message("Cannot test stopping conditions while testing local minimizer. `NAs` detected.")
 								else if( any(perr["val"] < perr["cond"]) ){									 # can be a vector for each component of the parameter					        
-									perr["stop"] <- perr["stop"] + as.integer(perr["val"] > perr["cond"])	 # and count separately for each one
+									perr["stop"] <- perr["stop"] + as.integer(perr["val"] < perr["cond"])	 # and count separately for each one
 									if(any(perr["stop"] >= globals$NmaxQI))											
 										break																			
 								} else { perr["stop"] <- rep(0L,xdim) }										 # reset	
@@ -1725,9 +1725,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 											message("Could not find index of selection candidate. Switch to global phase.")							
 									 	} else {
 											# compute criterion function at new sample point						
-											Spar <- criterionFun(Y[id,],W=I,theta=xt)
-											if(.isError(Spar))
-											 stop("Could not evaluate criterion function at local phase.")
+											Spar <- criterionFun(Y[id,],W=I,theta=xt)											
 										}
 										
 								} # candidate selection								
@@ -1736,7 +1734,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 						
 						} # end local sampling
 						
-						# start global sampling
+						# start or continue with global sampling
 						if(status[["global"]] > 1L){
 							I  <- Snext$I												# not an approximate root or has error
 							xt <- Snext$par

@@ -252,7 +252,8 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 
 # intern use only!
 .rootTest <- function(par, value, I, obs, alpha, test, ...,
-		       multi.start = 0L, Npoints = 10, cl = NULL, na.rm = TRUE, verbose = FALSE){	
+		       			multi.start = 0L, Npoints = 10, cl = NULL,
+			   				na.rm = TRUE, verbose = FALSE){	
 	aiqm <- NULL
 	mScore <- NULL	
 	xdim <- length(par)
@@ -266,7 +267,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 		# multi start root finding, no nested parallel execution
 		# including restart if more than one method is given 
 		if(is.null(opt.args$nstart))
-			opt.args$nstart <- 2L*Npoints
+			opt.args$nstart <- (xdim+1L)*Npoints
 		do.call(doInParallel,
 				c(list(X=obs,
 					FUN=function(obs,...) {
@@ -355,9 +356,10 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 			"sb"=value, "Sb"=tvals,
 			"test"=test)
 	
-	relED <-
+	relEF <-
 	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {
-		 try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
+		 #try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
+		  try(abs(1 - sqrt(diag(qi))/sqrt(diag(msem))),silent=TRUE)
 	} else {
 		message("Failed to compute relative difference of empirical and predicted error.")
 		NULL
@@ -376,7 +378,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 			msem=msem,							# mean square error matrix
 			aiqm=aiqm,							# average inverse QI (re-estimated parameters)
 			qi=qi,								# inverse QI at estimated theta
-			relED=relED,
+			relEF=relEF,
 			obs=NULL,							# (MC) observations
 			mean.score=mScore,					# average score/gradient
 			criterion=test,
@@ -398,10 +400,9 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @param obs0			optional, vector of observed statistics corresponding to `\code{par0}`
 #' @param ...			arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}
 #' @param sim			user supplied simulation function (see \code{\link{qle}})
-#' @param criterion		optional, name of criterion function, here test statistic, either "\code{qle}" (default) or "\code{mahal}", only if `\code{local}` is a parameter vector to test and ignored otherwise
+#' @param criterion		optional, \code{NULL} (default), test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter
 #' @param nsim			number of model replications to generate the simulated statistics
 #' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesized parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` if also \code{NULL} 
-#' @param check.root    logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})  						
 #' @param alpha			significance level for testing the hypothesis
 #' @param multi.start   integer, \code{=0,1,2}, level of multi start root finding (see details)
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
@@ -418,12 +419,11 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' 	 \item{msem}{ mean square error matrix of re-estimated parameters}
 #'   \item{aiqm}{ average inverse quasi-information matrix over all re-estimated parameters}
 #' 	 \item{qi}{ inverse quasi-information matrix at the parameter to be tested `\code{est$par}`}
-#'   \item{relED}{ relative difference of the empirial and predicted standard error of the parameter to be tested} 
+#'   \item{relEF}{ relative difference of the empirial and predicted standard error of the parameter to be tested} 
 #'   \item{obs}{ list of simulated observed statistics}
 #'   \item{optRes}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
 #'	 \item{mean.score}{ average quasi-score, respectively, average gradient of the MD at the re-estimated parameters}
 #' 	 \item{criterion}{always equal to "\code{qle}"}  
-#'   \item{solInfo}{ results of the numerical consistency checks for each re-estimated parameter} 
 #' 	 \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
 #'       the re-estimated parameters have NA values, criterion function minimizations have errors or did not converge numerically, the integer seed value `\code{iseed}`}
 #' 
@@ -461,8 +461,8 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @author M. Baaske
 #' @rdname qleTest
 #' @export
-qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", nsim = 100,
-		             obs = NULL, check.root = FALSE, alpha = 0.05, multi.start = 0L,
+qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
+		             nsim = 100, obs = NULL, alpha = 0.05, multi.start = 0L,
 					  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
 	if(.isError(est))
@@ -491,7 +491,10 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 	info <- attr(est,"optInfo")
 	if(est$qsd$var.type != "kriging")		
 	  opt.args <- c(opt.args,list(W=info$W,theta=info$theta))
-	
+    # optional: overwrite last criterion (from estimation result)
+  	if(!is.null(criterion))
+	  est$qsd$criterion  <- criterion
+  
 	# test at estimated parameter: simply overwrite `est$final`
 	# with something of class QSResult for testing another parameter
 	if(is.null(par0)){		
@@ -499,11 +502,14 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 		if(.isError(local) || !attr(est,"optInfo")$minimized)
 		 stop("Final optimization failed. Please check attribute `final` and `optInfo`.")
 	 	else if(local$convergence < 0)
-		  warning(paste0("Last local search did not converge by method: ",local$method))    
+		  warning(paste0("Last local search did not converge by method: ",local$method)) 
+	  	# use estimated parameter as default:
+		# which might render the test meaningless unless
+		# a different test statistic, i.e. "mahal" or "qle" (set by `criterion`),
+		# is used as before for estimation!
+	  	par0 <- local$par
     } else {
-		stopifnot(length(par0) == xdim)
-		if(!is.null(criterion))
-		  est$qsd$criterion  <- criterion
+		stopifnot(length(par0) == xdim)		
 	    # check input observed statistics
 		# default: use original data (statistics)
 	    if(!is.null(obs0)){
@@ -512,7 +518,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 			  warning("`NA` or `Inf` values detected in `obs0`.")
 		  if(!is.numeric(obs0) || length(obs0) != length(est$qsd$covT))
 			  stop("`obs0` must be a (named) `numeric` vector or list of length equal to the number of caoariance models `qsd`.")
-		  # set observed statistics
+		  # overwrite observed statistics
 		  est$qsd$obs <- obs0
 	    }		
 		
@@ -520,25 +526,25 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 		 tryCatch({				
 			 if(est$qsd$criterion == "qle"){
 				 quasiDeviance(par0,est$qsd,Sigma=attr(est$final,"Sigma"),
-						 W=info$W,theta=info$theta,cvm=est$cvm,verbose=verbose)						 
+						 W=info$W,theta=info$theta,cvm=est$cvm,verbose=verbose)				 
 			 } else {
 				 mahalDist(par0,est$qsd,Sigma=attr(est$final,"Sigma"),
 						 W=info$W,theta=info$theta,inverted=TRUE,cvm=est$cvm,
 						  verbose=verbose)
 			 }
 		 }, error = function(e) {
-			  msg <- .makeMessage("Error in criterion function: ",conditionMessage(e))				 
+			  msg <- .makeMessage("Error in criterion function evaluation: ",conditionMessage(e))				 
 			 .qleError(message=msg,call=sys.call(),error=e)		
 		 })
 		 if(!.isError(local)){			
 			 local <- local[[1]]
 		 } else {
-			 message(local$message)
+			 message(paste0("Cannot continue testing: ",local$message))
 			 return(local)
 		 }			
 	} 
 		
-    # MC simulation of observed `data`
+    # MC simulation of observed statistics
 	# if no observations supplied	
 	if(is.null(obs)){		
 		nid <- which(!is.na(id))
@@ -551,10 +557,10 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 				
 		simFun <- function(x) try(do.call(sim,c(list(x),args)))		
 		sim.args <-
-			list(sim=simFun,X=local$par,nsim=nsim,
-				 mode="list",cl=cl,iseed=iseed,verbose=verbose)
+			list(sim=simFun,X=par0,nsim=nsim, mode="list",
+					cl=cl,iseed=iseed,verbose=verbose)
 		if(verbose)
-		 cat("Simulating observed statistics...","\n")
+		 cat("Simulate observed statistics...","\n")
  		
 		obs <- tryCatch(
 				do.call(simQLdata,sim.args),
@@ -573,36 +579,32 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 		else if(class(obs) != "simQL" || !is.list(obs))
 		  stop("Argument `obs` must be of class `simQL` and `list` type.")	   
 	}
-	
-	# search minimizers	
-	if(verbose)
-	 cat("Estimating parameters...","\n")
-	
+		
  	RES <- 
- 	 if(multi.start > 0L){
+ 	 if(multi.start > 0L){																		# multi-start only in case of non-convergence  
 		if(verbose)
 		 cat("Re-estimate parameters (possibly use multi-start approach):","\n")
 		# multi start root finding, no nested parallel execution
 		# including restart if more than one method is given 
 		if(is.null(opt.args$nstart))
-		  opt.args$nstart <- 2L*Npoints
+		  opt.args$nstart <- (xdim+1L)*Npoints
 		do.call(doInParallel,
 			c(list(X=obs[[1]],
 					FUN=function(obs,...) {
 						# not in parallel!
-						multiSearch(x0=local$par,qsd=est$qsd,...,   		
+						multiSearch(x0=par0,qsd=est$qsd,...,   		
 						 cvm=est$cvm,obs=obs,inverted=TRUE,check=FALSE,
-						   multi.start=(multi.start > 1L),cl=NULL,verbose=FALSE,cores=1L)
+						   multi.start=(multi.start > 1L),cl=NULL,verbose=FALSE,cores=1L)		# multi.start = 2L, then always multi-start
 					},
 					cl=cl), opt.args))
-	} else {
+	} else {																					# never multi-start but restart if provided another routine
 		if(verbose)
 			cat("Re-estimate parameters:","\n")
 		#including restart if more than one method is given
 		do.call(doInParallel,
 			  c(list(X=obs[[1]],
 					FUN=function(obs,...) {
-						searchMinimizer(x0=local$par,qsd=est$qsd,...,    
+						searchMinimizer(x0=par0,qsd=est$qsd,...,    
 							cvm=est$cvm,obs=obs,inverted=TRUE,
 							  check=FALSE,verbose=verbose)
 				},
@@ -691,16 +693,10 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 	if(length(hasError) > 0L)	
 	  message(paste0("A total of ",length(hasError)," re-estimations failed."))
   
-    chk <- NULL
-    if(check.root && est$qsd$criterion == "qle") {
-		chk <- checkMultRoot(est,verbose=verbose)
-		if(.isError(chk))
-		 message(.makeMessage("Consistency check for the estimated model parameter failed."))		
-	}
-  
-	relED <-
+	relEF <-
 	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {
-		 try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
+		 #try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
+		 try(abs(1 - sqrt(diag(qi))/sqrt(diag(msem))),silent=TRUE)
 	 } else {
 		message(.makeMessage("Detected `NAs` values (for relative differences) in quasi-information or MSE matrix while testing."))		
 		NA
@@ -713,12 +709,11 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle", ns
 		    msem=msem,							# mean square error matrix
 	    	aiqm=aiqm,							# average inverse QI (re-estimated parameters)
 			qi=qi,								# inverse QI at estimated theta
-	    	relED=relED,
+	    	relEF=relEF,
 			obs=if(verbose) obs else NULL,		# (MC) observations
 	    	optRes=if(verbose) RES else NULL,	# optimization results
 			mean.score=mScore,					# average score/gradient
-			criterion=est$qsd$criterion,
-			solInfo=chk,						# values of consistency criteria
+			criterion=est$qsd$criterion,			
 	  info=list(badInv=which(badInv), 			# inversion errors
 			  	hasNa=which(has.na), 			# indices of NA parameters 
 		 		hasError=hasError,
@@ -778,9 +773,9 @@ print.qleTest <- function(x, pl = 1, digits = 5,...) {
 	  cat("\n\n")
 	  qi <- attr(x,"qi")
 	  aiqm <- attr(x,"aiqm")
-	  if(!is.null(aiqm) && !.isError(aiqm) && !is.null(qi) && !.isError(qi) && !is.null(attr(x,"relED")))
-		  pse <- as.data.frame( cbind(sqrt(diag(aiqm)), sqrt(diag(qi)), attr(x,"relED") ) )
-	  	  dimnames(pse) <- list(row.names(x$param),c("Average", "Estimate", "|1-RMSE/Estimate|"))
+	  if(!is.null(aiqm) && !.isError(aiqm) && !is.null(qi) && !.isError(qi) && !is.null(attr(x,"relEF")))
+		  pse <- as.data.frame( cbind(sqrt(diag(aiqm)), sqrt(diag(qi)), attr(x,"relEF") ) )
+	  	  dimnames(pse) <- list(row.names(x$param),c("Average", "Estimate", "EF"))
 		  cat("Predicted Std. Errors: \n\n")
 		  print(format(pse, digits=digits),
 				  print.gap = 2, right=FALSE, quote = FALSE)			  
