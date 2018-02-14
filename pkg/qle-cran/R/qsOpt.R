@@ -1296,12 +1296,30 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 			cat("\n")
 			df <- as.data.frame(
 					cbind(
-					 c(formatC(signif(as.numeric(xs),digits=6),digits=6,format="fg", flag="#"),formatC(signif(fs,digits=4),digits=4,format="e")),
-					 c(formatC(signif(as.numeric(xt),digits=6),digits=6,format="fg", flag="#"),formatC(signif(ft,digits=4),digits=4,format="e")),
-					 c(formatC(signif(as.numeric(Snext$par),digits=6),digits=6,format="fg", flag="#"),formatC(signif(Snext$value,digits=4),digits=4,format="e"))))
-			dimnames(df) <- list(c(names(x0),"value"),c("Start","Estimate", "Sample"))
+					 formatC(signif(as.numeric(xs),digits=6),digits=6,format="fg", flag="#"),
+					 formatC(signif(as.numeric(xt),digits=6),digits=6,format="fg", flag="#"),
+					 formatC(signif(as.numeric(Snext$par),digits=6),digits=6,format="fg", flag="#")))
+	       		
+			dimnames(df) <- list(names(x0),c("Start","Estimate", "Sample"))
+			dfv <- as.data.frame(
+					cbind(
+						formatC(signif(fs,digits=3),digits=3,format="e"),
+						formatC(signif(ft,digits=3),digits=3,format="e"),
+						formatC(signif(Snext$value,digits=3),digits=3,format="e")))
+			dimnames(dfv) <- list("value",c("","",""))
+		
+			if(!.isError(S0)){
+				df <- cbind(df,formatC(signif(as.numeric(S0$par),digits=6),digits=6,format="fg", flag="#"))
+				dimnames(df)[[2]] <- c("Start","Estimate", "Sample", "Local")
+				dfv <- cbind(dfv,formatC(signif(as.numeric(S0$value),digits=3),digits=3,format="e"))
+				dimnames(dfv)[[2]] <- c("","", "", "")
+			}		
+			
 			print(format(df, digits=6),
 				print.gap = 2, right=FALSE, quote = FALSE)	
+		    			
+			print(format(dfv, digits=6),
+					print.gap = 2, right=FALSE, quote = FALSE)
 			cat("\n\n")		
 			# other conditions
 			# max of quasi-score depends on whether criterion was minimized (local) or not
@@ -1321,8 +1339,12 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 			
 		 	print.default(format(cond, digits = 4, justify="left"),
 							print.gap = 2, quote = FALSE)
-								
+						
 			if(pl > 2L) {
+				if(!.isError(S0)){
+				 cat("\n\n")
+				 print(S0)				 
+			    }			 	
 				if(!is.null(Stest) && !.isError(Stest)){
 				   cat("\n\n")
 				   cat("Testing local minimizer: \n\n")
@@ -1552,19 +1574,14 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				# Set current iterate to last sampled point in case of no convergence
 				# during the global phase, eventually a sampled point 'Snext' also becomes
 				# a minimizer after a number of steps cycling through the vector of global weights								
-				status[["minimized"]] <-
-				  if(!.isError(S0) && S0$convergence >= 0L)
-					  TRUE 
-		  		  else {
-					  message("Could not complete multistart local search.")
-					  FALSE
-				  }
-			    				
-				if(status[["minimized"]]){								
+				    				
+				if(!.isError(S0) && S0$convergence >= 0L)
+				{
 					I <- S0$I
 					xt <- S0$par
 					ft <- S0$value					 
 					varS <- S0$varS	
+					status[["minimized"]] <- TRUE
 					
 					if(S0$convergence == 1L){										# found root of quasi-score
 						status[["global"]] <- 0L									# start local phase
@@ -1607,6 +1624,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					 } else { status[["global"]] <- 2L }										# no root at all switch to global sampling
 				} else {																		
 					status[["global"]] <- 2L										
+					status[["minimized"]] <- FALSE
+					message("Could not complete multistart local search.")
+					
 					# Though we might have found a local minimizer, we do not
 					# sample there because we trust the selection criteria
 					# which additionally considers point-interdistances. 
@@ -1958,7 +1978,41 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				Stest <- NULL
 				# update X sample			
 				X <- as.matrix(qsd$qldata[seq(xdim)])				
-			}																				# end main loop
+			
+			}  # end main loop		
+			
+			# Last iteration was done at global phase, so try to minimize again
+			# either from the last sample point since it this most local supposed to
+			# small for high (global) weights or by a multistart approach.
+					
+			if(status[["global"]] == 2L){
+				# always multistart and include last (global) sample point `Snext$par` as a starting point
+				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, control=control,
+						Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
+						check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
+						multi.start=TRUE, pl=pl, cl=cl, verbose=pl>0L)
+				
+				# overwrite last sample point if local minimization was successful
+				if(!.isError(S0) && S0$convergence >= 0L){					
+					xt <- S0$par
+					ft <- S0$value					 
+					status[["minimized"]] <- TRUE					
+				} else {
+					xt <- Snext$par
+					ft <- Snext$value
+					status[["minimized"]] <- FALSE
+					message("Could not complete multistart local search.")	
+				}
+				# store local minimization results as these are overwritten now
+				# where `Snext` does not change anymore, however, add it
+				tracklist <- c(tracklist,
+						list("S0"=S0,"Snext"=Snext,"status"=list(status)))
+				
+				# show results (update) 
+				.printInfo()
+				.showConditions()	
+			}		
+			
 		}, error = function(e) {
 			msg <- .makeMessage("Current iteration stopped unexpectedly: ",
 					  conditionMessage(e))
@@ -1970,7 +2024,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					 "qsd"=qsd,
 					 "cvm"=cvm,
 					 "why"=NULL,					 
-					 "final" = S0,															# local results
+					 "final"=S0,															# local results
 					 "convergence"=FALSE),				
 				tracklist = tracklist,				
 				optInfo = list("x0"=x0,
@@ -2001,37 +2055,6 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	if(.isError(dummy))
 	 return(dummy)
 	
- 	# Last iteration was done at global phase, so try to minimize again
-	# either from the last sample point since it this most local supposed to
-	# small for high (global) weights or by a multistart approach.
-	
- 	if(status[["global"]] == 2L){
-		# always multistart and include last (global) sample point `Snext$par` as a starting point
-		S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, contorl=control,
-					Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-					 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-					  multi.start=TRUE, cl=cl, pl=pl, verbose=pl>0L)
-		
-		# overwrite last sample point if local minimization was successful
-		if(!.isError(S0) && S0$convergence >= 0L){					
-			xt <- S0$par
-			ft <- S0$value					 
-			status[["minimized"]] <- TRUE					
-		} else {
-			xt <- Snext$par
-			ft <- Snext$value
-			status[["minimized"]] <- FALSE
-			message("Could not complete multistart local search.")	
-		}
-		# store local minimization results as these are overwritten now
-		# where `Snext` does not change anymore, however, add it
-		tracklist <- c(tracklist,
-		 list("S0"=S0,"Snext"=Snext,"status"=list(status)))
-	    
-        # show results (update) 
-		.printInfo()
-		.showConditions()	
-	}
  
 	## only for estimte theta=(xt,ft)	
 	ctls["stopval",c(2,4)] <- c(ft,ft < ctls["stopval","cond"])	
@@ -2041,13 +2064,13 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	# remove `nfail`, `nsucc`
 	ctls <-
 	 if(.isError(S0)) {
-	   message("Last search results have errors. Please see list element `\"final\")`.")	   
+	   message("Last search results have errors. Please see list element `\"final\"`.")	   
 	   ctls[1:8,-3]
 	 } else {	  	
 		val <- max(abs(S0$score))
 		ctls <- rbind(ctls[1:8,-3],   										# remove `tmp` column
 		    	as.data.frame(cbind("cond" = qscore.opts$score_tol,
-			 				        "val" = val ,
+			 				        "val" = val,
 									"stop" = as.integer(val < qscore.opts$score_tol),
 									"count" = 1L),
 		   		     row.names = ifelse(qsd$criterion == "qle","score","grad"),
@@ -2065,7 +2088,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		 	 "qsd"=qsd,
 			 "cvm"=cvm,
 			 "why"=arg.names,
-			 "final" = S0,			 		# local results (NULL if `last.global` is TRUE)
+			 "final"=S0,			 		# local results (NULL if `last.global` is TRUE)
 			 "convergence"=(status[["minimized"]] && length(arg.names) > 0L)),	 	
 		tracklist = tracklist,		
 		optInfo = list("x0"=x0,
