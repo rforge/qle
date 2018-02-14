@@ -4,10 +4,9 @@
 \alias{qleTest}
 \title{Monte Carlo testing}
 \usage{
-qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = "qle",
-  nsim = 100, obs = NULL, check.root = FALSE, alpha = 0.05,
-  multi.start = 0L, na.rm = TRUE, cl = NULL, iseed = NULL,
-  verbose = FALSE)
+qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
+  nsim = 100, obs = NULL, alpha = 0.05, multi.start = 0L,
+  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
@@ -20,13 +19,11 @@ qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = "qle",
 
 \item{sim}{user supplied simulation function (see \code{\link{qle}})}
 
-\item{criterion}{optional, name of criterion function, here test statistic, either "\code{qle}" (default) or "\code{mahal}", only if `\code{local}` is a parameter vector to test and ignored otherwise}
+\item{criterion}{optional, \code{NULL} (default), test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter}
 
 \item{nsim}{number of model replications to generate the simulated statistics}
 
 \item{obs}{optional, \code{NULL} (default), simulated statistics at the hypothesized parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` if also \code{NULL}}
-
-\item{check.root}{logical, \code{FALSE} (default), whether to check consistency of estimated parameter (see \code{\link{checkMultRoot}})}
 
 \item{alpha}{significance level for testing the hypothesis}
 
@@ -50,16 +47,15 @@ and attributes:
 	 \item{msem}{ mean square error matrix of re-estimated parameters}
   \item{aiqm}{ average inverse quasi-information matrix over all re-estimated parameters}
 	 \item{qi}{ inverse quasi-information matrix at the parameter to be tested `\code{est$par}`}
-  \item{relED}{ relative difference of the empirial and predicted standard error of the parameter to be tested} 
+  \item{relEF}{ relative difference of the empirial and predicted standard error of the parameter to be tested} 
   \item{obs}{ list of simulated observed statistics}
   \item{optRes}{ results from re-estimating the model parameters for each simulated observation from `\code{obs}`}
  \item{mean.score}{ average quasi-score, respectively, average gradient of the MD at the re-estimated parameters}
 	 \item{criterion}{always equal to "\code{qle}"}  
-  \item{solInfo}{ results of the numerical consistency checks for each re-estimated parameter} 
 	 \item{info}{ list of indices of re-estimation results where the inversion of the quasi-information matrix failed,
       the re-estimated parameters have NA values, criterion function minimizations have errors or did not converge numerically, the integer seed value `\code{iseed}`}
 }
- \details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
+\details{ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
  model w.r.t. to the estimated parameter is true, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} by testing based
  on a Monte Carlo approach (see vignette). Due to the approximate nature of the assumed statistical model for the observed data the
  exact distribution of the test statistics, that is, the Mahalanobis distance or quasi-deviance, is generally unknown and therefore
