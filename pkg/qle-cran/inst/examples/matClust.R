@@ -309,78 +309,16 @@ plot(ecdf(fval),lty=4)
 roots <- do.call(rbind,lapply(RES,function(x) x$score))
 colMeans(roots)
 
-
-##########################
-####### TESTING ##########
-##########################
-
-Stest2
-attr(Stest2,"info")
-attr(Stest2,"optInfo")
-RES2 <- attr(Stest2,"optRes")
-fval2 <- sapply(RES2,"[[","value")
-mean(fval2)
-quantile(fval2)
-summary(fval2)
-plot(ecdf(fval2))
-roots2 <- do.call(rbind,lapply(RES2,function(x) x$score))
-colMeans(roots2)
-id <- which(fval2>1e-4)
-RES2[id]
-
-####################
-
-print(Stest)
-Stest$par
-QS$par
-msem <- attr(Stest,"msem")
-aiqm <- attr(Stest,"aiqm")
-1-sqrt(diag(msem))/sqrt(diag(attr(Stest,"qi")))
-
-# Stest
-Sb <- attr(Stest$test,"Sb")
-sb <- as.numeric(Stest$test[1])
-alpha <- 0.05
-(q <- quantile(Sb,1-alpha,na.rm=TRUE))
-(sum(Sb>=q))/(length(Sb))
-(z <- (sum(Sb>=sb))/(length(Sb)))
-(q <- quantile(Sb,z,na.rm=TRUE))
-
-(p <- (1+sum(Sb>z))/(length(Sb)+1))
-(p <- (1+sum(Sb>sb))/(length(Sb)+1))
-
-Sb <- sort(Sb)
-e_cdf <- 1:length(Sb) / length(Sb)
-plot(Sb, e_cdf, type = "s")
-abline(h = alpha, lty = 3)
-(z <- Sb[which(e_cdf >= 1-alpha)[1]])
-try(quantile(Sb,1-alpha,na.rm=TRUE),silent=TRUE)
-1-ecdf(Sb)(z)
-
-   ####################
-
-# show envelopes for K,G,F function
-plotGraphs(OPT$par,nsim=1000)
-
-## fit model by Minimum Contrast
-## and compare with QLE
-#data(redwood)
-#fitM <- kppm(redwood, ~1, "MatClust")
-#fitM$modelpar
-#OPT$par
-#QS$par
-
 # do not forget
 stopCluster(cl)
-
 
 # ------------------------- ONLY FOR THE VIGNETTE ---------------------------
 
 ## save results for vignette
-matclust <- list("qsd"=qsd,"cvm"=cvm,"OPT"=OPT,"Stest"=Stest)
-save(matclust,file="matclust.rda")
+#matclust <- list("qsd"=qsd,"cvm"=cvm,"OPT"=OPT,"Stest"=Stest)
+#save(matclust,file="matclust.rda")
 
 ## plot and store envelopes
-pdf("Kfunc.pdf",width = 8, height = 10)
-plotGraphs(OPT$par,nsim=1000)
-dev.off()
+#pdf("Kfunc.pdf",width = 8, height = 10)
+#plotGraphs(OPT$par,nsim=1000)
+#dev.off()
