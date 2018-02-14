@@ -141,7 +141,7 @@
 		 "NmaxLam" = 3,
 		 "NmaxQI" = 5,		 		 
 		 "Nmaxftol"= 3,
-		 "nstart" = 10*(xdim+1))					    	# number of starting points for multistart version at global phase
+		 "nstart" = 10*(xdim+1L))					    	# number of starting points for multistart version at global phase
 }
 
 .getDefaultLOCoptions <- function(xdim) {
