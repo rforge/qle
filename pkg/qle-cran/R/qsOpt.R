@@ -1543,7 +1543,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				# the methods given in `method` does not converge or has errors
 				S0 <- multiSearch(xs, qsd=qsd, method=method, opts=qscore.opts, control=control,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-							 check=FALSE, nstart=max(globals$nstart,2L*nrow(X)),
+							 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 							  multi.start=status[["global"]]>1L, pl=pl, cl=cl, verbose=pl>0L)
 				
 				# store local minimization results
@@ -2009,7 +2009,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		# always multistart and include last (global) sample point `Snext$par` as a starting point
 		S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, contorl=control,
 					Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-					 check=FALSE, nstart=max(globals$nstart,2L*nrow(X)),
+					 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 					  multi.start=TRUE, cl=cl, pl=pl, verbose=pl>0L)
 		
 		# overwrite last sample point if local minimization was successful
