@@ -102,22 +102,19 @@ points(X,QD,pch=3,cex=1)
 points(OPT$par,OPT$val,col="magenta",pch=5)
 par(op)
 
-OPT$par
-# testing
-
+# check weighting matrix and center point for variance average approximation
 W <- attr(OPT,"optInfo")$W
 theta <- attr(OPT,"optInfo")$theta
-par0 <- c("rho"=0.5)
-(QD <- quasiDeviance(OPT$par,OPT$qsd,W=W,theta=theta)[[1]])
-(QD <- quasiDeviance(OPT$par,OPT$qsd)[[1]])
+
+par0 <- c("rho"=0.51356)
+QD <- quasiDeviance(OPT$par,OPT$qsd,W=W,theta=theta)[[1]]
+# check final quasi-deviance from estimation results
 QD$value
-OPT$value
+OPT$value			# // <- ok.
 
-debug(qleTest)
-Stest <- qleTest(OPT,par0=par0,obs0=c("N"=1),
-		   sim=simfn,cond=cond,nsim=500,check.root=TRUE)
-Stest
-attr(Stest,"solInfo")
+## testing: test H_0: \theta_0 = par0
+## same observed statistics as for estimation
+Stest <- qleTest(OPT,par0=OPT$par,obs0=c("N"=1),
+		   sim=simfn,cond=cond,nsim=500,multi.start=1L)
 
-Stest2 <- qleTest(OPT,sim=simfn,cond=cond,nsim=500,check.root=TRUE)   
-Stest2
+print(Stest)
