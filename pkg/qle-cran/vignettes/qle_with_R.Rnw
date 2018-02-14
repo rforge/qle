@@ -512,9 +512,9 @@ Besides a pre-specified weight pattern the algorithm also includes an automated
 adjustment of the weights according to the progress of the iterates and achieved
 accuracy of the QS approximation. By this, we intend to faciliate convergence
 of our method. We say that the current local phase at iteration $n$ was
-\emph{successful} in case the following conditions hold
+\emph{successful} in case the following holds
 \[
- s_n<s_{n-1},\; \lambda^{max}_n<\lambda^{max}_{n-1},\; C^{max}_n<C^{max}_{n-1}
+ s_n<s_{n-1},\; \lambda^{max}_n<\lambda^{max}_{n-1}
 \]
 and \emph{failed} otherwise. We record the number successful and failed local
 phase iterations and as soon as the above conditions hold for a certain
