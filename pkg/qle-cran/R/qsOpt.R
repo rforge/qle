@@ -1,12 +1,14 @@
-# Copyright (C) 2017 Markus Baaske. All Rights Reserved.
+# Copyright (C) 2018 Markus Baaske. All Rights Reserved.
 # This code is published under the GPL (>=3).
 #
 # File: 	qsOpt.R
-# Date:  	20/10/2017
+# Date:  	14/03/2018
 # Author: 	Markus Baaske
 #
-# Functions for Quasi-likelihood based estimation as well as
-# the quasi-scoring as a local root finding method 
+# Functions for simulated quasi-likelihood estimation,
+# sampling candidates for evaluation, cross-validation,
+# implements local and global search methods,
+# quasi-scoring method 
 
 .qleError <- function(subclass = NULL,
 		        message = "", call = as.list(sys.call(-1))[[1]],
@@ -185,13 +187,14 @@
 #' 
 #' @title Print default options for optimization
 #' 
-#' @description Print default options for global and local optimization in function \code{\link{qle}}
+#' @description Print default options for global and local optimization routines
+#' for function \code{\link{qle}}
 #' 
 #' @param xdim 		dimension of the unknown model parameter
 #' 
 #' @return List of options.
 #' 
-#' @details The function returns a lists of available options
+#' @details The function returns a list of available options
 #'  for functions \code{\link{qscoring}} and \code{\link{qle}}.
 #' 
 #' @examples
@@ -318,42 +321,40 @@ cverrorTx <- function(points, Xs, dataT, cvm, Y, type, cl = NULL) {
 #'
 #' @title Prediction variances by cross-validation
 #'
-#' @description The function estimates the prediction variances by a cross-validation approach (see vignette) applied to
-#'  each sample means of the involved statistics. 
+#' @description The function estimates the prediction variances by a cross-validation approach (see vignette)
+#'  applied to each sample means of summary statistics. 
 #'
 #' @param qsd   	object of class \code{\link{QLmodel}}
-#' @param cvm		list of prefitted covariance models from function \code{\link{prefitCV}}
+#' @param cvm		list of prefitted covariance models obtained from function \code{\link{prefitCV}}
 #' @param theta		optional, default \code{NULL}, list or matrix of points where to estimate prediction variances
-#' @param type		name of prediction variance measure 
-#' @param cl	    cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
+#' @param type		name of type of prediction variance 
+#' @param cl	    cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' 						 
 #' 	
-#' @return A matrix of estimated prediction variances for each point given by the argument \code{theta} (rows)
-#'  and for each statistic (columns).  
+#' @return A matrix of estimated prediction variances for each point given by the argument \code{theta} (as rows)
+#'  and for each statistic (as columns).  
 #'
 #' @details	Other than the kriging prediction variance, which solely depends on interdistances of sample points
-#'  and estimated covariance parameters of some assumed to be known spatial covariance structure, the cross-validation
-#'  based approach (see [4] and the vignette) even takes into account the predicted values at `\code{theta}` and thus can be seen as a more robust
-#'  measure of variability between different spatial locations. By default, `\code{theta}` equals the current sampling set 
+#'  and estimated covariance parameters of some assumed to be known spatial covariance model, the cross-validation
+#'  based approach (see [4] and the vignette) even takes into account the predicted values at `\code{theta}` and thus can be thought of
+#'  a more robust measure of variability between different spatial locations. By default, `\code{theta}` equals the current sampling set 
 #'  stored in the object `\code{qsd}`.
 #' 
-#'  If we set the error `\code{type}` equal to "\code{cve}", the impact on the level of accuracy (predicting at unsampled
-#'  points) is measured by the \emph{delete-k jackknifed variance} of prediction errors. This approach does not require further
-#'  simulations as a measure of uncertainty for predicting the sample means of statistics at new candidate points accross the parameter space.
-#'  Note that if the attribute \code{attr(cvm,"type")} equals "\code{max}", then the maximum of kriging and CV-based prediction
-#'  variances is returned. 
+#'  If we set the type of measure `\code{type}` equal to "\code{cve}", the impact on the level of accuracy (predicting at unsampled
+#'  points) is measured by a \emph{delete-k jackknifed variance} of prediction errors. This approach does not require further
+#'  simulation runs as a measure of uncertainty for predicting the sample means of statistics at new candidate points accross the parameter space.
+#'  If \code{attr(cvm,"type")} equals "\code{max}", then the maximum of kriging and CV-based prediction variances is returned. 
 #' 
-#'  In addition, other measures of prediction uncertainty are available, such as the \emph{root mean square deviation}
+#'  In addition, other measures of prediction uncertainty are available such as the \emph{root mean square deviation}
 #'  (\code{rmsd}) and \emph{mean square deviation} (\code{msd}) or the \emph{standardized cross-validation error}
 #'  (\code{scve}). The details are explained in the vignette. In order to assess the predictive quality of possibly
-#'  different covariance structures (also depending on the initial sample size), including the comparison of different
-#'  sizes of initial sampling designs, the following measures [8] are
-#'  also available for covariance model validation and adapted to the cross-validation approach here by using an
-#'  \emph{average cross-validation error} (\code{acve}), the \emph{mean square error} (\code{mse}) or the
-#'  \emph{average standardized cross-validation error} (\code{ascve}). These last measures can only be computed in case the total number
+#'  different covariance models (also depending on the initial sample size), including the comparison of different
+#'  sizes of initial sampling designs, the following measures [8] are available for covariance model validation and adapted
+#'  to the cross-validation approach here by using an \emph{average cross-validation error} (\code{acve}), the \emph{mean square error} (\code{mse})
+#'  or the \emph{average standardized cross-validation error} (\code{ascve}). These last measures can only be computed in case the total number
 #'  of sample points equals the number of leave-one-out covariance models. This requires to fit each cross-validation
 #'  covariance model by \code{\link{prefitCV}} using the option `\code{reduce}`=\code{FALSE} which is then based on exactly
-#'  one left out point. Also, we can calculate the kriging variance at the left-out sample points if we set the option `\code{type}`
+#'  one left-out point. Also, we can calculate the kriging variance at the left-out sample points if we set the option `\code{type}`
 #'  equal to "\code{sigK}". 
 #'
 #' @examples
@@ -454,28 +455,28 @@ updateCV <- function(i, qsd, fit, ...) {
 #' @title Covariance parameter estimation for cross-validation 
 #'
 #' @description The function constructs a list of covariance models of statistics in order to estimate the prediction error
-#'  variances by a cross-validation (CV) approach at unsampled points. 
+#'  variances by a cross-validation approach at unsampled points. 
 #'
 #' @param qsd   	  object of class \code{\link{QLmodel}}
 #' @param reduce	  if \code{TRUE} (default), reduce the number of covariance models to refit
-#' @param type		  type of prediction variances, "\code{cv}" (default), see \code{\link{qle}}
-#' @param control	  control arguments for REML estimation passed to \code{\link[nloptr]{nloptr}}  	
-#' @param cl	      cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
+#' @param type		  type of prediction variances, "\code{cv}" (default) and "\code{max}", see \code{\link{crossValTx}}
+#' @param control	  control arguments for REML estimation, passed to \code{\link[nloptr]{nloptr}}  	
+#' @param cl	      cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' @param verbose	  if \code{TRUE}, print intermediate output
 #'
 #' @return A list of certain length depending on the current sample size (number of evaluated points).
-#'  Each list element corresponds to a (reduced) number of sample points with at most \eqn{k} points
-#'  (see details) left out for fitting the covariance models. 
+#'  Each list element corresponds to a (possibly reduced) number of sample points with at most \eqn{k} points
+#'  (see details) left-out for fitting the corresponding covariance models. 
 #'
-#' @details Using the CV-based approach (see vignette) for estimating the prediction variances 
-#' 	might require a refit of covariance parameters of each statistic based on leaving out a certain number of sample points.
-#'  The covariance models can be refitted if `\code{fit}` equals \code{TRUE} and otherwise are simply updated without fitting which
-#'  saves some computational resources. The number of points left out is dynamically adjusted depending on the number
+#' @details Using the cross-validation approach (see vignette) for estimating the prediction variances 
+#' 	might require a refit of covariance parameters of each statistic based on the remaining sample points.
+#'  The covariance models are refitted if `\code{fit}` equals \code{TRUE} and otherwise simply updated without fitting which
+#'  saves some computational resources. The number of points left-out, if applicable, is dynamically adjusted depending on the number
 #'  of sample points in order to prevent the main estimation algorithm to fit as many models as there are points already evaluated.  
 #' 
-#'  For CV the number \eqn{n_c} of covariance models still to fit, that is, the number of partitioning sets of sample points, is limited by
+#'  The number \eqn{n_c} of covariance models still to fit, that is, the number of partitioning sets of sample points, is limited by
 #'  \eqn{n_c\leq n}, with maximum \eqn{k} sampling points deleted from the full sample set with overall \eqn{n} sample points such that
-#'  \eqn{n=n_c k} (see vignette for further details). 
+#'  \eqn{n=n_c k} (see also the vignette for further details). 
 #' 
 #' @examples 
 #'   data(normal)
@@ -596,12 +597,11 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 	  	
 }
 
-
 #' @name searchMinimizer
 #'
 #' @title Minimize a criterion function 
 #'
-#' @description The function searches for a root of the quasi-score vector or minimizes one of the criterion functions.
+#' @description The function either searches for a root of the quasi-score or minimizes one of the criterion functions.
 #'
 #' @param x0		  (named) numeric vector, the starting point
 #' @param qsd   	  object of class \code{\link{QLmodel}}
@@ -617,27 +617,26 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #'
 #' @details The function provides an interface to local and global numerical minimization routines
-#'  using the approximate quasi-deviance (QD) or Mahalanobis distance (MD) as an objective function.
+#'  using the approximate quasi-deviance (QD) or Mahalanobis distance (MD) as an objective (monitor) function.
 #'  
-#'  The function does not require additional simulations to find an approximate minimizer or root. The
-#'  numerical iterations always take place on the fast to evaluate criterion function approximations.
-#'  The main purpose is to provide an entry point for minimization without the
-#'  need of sampling new candidate points for evaluation. This is particularly useful if we search
-#'  for a "first-shot" minimizer. 
+#'  The function does not require additional simulations to find an approximate minimizer or root of the quasi-score.
+#'  The numerical iterations always take place on the fast to evaluate criterion function approximations.
+#'  The main purpose is to provide an entry point for minimization without the need of sampling new candidate points for evaluation.
+#'  This is particularly useful if we search for a "first-shot" minimizer or to re-iterate a few further steps after estimation of the
+#'  model parameter.  
 #' 
 #'  The criterion function is treated as a deterministic (non-random) function during minimization
-#'  (or root finding) whose surface depends on the sample points. Because of the typical nonconvex nature of the
-#'  criterion functions one cannot expect a global minimizer by applying any local search method like,
-#'  for example, the scoring iteration \code{\link{qscoring}}.
-#'  Therfore, if the scoring iteration or some other available method gets stuck in a possibly local
-#'  minimum of the criterion function showing at least some kind of numerical convergence we use such
-#'  minimizer as it is and finish the search, possibly being unlucky, having not found an approximate root
-#'  of the quasi-score vector (or minimum of the Mahalanobis distance). If there is no convergence practically,
-#'  the search is restarted by switching to the next user supplied minimization routine defined in `\code{method}`. 
+#'  (or root finding) whose surface depends on the sample points and chosen covariance models. Because of the typical nonconvex
+#'  nature of the criterion functions one cannot expect a global minimizer by applying any local search method like, for example,
+#'  the scoring iteration \code{\link{qscoring}}. Therfore, if the quasi-scoring iteration or some other available method gets stuck
+#'  in a local minimum of the criterion function showing at least some kind of numerical convergence we use such minimizer as it is and
+#'  finish the search, possibly being unlucky, having not found an approximate root of the quasi-score vector (or minimum of the Mahalanobis distance).
+#'  If there is no obvious convergence or any error, the search is restarted by switching to the next user supplied minimization routine defined
+#'  in the vector of method names `\code{method}`. 
 #' 
-#'  \subsection{Choice of auxiliary minimization methods}{  
-#'  Besides the local quasi-scoring (QS) iteration, `\code{method}` equal to "\code{qscoring}", the following
-#'  (derivative-free) auxiliary methods from the \code{\link[nloptr]{nloptr}} package are available for minimizing
+#'  \subsection{Choice of local minimization routines}{  
+#'  Besides the quasi-scoring method, `\code{method}` equal to "\code{qscoring}", the following
+#'  (derivative-free) routines from the \code{\link[nloptr]{nloptr}} package are available for minimizing
 #'  both criterion functions:
 #'  
 #' 	\itemize{
@@ -647,22 +646,21 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' 	  \item{}{ \code{\link[nloptr]{nloptr}}, as the general optimizer, which allows to use further methods}
 #'  }
 #'    
-#'  Using quasi-scoring first, which is only valid for minimizing the QD function, is always a good idea since we might have done
-#'  a good guess already being close to an approximate root. If it fails we switch to any of the above alternative methods
+#'  Using quasi-scoring first, which is only valid for minimizing the QD, is always a good idea since we might have done
+#'  a good guess already being close to an approximate root. If this fails we switch to any of the above alternative methods
 #'  (e.g. \code{\link[nloptr]{bobyqa}} as the default method) or eventually - in some real hard situations - to the
-#'  method `\code{direct}` or its locally biased version `\code{directL}`. The order of processing is determined
+#'  method `\code{direct}`, if given, or its locally biased version `\code{directL}`. The order of processing is determined
 #'  by the order of appearance of the names in the argument `\code{method}`. Any method available from package `\code{nloptr}` can be
-#'  chosen. In particular, setting \code{method="nloptr"} and `\code{control}` allows to choose a multistart algorithm such
-#'  as \code{\link[nloptr]{mlsl}}.
+#'  chosen. In particular, setting \code{method="nloptr"} and defining `\code{control}` in an appropriate way allows to choose a multistart
+#'  algorithm such as \code{\link[nloptr]{mlsl}}, see also \code{\link{multiSearch}} for an alternative solution.
 #' 
-#'  Only if there are reasonable arguments against quasi-scoring, such as expecting a local
-#'  minimum rather than a root first or an available limited computational budget, we can always apply
-#'  the direct search method `\code{direct}` leading to a globally exhaustive search. Note that we must always supply a starting
-#'  point `\code{x0}`, which could be any vector valued parameter of the parameter space unless method `\code{direct}` is
-#'  chosen. Then `\code{x0}` is still required but ignored as a starting point since it uses the "center point" of
-#'  the (hyper)box constraints internally. In addition, if CV models `\code{cvm}` are given, the CV based prediction variances
-#'  are inherently used during consecutive iterations of all methods. This results in additional computational efforts
-#'  due to the repeated evaluations of the statistics to calculate these variances during each new iteration.  
+#'  Only if there are reasonable arguments against quasi-scoring, such as expecting local minima rather than a root first or an available
+#'  limited computational budget, we can always apply the direct search method `\code{direct}` leading to a globally exhaustive search.
+#'  Note that we must always supply a starting point `\code{x0}`, which could be any vector valued parameter of the parameter space unless
+#'  method `\code{direct}` is chosen. Then `\code{x0}` is still required but ignored as a starting point since it uses the "center point" of
+#'  the (hyper)box constraints internally. In addition, if cross-validation models `\code{cvm}` are given, the cross-validation prediction variances
+#'  are inherently used during consecutive iterations of all methods. This results in additional computational efforts due to the repeated evaluations
+#'  of the statistics to calculate these variances during each new iteration.  
 #' }
 #' 
 #' @return A list as follows
@@ -676,7 +674,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' data(normal)
 #' searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method=c("qscoring","bobyqa"),verbose=TRUE) 
 #' 
-#' @seealso \code{\link[nloptr]{nloptr}}, \code{\link{qscoring}}
+#' @seealso \code{\link[nloptr]{nloptr}}, \code{\link{qscoring}}, \code{\link{multiSearch}}
 #' 			
 #' @rdname searchMinimizer
 #' @author M. Baaske
@@ -898,8 +896,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'
 #' @title A multistart version of local searches for parameter estimation
 #'
-#' @description  The function is multistart version of \code{\link{searchMinimizer}} which selects the best
-#' 	root of the quasi-score (if there is any) or a local minimum from all found minima according to the criteria described in the vignette.
+#' @description  The function is a multistart version of \code{\link{searchMinimizer}} which selects the best
+#' 	root of the quasi-score (if there is any) or a local minimum from all found minima according to the criteria described
+#'  in the vignette.
 #' 
 #' @param x0	 	  numeric, \code{NULL} default, list, vector or matrix of starting parameters
 #' @param qsd		  object of class \code{\link{QLmodel}}
@@ -915,11 +914,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @details The function performs a number of local searches depending which local method `\code{method}` was passed to
 #'  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
 #'  design based on the sample set stored in `\code{qsd}`. The function evaluates all found solutions and selects the one which 
-#'  is best according to the criteria defined in the vignette.
+#'  is best according to the criteria defined in the vignette. If none of the criteria match, then the parameter for which the lowest value
+#'  of the criterion function was found is returned. 
 #' 
-#' @return Object of class \code{QSResult} and attribute `\code{roots}`, e.t. the matrix of estimated parameters for which any of
+#' @return Object of class \code{QSResult} and attribute `\code{roots}`, i.e. the matrix of estimated parameters for which any of
 #'  the available minimization methods has been successfully applied. If `code{optInfo}` is \code{TRUE}, then the originally estimtation reuslts
-#'  are also returned. The best solution is stored as an attribute named `\code{par}` if any could have been found.
+#'  are also returned. The best solution is stored as an attribute named `\code{par}` if found any.
 #' 
 #' @seealso \code{\link{checkMultRoot}}
 #'  
@@ -1041,114 +1041,116 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #'
 #' @title Simulated quasi-likelihood parameter estimation
 #'
-#' @description  This is the main function of the simulated quasi-likelihood estimation (QLE) approach. 
+#' @description  This is the main estimation function of the simulated quasi-likelihood estimation approach. 
 #' 
 #' @param qsd			object of class \code{\link{QLmodel}}
-#' @param sim		    simulation function, see details
-#' @param ...			further arguments passed to the simulation function `\code{sim}` 
-#' @param nsim			optional, number of simulation replications at each new sample point,
-#'  					`\code{qsd$nsim}` (default)
+#' @param sim		    user-defined simulation function, see details
+#' @param ...			further arguments passed to `\code{sim}` 
+#' @param nsim			optional, number of simulation replications at each new sample point, set by `\code{qsd$nsim}` (default)
 #' @param x0 			optional, numeric vector of starting parameters
-#' @param obs			optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}`
+#' @param obs			optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}` if given
 #' @param Sigma			optional, constant variance matrix estimate of statistics (see details) 
 #' @param global.opts	options for global search phase
 #' @param local.opts	options for local search phase
-#' @param method		vector of names of local search methods	
+#' @param method		vector of names of local search methods which are applied in consecutive order	
 #' @param qscore.opts   list of control arguments passed to \code{\link{qscoring}}
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
 #' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
-#' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}" 
+#' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster} 
 #' @param iseed			integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster
 #' @param plot 			if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)
 #'
 #' @return List of the following objects:
 #' 	  \item{par}{ final parameter estimate}
 #' 	  \item{value}{ value of criterion function}
-#'    \item{ctls}{ a data frame with values of stopping conditions}
-#'    \item{qsd}{ final \code{\link{QLmodel}} object, including all sample points
-#' 				  and covariance models}
+#'    \item{ctls}{ a data frame with values of the stopping conditions}
+#'    \item{qsd}{ final \code{\link{QLmodel}} object, including all sample points and covariance models}
 #' 	  \item{cvm}{ CV fitted covariance models}
-#'    \item{why}{ names of stopping conditions matched}
+#'    \item{why}{ names of matched stopping conditions}
 #'	  \item{final}{ final local minimization results of the criterion function, see \code{\link{searchMinimizer}} }
-#'	  \item{score}{ quasi-score vector or gradient of the Mahalanobis distance}
-#' 	  \item{convergence}{ logical, whether the iterates converged, see details} 	  
+#'	  \item{score}{ quasi-score vector or the gradient of the Mahalanobis distance}
+#' 	  \item{convergence}{ logical, whether the QL estimation has converged, see details} 	  
 #' 
 #'  Attributes: 	 
 #'  
-#'  \item{tracklist}{ an object (list) of class \code{QDtrack} containing the local minimization results,
-#'     evaluated sample points and the status of the corresponding iteration}    
+#'  \item{tracklist}{ an object (list) of class \code{QDtrack} containing local minimization results,
+#'     evaluated sample points and the status of the corresponding iterations}    
 #'  \item{optInfo}{ a list of arguments related to the estimation procedure:}
-#'  \itemize{
+#'   \itemize{
 #'    \item{x0:}{ starting parameter vector}
-#' 	  \item{W:}{ final weighting matrix (equal to quasi-information matrix at \code{theta}) used for both variance
-#' 			 average approximation, if applicable, and as the predicted variance for (local) sampling of new candidate points
-#' 			 according to a multivariate normal distribution with this variance and the current root as the mean parameter.}
-#'    \item{theta:}{ the parameter corresponding to \code{W}, typically an approximate root or local minimzer} 
+#' 	  \item{W:}{ final weight matrix, equal to quasi-information matrix at \code{theta}, used for both the variance
+#' 			 average approximation, if applicable, and as the predicted variance for the (local) sampling of new candidate points
+#' 			 according to a multivariate normal distribution with this variance and the current root as its mean parameter.}
+#'    \item{theta:}{ the parameter corresponding to \code{W}, typically an approximate root or local minimzer of the criterion function} 
 #' 	  \item{last.global:}{ logical, whether last iteration sampled a point globally}
 #' 	  \item{minimized:}{ whether last local minimization was successful}
-#' 	  \item{useCV:}{ logical, whether the CV approach was applied}
+#' 	  \item{useCV:}{ logical, whether the cross-validation approach was applied}
 #' 	  \item{method:}{ name of final search method applied}
 #'    \item{nsim:}{ number of simulation replications at each evaluation point}
 #' 	  \item{iseed}{ the seed to initialize the RNG}
-#'  }
+#'   }
 #'     
 #' @details
 #'  The function sequentially estimates the unknown model parameter. Basically, the user supplies a simulation function `\code{sim}`
 #'  which must return a vector of summary statistics (as the outcome of model simulations) and expects a vector of parameters
-#'  as its first argument. Further arguments can be passed by the `\code{\ldots}` argument. The object
-#'  `\code{qsd}` aggregates the type of variance matrix approximation, the data frame of observed and simulated data, the
-#'  initial sample points and the covariance models of the involved statistics (see \code{\link{QLmodel}}). In addition, it defines
+#'  as its first input argument. Further arguments can be passed to the simulation function by the `\code{\ldots}` argument. The object
+#'  `\code{qsd}` aggregates the type of variance matrix approximation, the data frame of simulation runs, the
+#'  initial sample points and the covariance models of the involved statistics (see \code{\link{QLmodel}}). In addition, it sets
 #'  the criterion function by `\code{qsd$criterion}`, which is either used to monitor the sampling process or minimized itself. The user
 #'  also has the option to choose among different types of prediction variances: either "\code{kv}" (kriging variances), "\code{cv}"
-#'  (CV variances) or the maximum of both, by "\code{max}", are available.
+#'  (cross-validation-based variances) or the maximum of both, set by "\code{max}", are available.
 #' 
-#'  \subsection{Criterion functions}{The QD criterion function follows the quasi-likelihood estimation principle (see vignette)
-#'  and seeks a solution to the quasi-score equation. Besides, the Mahalanobis distance (MD) as an alternative (simulation-based)
+#'  \subsection{Criterion functions}{
+#'  The QD as a criterion function follows the quasi-likelihood estimation principle (see vignette)
+#'  and seeks a solution to the quasi-score equation. Besides, the Mahalanobis distance (MD) as an alternative 
 #'  criterion function has a more direct interpretation. It can be seen as a (weighted or generalized) least squares criterion
 #'  depending on the employed type of variance matrix approximation. For this reason, we support several types of variance matrix
 #'  approximations. In particular, given `\code{Sigma}` and setting `\code{qsd$var.type}` equal to "\code{const}" treats `\code{Sigma}`
 #'  as a constant estimate throughout the whole estimation procedure. Secondly, if `\code{Sigma}` is supplied and used as
 #'  an average variance approximation (see \code{\link{covarTx}}), it is considered an initial variance matrix approximation and
 #'  recomputed each time an approximate (local) minimizer of the criterion function is found. This is commonly known as an iterative update
-#'  strategy of variance matrices in the context of GMM estimation. Opposed to this, setting `\code{qsd$var.type}` equal to
-#'  "\code{kriging}" corresponds to continuously updating the variance matrix each time a new criterion function value is
-#'  required at any point of the parameter space. In this way the algorithm can also be seen as a simulated version of a least squares
-#'  method or even as a special case of a \emph{simulated method of moments} (see, e.g. [3]). Note that some input combinations
-#'  concerning the variance approximation types are not applicable since the criterion "\code{qle}", which uses the
-#'  QD criterion function, does not support a constant variance matrix at all.
+#'  strategy of the variance matrix. Opposed to this, setting `\code{qsd$var.type}` equal to "\code{kriging}" corresponds to continuously
+#'  updating the variance matrix each time a new criterion function value is required at any point of the parameter space. In this way the
+#'  algorithm can also be seen as a simulated version of a least squares approach or even as a special case of the \emph{simulated method of moments}
+#'  (see, e.g. [3]). Note that some input combinations concerning the variance approximation types are not applicable since the criterion "\code{qle}",
+#'  which uses the QD criterion function, is not applicable to a constant variance matrix approximation.
 #'  }
 #'       
-#'  \subsection{Monte Carlo (MC) hypothesis testing}{ The algorithm sequentially evaluates promising local minimizers of the criterion function during
-#'  the local phase in order to assess the plausibility of being an approximate root of the corresponding quasi-score vector. We use essentially
-#'  the same MC test procedure as in \code{\link{qleTest}}. First, having found a local minimum of the test statistic, i.e. the criterion
-#'  function, given the data, new observations are simulated w.r.t. to the local minimizer and the algorithm re-estimates the approximate roots for each
-#'  observation independently. If the current minimizer is accepted as an approximate root at the significance level `\code{local.opts$alpha}`, then the algorithm stays
-#'  in its local phase and continues sampling around the current minimizer accoring to its asymptotic variance (measured by the inverse of the
-#'  predicted quasi-information) and uses the additional simulations to improve the current kriging approximations. Otherwise we switch to the global phase and
-#'  do not consider the current minimizer as an approximate root.
+#'  \subsection{Monte Carlo (MC) hypothesis testing}{
+#'  The algorithm sequentially evaluates promising local minimizers of the criterion function during the local phase in order to assess the plausibility
+#'  of being an approximate root of the corresponding quasi-score vector. We use essentially the same MC test procedure as in \code{\link{qleTest}}.
+#'  First, having found a local minimum of the test statistic, i.e. the criterion function, given the data, new observations are simulated w.r.t. to the
+#'  local minimizer and the algorithm re-estimates the approximate roots for each observation independently. If the current minimizer is accepted as an
+#'  approximate root at some significance level `\code{local.opts$alpha}`, then the algorithm stays in its local phase and continues sampling around the
+#'  current minimizer accoring to its asymptotic variance (measured by the inverse of the predicted quasi-information) and uses the additional simulations
+#'  to improve the current kriging approximations. Otherwise we switch to the global phase and do not consider the current minimizer as an approximate root.
 #' 
 #'  This procedure also allows for a stopping condition derived from the reults of the MC test. We can compare the estimated mean squared error (MSE) with the
 #'  predicted error of the approximate root by its relative difference and terminate in case this value drops below a user-defined bound `\code{perr_tol}`
 #'  (either as a scalar value or numeric vector of length equal to the dimension of the unknown parameter). A value close to zero suggests a good match of both
-#'  error measures. The testing procedure is disabled by default. Use `\code{local.opts$test=TRUE}` for testing approximate roots. A value of the criterion function smaller
-#'  than `\code{local.opts$ftol_abs}` indicates that the corresponding minimizer could be an approximate root. Otherwise the last evaluation point is used as
-#'  a starting point for next local searches which mimics a random multistart type minimization over the next iterations of the algorithm. This behaviour is
-#'  also implemented for results of the above MC test when the local minimizer is not accepted as an approximate root. Note that this approach has the
-#'  potential to escape regions where the criterion function value is quite low but, however, is not considered trustworthy in relation to the upper bound
-#'  `\code{local.opts$ftol_abs}` or the results of the MC test procedure.
+#'  error measures. The testing procedure is disabled by default. Set `\code{local.opts$test=TRUE}` for testing an approximate root during the estimation.
+#'  In this case, if for some value of the criterion function its value exceeds `\code{local.opts$ftol_abs}`, then the corresponding minimizer is tested for an approximate root.
+#'  Otherwise the last evaluation point is used as a starting point for next local searches  by a multistart approach when the algorithm is in its global phase.
+#'  Note that this approach has the potential to escape regions where the criterion function value is quite low but, however, is not considered trustworthy as an
+#'  approximate root. If testing is disabled, then a local minimizer whose criterion function dropds below the upper bound `\code{local.opts$ftol_abs}` is considered
+#'  as a root of the quasi-score and the algorithm stays in or switches to its local phase. The same holds, if the quasi-score vector matches the numerical tolerance for 
+#'  being zero. A multistart approach for searching a minimizer during the local phase is only enabled if any of the local search methods fail to converge since most of the
+#'  time the iteration is started from a point which is already near a root. The re-estimation of parameters during the test procedure also uses
+#'  this type of multistart approach and cannot be changed by the user. 
 #'  
 #'  If one of the other termination criteria is met in conjunction with a neglectable value of the criterion function, we
 #'  say that the algorithm successfully terminated and converged to a local minimizer of the criterion function which could be an approximate root of the quasi-score
-#'  vector. We then can perform a goodness-of-fit test in order to assess its plausibility (see \code{\link{qleTest}}) and quantify the empirical and predicted
-#'  estimation error. If we wish to improve the final estimate the algorithm allows for a simple warm start strategy though not yet as an fully automated
-#'  procedure. The algorithm can be easily restarted based on the final result of the preceeding run. We only need to extract the object
-#'  `\code{OPT$qsd}` as an input argument to function \code{\link{qle}} again. 
+#'  vector. This can be further investigated by a goodness-of-fit test in order to assess its plausibility (see \code{\link{qleTest}}) and quantify the empirical and
+#'  predicted estimation error of the parameter. If we wish to improve the final estimate the algorithm allows for a simple warm start strategy though not yet as an fully
+#'  automated procedure. A restart can be based on the final result of the preceeding run. We only need to extract the object
+#'  `\code{OPT$qsd}` and pass it as an input argument to function \code{\link{qle}}. 
 #'  }
 #' 
-#'  \subsection{Sampling new points}{Our QLE approach dynamically switches from a \emph{local} to a \emph{global search phase} and vise versa for
-#'  sampling new promising candidates for evaluation, that is, performing new simulations of the statistical model. Depending on the current value of the criterion
-#'  function three different sampling criteria are used to select next evaluation points which aim on potentially improving the quasi-score
+#'  \subsection{Sampling new points}{
+#'  The QL estimation approach dynamically switches from a \emph{local} to a \emph{global search phase} and vise versa for
+#'  sampling new promising candidates for evaluation, that is, performing new simulations of the statistical model. Depending on the current value of
+#'  the criterion function three different sampling criteria are used to select next evaluation points which aim on potentially improving the quasi-score
 #'  or criterion function approximation. If a local minimizer of the criterion function has been accepted as an approximate root, then a local search
 #'  tries to improve its accuracy. The next evaluation point is either selected according to a weighted minimum-distance criterion (see [2] and vignette),
 #'  for the choice `\code{nextSample}` equal to "\code{score}", or by maximizing the weighted variance of the quasi-score vector in
@@ -1174,9 +1176,9 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #'  (see \code{\link{clusterExport}} and \code{\link{clusterApply}}).
 #'  If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
 #'  for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link{clusterSetRNGStream}},
-#'  for reproducible results of estimation in case a local cluster is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
-#'  using a prespecified cluster object \code{cl}, then the user is responsible for seeding whereas the seed can be stored
-#'  in the return value as well, see attribute `\code{optInfo}$iseed`.  
+#'  for reproducible results of estimation in case a local cluster object is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
+#'  using a prespecified cluster object in `\code{cl}`, then the user is responsible for seeding whereas the seed can be passed to the function
+#'  and is then stored in the return value, see attribute `\code{optInfo}$iseed`.  
 #' 
 #'  The following controls `\code{local.opts}` for the local search phase are available:
 #'   \itemize{
@@ -1186,8 +1188,8 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #'  	This stops the main iteration sampling new locations following the idea that in this case
 #' 		the quasi-score interpolation error has dropped below the estimated precision at best measured by
 #' 		quasi-information matrix for `\code{global.opts$NmaxLam}` consecutive iterates.}
-#' 	 \item{\code{pmin}:}{ minimum required probability that a new random candidate sample falls inside the parameter
-#'                space. Dropping below this value triggers a global phase sampling step. This might indicate
+#' 	 \item{\code{pmin}:}{ minimum required probability that a new random candidate point is inside the parameter
+#'                space. Dropping below this value triggers the global phase. This might indicate
 #' 				  that the inverse of the quasi-information matrix does not sufficiently reflect the variance
 #' 				  of the current parameter estimate due to a sparse sample or the (hyper)box constraints of the
 #' 				  parameter space could be too restrictive.}
@@ -1195,8 +1197,9 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' 	 \item{\code{weights}:}{ vector of weights, \eqn{0\leq\code{weights}\leq 1}, for local sampling}
 #' 	 \item{\code{useWeights}:} {logical, if \code{FALSE} (default), dynamically adjust the weights, see vignette}
 #'	 \item{\code{ftol_abs}:}{ upper bound on the function criterion: values smaller trigger the local phase
-#'    treating the current minimzer as an approximate root otherwise forces the algorithm to switch to the global phase and vice versa.}
-#'   \item{\code{eta}:}{ values for decrease and increase of the local weights, which is intended to faciliate convergence
+#'    treating the current minimzer as an approximate root otherwise forces the algorithm to switch to the global phase and vice versa
+#'    unless testing is enabled in which case, depending on the result of testing, could even stay in the local phase.}
+#'   \item{\code{eta}:}{ values for decrease and increase of the local weights for the sampling criterion, which is intended to faciliate convergence
 #' 		 while sampling new points more and more around the current best parameter estimate.} 
 #'   \item{\code{alpha}:}{ significance level for computation of empirical quantiles of one of the test statistics, that is,
 #'          testing a parameter to be a	root of the quasi-score vector in probability.}
@@ -1245,15 +1248,12 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' # (simulations of the statistical model)
 #' OPT <- qle(qsd,qsd$simfn,nsim=10,
 #' 		    global.opts=list("maxeval"=1),
-#'  		local.opts=list("test"=FALSE))
-#' 
+#'  		local.opts=list("test"=FALSE)) 
 #' 
 #' @author M. Baaske
-#' @rdname qle
-#' 
+#' @rdname qle#' 
 #' @useDynLib qle, .registration = TRUE, .fixes = "C_"
-#' @export 
-#' 
+#' @export  
 #' @import parallel stats
 #' @importFrom graphics points
 qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
@@ -2265,14 +2265,14 @@ print.QSResult <- function(x, pl = 1, digits = 5,...) {
 #'
 #' @title Generate a random sample of points
 #'
-#' @description Generate a random sample of points as a set of candidates for evaluation 
+#' @description Generate a random sample of points as a set of candidate points for evaluation 
 #'
 #' @param S			    variance matrix of sample points (usually chosen as the information matrix)
-#' @param x			    an approximate root as the mean value if the MVN distribution
-#' @param n				number of points to sample
-#' @param lb			vector of lower bounds of the hypercube
-#' @param ub			vector of upper bounds of the hypercube
-#' @param pmin			minimum required probability to cover the hypercube (parameter space)
+#' @param x			    an approximate root as the mean value if the multivariate normal distribution
+#' @param n				number of points to randomly sample
+#' @param lb			vector of lower bounds of the (hyper)box
+#' @param ub			vector of upper bounds of the (hyper)box
+#' @param pmin			minimum required ratio of points falling inside the hyperbox of parameters
 #' @param invert	    optional, \code{invert=FALSE} (default) for no inversion of `\code{S}`
 #'
 #' @return Matrix of sampled locations.
@@ -2327,21 +2327,21 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' 
 #' @title Quasi-scoring iteration
 #'
-#' @description The function solves the quasi-score equation by a root finding algorithm similar to Fisher's scoring iteration.
+#' @description The function numerically solves the quasi-score equation by a root finding algorithm similar to Fisher's scoring method.
 #'
 #' @param qsd    	object of class \code{\link{QLmodel}}
 #' @param x0		(named) numeric vector, the starting parameter
 #' @param opts		quasi-scoring options, see details
-#' @param Sigma	    a pre-specified variance matrix estimate
-#' @param ...	    further arguments passed to function \code{\link{covarTx}}
+#' @param Sigma	    a prespecified variance matrix estimate
+#' @param ...	    further arguments passed to the function \code{\link{covarTx}}
 #' @param inverted  currently ignored
 #' @param check		logical, \code{TRUE} (default), whether to check input arguments
 #' @param cvm		list of covariance models for cross-validation (see \code{\link{prefitCV}})
-#' @param Iobs	    logical, \code{FALSE} default, whether to compute observed quasi-information matrix
-#' @param pl	    numeric, print level, use \code{pl}>0 to give intermediate output  	
+#' @param Iobs	    logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate
+#' @param pl	    numeric, print level, use \code{pl}>0 to print intermediate output  	
 #' @param verbose   \code{FALSE} (default), otherwise print intermediate output
 #'
-#' @return List of results of quasi-scoring iteration.
+#' @return List of results of quasi-scoring iteration with elements:
 #'  \item{convergence}{ integer, why scoring iterations stopped}
 #'  \item{message}{ string, corrsponding to `\code{convergence}`}
 #'  \item{iter}{ number of iterations}
@@ -2354,7 +2354,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #'  \item{criterion}{ equal to "\code{qle}"} 
 #'
 #' @details The function implements a step-length controlled quasi-scoring iteration with simple bound
-#'  constraints (see, e.g. [1,3]) specifically tailored for quasi-likelihood parameter estimation. Due to the typical
+#'  constraints (see also [1,3]) specifically tailored for quasi-likelihood parameter estimation. Due to the typical
 #'  nonconvex nature of the (unknown and not further specified) quasi-likelihood function as an objective
 #'  function one needs some kind of globalization strategy in order to stabilize the descent step and to avoid a premature
 #'  termination. Therfore, we use the quasi-deviance function as a monitor function (see vignette) though it does not
@@ -2363,16 +2363,16 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #'  finding algorithms and need to be addressed elsewhere. 
 #'  
 #'  \subsection{Quasi-scoring under uncertainty}{ 
-#'  The quasi-scoring iteration covers both kinds of prediction variances, kriging-based and those by a CV approach, which account for
-#'  the uncertainty induced by the quasi-score approximation model. By default kriging variances
+#'  The quasi-scoring iteration includes both kinds of prediction variances, kriging-based and those derived from a cross-validation (CV) approach,
+#'  which account for the uncertainty induced by the quasi-score approximation model. By default kriging variances
 #'  are included in the computation during all iterations. If fitted covariance models `\code{cvm}` are supplied by the user
 #'  in advance (see \code{\link{prefitCV}}), the variances of prediction errors of each statistic are separately evaluated by the proposed CV
 #'  approach for each new point. For the price of relatively high computational costs those prediction variances
 #'  are intended to increase the robustness against false roots due to simulation and approximation errors of the quasi-score function.
 #' 
 #'  Opposed to this, the user also has the option to carry out a "pure version" of quasi-scoring without accounting for
-#'  these errors. This can be set earlier as an option in \code{\link{QLmodel}}. See also \code{\link{covarTx}} and
-#'  \code{\link{mahalDist}} for details on how to choose the variance matrix approximation of the statistics.
+#'  these errors. This can be set earlier as an option in \code{\link{QLmodel}} using dual kriging prediction.
+#'  See also \code{\link{covarTx}} and \code{\link{mahalDist}} for details on how to choose the variance matrix approximation of the statistics.
 #'  }
 #' 
 #'  The following algorithmic options, which can be set by `\code{opts}`, are available:
@@ -2384,7 +2384,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
 #' 		\item{\code{score_tol}:}{ upper bound on the quasi-score vector components, testing for an approximate root}
 #'      \item{\code{maxiter}:}{ maximum allowed number of iterations}
-#' 		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. order of upper bounds of the parameter space}
+#' 		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. the order of upper bounds of the parameter space}
 #'      \item{\code{fscale}:}{ numeric, default is vector of 1, typical magnitudes of quasi-score components}
 #' 	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual
 #' 							 iterates and further values}

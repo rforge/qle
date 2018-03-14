@@ -1,13 +1,13 @@
-# Copyright (C) 2017 Markus Baaske. All Rights Reserved.
+# Copyright (C) 2018 Markus Baaske. All Rights Reserved.
 # This code is published under the GPL (>=3).
 #
 # File: 	krige.R
-# Date:  	20/10/2017
+# Date:  	14/03/2018
 # Author: 	Markus Baaske
 #
 # Monte Carlo based testing procedure using an approximate
-# efficient score statistic (here: quasi-deviance) or a generalized
-# least squares criterion as the test statistic for a goodness-of-fit test
+# efficient score test statistic (here: quasi-deviance) or a generalized
+# least squares criterion as the test statistic for testing the goodness-of-fit
 
 # collect test results
 .qleTest <- function(obj,alpha = 0.05) {	
@@ -198,6 +198,7 @@
 #'  
 #' @examples 
 #'  data(normal)
+#' 
 #'  # a dummy estimation result
 #'  OPT <- qle(qsd,qsd$simfn,global.opts=list("maxeval"=0))
 #'  
@@ -402,7 +403,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @param sim			user supplied simulation function (see \code{\link{qle}})
 #' @param criterion		optional, \code{NULL} (default), test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter
 #' @param nsim			number of model replications to generate the simulated statistics
-#' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesized parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` if also \code{NULL} 
+#' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesised parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` if also \code{NULL} 
 #' @param alpha			significance level for testing the hypothesis
 #' @param multi.start   integer, \code{=0,1,2}, level of multi start root finding (see details)
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of
@@ -454,9 +455,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #'  (including quasi-scoring) by the corresponding control parameters (see \code{\link{searchMinimizer}}). Any failed re-estimations are
 #'  excluded from the test results and stored in the attribute `\code{info}`. In addition, as part of the returned data frame `\code{param}`
 #'  the empirical standard error, predicted standard error (based on the average inverse quasi-information matrix), the root mean square error,
-#'  the bias and sample mean value of the re-estimated parameters are also available.
-#' 
-#' 	For an example please see the package vignette.
+#'  the bias and sample mean value of the re-estimated parameters are also available. For a full example please see the package vignette.
 #' 
 #' @author M. Baaske
 #' @rdname qleTest

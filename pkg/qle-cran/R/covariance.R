@@ -1,8 +1,8 @@
-# Copyright (C) 2017 Markus Baaske. All Rights Reserved.
+# Copyright (C) 2018 Markus Baaske. All Rights Reserved.
 # This code is published under the GPL (>=3).
 #
 # File: 	covariance.R
-# Date:  	12/04/2017
+# Date:  	14/03/2018
 # Author: 	Markus Baaske
 #
 # Define covariance structures: SIRF-k and Matern
@@ -16,44 +16,42 @@
 #' @description 
 #' 	Set a covariance model for kriging the sample means of the involved statistics or for the variance matrix of the statistics.
 #' 
-#' @param model			name of covariance model
+#' @param model			name of covariance model: `\code{sirfk}` (default), `\code{matern}`, `\code{powexp}`, `\code{exp}`
 #' @param param			numeric vector, \code{NULL} (default), starting values of covariance parameters for estimation 
 #' @param npoints		number of sample points already evaluated for covariance parameter estimation
-#' @param var.sim		numeric vector, \code{NULL} (default), local simulation variances (so-called local nugget variances)
-#' @param nugget		starting value for (global) nugget variance estimation
-#' @param trend			trend order ID: either linear (=1) or quadratic (=2) for polynomial trend terms 					    
-#' @param fixed.param	vector of names, corresponding to `\code{param}` of covariance parameters, which are hold fixed for covariance
-#' 						parameter estimation
+#' @param var.sim		numeric vector, \code{NULL} (default), local simulation variances (as local nugget variances)
+#' @param nugget		starting value for (global nugget) variance estimation
+#' @param trend			integer, \code{=2} (default) number of polynomial trend order: either set to linear (=1) or quadratic (=2) 					    
+#' @param fixed.param	vector of names, corresponding to `\code{param}` of covariance parameters, which will be hold fixed for covariance parameter estimation by REML
 #' @param lower			lower bounds of covariance parameters for REML estimation 
 #' @param upper			upper bounds of covariance parameters for REML estimation
 #' @param ...			additional arguments which can be stored
 #' 
-#' @return Object of class \code{covModel}, a list of following elements
-#'  \item{model}{ integer of covariance function}
-#'  \item{param}{ estimtated covariance parameters}
-#' 	\item{start}{ start point of REML estimation of covariance parameters}
-#'  \item{trend}{ trend order}
+#' @return Object of class \code{covModel} as a list of the following objects
+#'  \item{model}{ integer number of covariance function}
+#'  \item{param}{ estimtated covariance parameter vector}
+#' 	\item{start}{ start point for REML estimation of covariance parameters}
+#'  \item{trend}{ trend order number}
 #'  \item{fix.nugget}{ vector of (fixed) values used as local nugget variances}
 #'  \item{free}{ index of free parameters for REML estimation}
 #' 	\item{lower}{ lower bounds of covariance parameters for REML estimation}
 #'  \item{upper}{ upper bounds of covariance parameters for REML estimation}
 #'  \item{...}{ additional objects which can be stored}
 #' 
-#' @details The function defines a covariance model for kriging the sample mean values of an involved statistic. The covariance model
-#'  (including a polynomial trend) defines the spatial dependence between different locations (points) of the
-#'  parameter space. Currently, the function provides the generalized covariance models
-#'  (`\code{sirfk}`, see \code{\link{fitSIRFk}}) of order \eqn{k=1,2} 
-#'  and the Mat\eqn{\textrm{\'{e}}}rn covariance model with scale (or sill) parameter `\code{scale}`, smoothness parameter
-#'  `\code{alpha}`, respectively, `\code{nu}`, and the range parameter `\code{rho}` defined only for the latter. A power exponential
-#'  covariance model named "\code{powexp}" is also supported. 
+#' @details The function defines a covariance model for the kriging approximation of the sample mean values of a summary statistic. The covariance model
+#'  (which might include a polynomial trend) defines the spatial dependence between different locations (points) of the parameter space. Currently, the
+#'  function provides the generalized covariance models (`\code{sirfk}`, see \code{\link{fitSIRFk}}) of order \eqn{k=1,2} 
+#'  and the Mat\eqn{\textrm{\'{e}}}rn covariance model with scale (i.e. sill) parameter `\code{scale}`, smoothness parameter
+#'  `\code{alpha}`, respectively, `\code{nu}`, and the range parameter `\code{rho}` defined only for the latter and the (power)
+#'  exponential covariance model `\code{powexp}`.  
 #'  
 #'  \subsection{Use of simulation variance}{
 #'  If a vector of simulation variances is statically set by `\code{var.sim}` for each location these are used as (local)
 #'  nugget variance estimations which account for the sampling variability due to the repeated measurements of the statistics
-#'  by simulation. The length should match the number of locations `\code{npoints}` otherwise the given vector components
-#'  are recycled. A global scalar valued nugget, which can captures the variance of the underlying random function, can be set by
-#'  `\code{nugget}` as a starting value for the REML estimation procedure. Clearly, both types of nugget variances have a direct
-#'  influence on the REML estimates.
+#'  by simulations. The length should match the number of locations `\code{npoints}` otherwise the given vector components
+#'  are recycled to the number of `\code{npoints}`. A global nugget value, which captures the variance of the underlying random function,
+#'  could be set by `\code{nugget}` as a starting value for the REML estimation procedure for covariance estimation. Clearly, both types
+#'  of nugget variances have a direct influence on the REML estimates in terms of smoothness and goodness-of-fit. 
 #'  } 
 #' 
 #'  \subsection{Default parameters}{ 
@@ -63,11 +61,12 @@
 #'  \code{"phi"=1.0} and power \code{"kappa"=1.5} with \eqn{0<\kappa\leq 2}. 
 #'  The corresponding lower and upper bounds are chosen such that the underlying random function remains
 #'  twice continuously differentiable. Further, setting the names of the covariance parameters in `\code{fixed.param}`,
-#'  excludes these parameters from subsequent REML estimations such that they remain unchanged. 
+#'  excludes these parameters from subsequent REML estimations such that these are hold fixed and used as given in the
+#'  starting parameter. 
 #' 
 #'  The above settings are applicable for a wide range of statistics but, however, generally depend on the kind of statistics to be interpolated
 #'  and thus have to be chosen carefully. Note that a valid (generalized) covariance model for kriging requires at least \eqn{q+2} design points
-#'  for the trend order \eqn{k=1} and \eqn{1+(q+1)(q+2)/2} for \eqn{k=2} where \eqn{q} is the dimension of the unknown model parameter.
+#'  for the trend order \eqn{k=1} and \eqn{1+(q+1)(q+2)/2} for \eqn{k=2} where \eqn{q} is the dimension of the unknown model parameter `\code{param}`.
 #'  }   
 #'  
 #' @examples 
@@ -92,8 +91,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
     cov.list <- c("sirfk","matern","powexp","exp")
  	cov.nr <- pmatch(model, cov.list)
 	if (is.na(cov.nr)) {
-		msg <- paste("Unknown covariance model!",
-				"Possible values are", paste(cov.list,collapse = ","))
+		msg <- paste("Unknown covariance model. Use one of ", paste(cov.list,collapse = ","))
 		message(msg)
 		stop(msg)
 	}		
@@ -226,7 +224,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' 
 #' @title 		Restricted maximum likelihood (REML)
 #' 
-#' @description Calculate the REML value (witout constant term) for a given covariance model and data 
+#' @description Compute the value of the REML function (without constant term) for a given covariance model and data 
 #' 
 #' @param models   	 object of class \code{krige} (list of covariance models) or class
 #'					 	 \code{covModel} (a single covariance model), see \code{\link{setCovModel}}
@@ -440,32 +438,32 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 
 #' @name fitCov
 #' 
-#' @title Fitting covariance models by REML estimation
+#' @title Covariance parameter estimation
 #' 
-#' @description The function estimates the (hyper)parameters of the covariance models by
-#' 	  the \emph{Restricted Maximum Likelihood} (REML) method.
+#' @description The function estimates the (hyper)parameters of a list of covariance models `\code{models}` by
+#' 	  the \emph{Restricted Maximum Likelihood} (REML) estimation method.
 #' 
-#' @param models  	 object either of class \code{krige}, a list of covariance models, or of
-#' 	 				 class \code{covModel}, that is, a single covariance model
-#' @param Xs	 	 matrix of sample points, the design
+#' @param models  	 object either of class \code{krige}, a list of covariance models or an object of
+#' 	 				 class \code{covModel} (a single covariance model)
+#' @param Xs	 	 matrix of sample points (design points)
 #' @param data		 data frame of simulated sample means of statistics
-#' 					 first column corrsponds to the first model in the list `\code{models}` and so forth
+#' 					 first column corresponds to the first model in the list `\code{models}` and so forth
 #' @param controls	 list of control parameters, see \code{\link[nloptr]{nloptr}}
 #' @param cl		 cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
-#' @param verbose 	 logical, \code{TRUE} for intermediate output
+#' @param verbose 	 logical, \code{FALSE} (default) for intermediate output
 #' 
 #' @return An object of class \code{reml} which consists of a list of named lists
-#'  (`\code{model}`, `\code{convergence}`) each storing a fitted covariance model itself
-#'  together with the optimization results from \code{\link[nloptr]{nloptr}} as an attribute
-#'  named `\code{optres}`. The default method for estimating the covariance parameters is
-#'  \code{\link[nloptr]{mlsl}} which uses random starting points and thus could produce different results if
-#'  it is run multiple times. If the results strongly vary, then the corresponding REML function might have many
-#'  local minima which precludes the use of this default algorithm and another one, e.g. `\code{NLOPT_GN_DIRECT}`
-#'  (see \code{\link[nloptr]{nloptr.print.options}}), might lead to better results. 
+#'  (of elements `\code{model}` and `\code{convergence}`) each storing a fitted covariance model
+#'  together with optimization results from a call to \code{\link[nloptr]{nloptr}} as an attribute
+#'  named `\code{optres}` if \code{verbose=TRUE}. The default method for estimation is \code{\link[nloptr]{mlsl}} which
+#'  uses random starting points and thus produces different results if it is run more than onces. If the results strongly vary,
+#'  then the corresponding REML function might have many local minima which precludes the use of this default algorithm and another
+#'  one, e.g. `\code{NLOPT_GN_DIRECT}` (see \code{\link[nloptr]{nloptr.print.options}}), might lead to better results. 
 #' 
 #' @details The function fits a list of covariance models using the REML method. In order to avoid singularities
-#'  of the so-called trend matrices make sure to use at least the minimum required number of sample points stored in
-#'  `\code{Xs}` which depends on the defined trend order, see \code{\link{setCovModel}}.
+#'  of the so-called trend matrices make sure to use at least the minimum required number of sample points given by
+#'  `\code{Xs}` which depends on trend order, see \code{\link{setCovModel}}. THe use is given an advice if the trend order does
+#'  not match the required number of (initial) design points.   
 #' 
 #' @examples 
 #' data(normal)  
@@ -529,7 +527,7 @@ fitCov <- function(models, Xs, data, controls = list(),
 
 #' @name QLmodel
 #' 
-#' @title Construct quasi-likelihood approximation 
+#' @title Construct the quasi-likelihood approximation model
 #' 
 #' @description Aggregate and construct the data for quasi-likelihood estimation
 #' 
@@ -539,33 +537,33 @@ fitCov <- function(models, Xs, data, controls = list(),
 #' @param obs	    	numeric vector of observed statistics
 #' @param mods			list of (fitted) covariance models (see \code{\link{fitSIRFk}}) 
 #' @param nfit			number of cycles, \code{nfit=1} (default), after which covariance
-#' 						parameters are re-estimated otherwise re-used 
+#' 						parameters are re-estimated and otherwise only re-used 
 #' @param cv.fit 		logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
 #' @param var.type  	name of the variance approximation method (see \code{\link{covarTx}})
 #' @param useVar    	logical, \code{TRUE} (default), whether to use prediction variances (see details)
 #' @param criterion 	global criterion function for sampling and minimization, either "\code{qle}" or "\code{mahal}"				    	
-#' @param verbose       logical, \code{FALSE} (default), whether to give further output 
+#' @param verbose       logical, \code{FALSE} (default), whether to give intermediate output 
 #' 
 #' @return An object of class \code{\link{QLmodel}} which stores the data frame of simulation results, bounds on
 #'  the parameter space, covariance models for kriging, vector of observed statistics as well as options for
-#'  kriging and fitting. 
+#'  kriging and covariance parameter estimation. 
 #' 
-#' @details The function aggregates all required information for quasi-likelihood estimation, stores the fitted
-#'   covariance models of the sample means of the statistics and the type of variance matrix approximation. For an advanced setup
-#'   of the estimation procedure and more involved statistical models this function explicitly offers the data structure to construct
-#'   individual covariance models for each statistic as defined by \code{\link{setCovModel}}. The user has the choice whether or not to
-#'   make use of of kriging prediction variances by `\code{useVar}` to account for the simulation error when constructing
-#'   the approximation of the variance matrix and the quasi-score function. If \code{TRUE}, then a kriging procedure calculating
-#'   prediction variances is automatically used. Otherwise the so-called \emph{dual} approach is employed which has some computational
-#'   advantage if prediction variances are not required. 
+#' @details The function aggregates all required information for quasi-likelihood estimation and defines the input object to the 
+#'   function \code{\link{qle}}, stores the fitted covariance models of the sample means of the statistics and the type of variance
+#'   matrix approximation. For an advanced setup of the estimation procedure and more involved statistical models this function
+#'   explicitly offers the data structure to construct individual covariance models for each statistic, see \code{\link{setCovModel}}.
+#'   The user has the choice whether or not to make use of kriging prediction variances by `\code{useVar}` to account for the simulation
+#' 	 error when constructing the approximation of the variance matrix and the quasi-score function. If \code{useVar=TRUE}, then a kriging
+#'   procedure including the computation of prediction variances based on kriging is automatically used. Otherwise the so-called
+#'   \emph{dual} approach is employed which has some computational advantage if prediction variances are not required. 
 #' 
 #' @examples 
 #' 
 #' data(normal)
 #' 
-#' # We simply re-use the stored normal data and fit again: 
-#' # fit generalized covariance model to the data using
-#' # simulation variances as local nugget variances
+#' # As an example we re-use the stored normal data and fit 
+#' # a generalized covariance model to the data using simulation
+#' # variances as local variances for REML estimation.
 #' mods <- fitSIRFk(qsd$qldata, verbose=TRUE)
 #' 
 #' # construct QL approximation model
@@ -678,53 +676,57 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' 
 #' @description Fit a generalized covariance model to simulation data
 #' 
-#' @param qldata		object of class \code{QLdata}, a data frame from \code{\link{setQLdata}}
+#' @param qldata		object of class \code{QLdata}, a data frame from function \code{\link{setQLdata}}
 #' @param set.var 		logical vector of length one or equal to the number of covariance models;
 #' 						for values \code{TRUE} (default), set simulation variances as local nugget variances
-#' 						for the corresponding covariance model/statistic 
+#' 						for the corresponding covariance model according to its index 
 #' @param var.type      name of variance matrix approximation type (see \code{\link{covarTx}})  
 #' @param var.opts	    list of arguments passed to \code{\link{setCovModel}}
 #' 						(only if `\code{var.type}`="\code{kriging}" and ignored otherwise)
 #' @param intrinsic 	logical vector, \code{FALSE} (default), of length one or equal to the number of Cholesky
 #' 					    decompositions of variance matrices; as default use an internal nugget variance estimate (see details)
-#' 						for kriging the variance matrix of the involved statistics
+#' 						for kriging the variance matrix of the statistics
 #' @param ...			arguments passed to \code{\link{setCovModel}}
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param controls		list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization
-#' @param verbose		if \code{TRUE}, print intermediate results
+#' @param verbose		if \code{TRUE}, show intermediate output
 #' 
 #' @return A list of fitted covariance models for kriging the sample means of statistics named `\code{covT}` and optionally
 #'  the variance matrix of statistics, `\code{covL}`. The object also stores the reml optimization parameters `\code{controls}`. 
 #' 
-#' @details The function estimates the parameters of a covariance model using the REML method for kriging
+#' @details The function contructs and estimates the parameters of the covariance models by the REML estimatino method for both kriging
 #'   the sample means of the statistics and kriging the variance matrix of statistics unless `\code{var.type}`
-#'   equals "\code{const}". By default it uses the covariance model derived from a (self-similar) intrinsic random function, that is,
+#'   equals "\code{const}" for the latter. The default covariance model is derived from a (self-similar) intrinsic random function, that is,
 #'   the `\code{sirfk}` function of order \eqn{k} (see, e.g. [1]) with \eqn{k=1,2}, for all statistics (including a default quadratic drift term
-#'   \eqn{k=2}). The user can also define different covariance models for each statistic separately (see below). Other covariance models can be used by their
-#' 	 name `\code{model}` which is passed to the function \code{\link{setCovModel}}. Kriging the variance matrix always uses the `\code{sirfk}` covariance model. 
+#'   \eqn{k=2}). The user can also define different covariance models for each statistic separately (see below). Other covariance models can be set
+#'   by their name in the argument `\code{model}` which is passed to the function \code{\link{setCovModel}}. Currently, kriging the variance matrix
+#'   is done by the `\code{sirfk}` model. 
 #'    		
-#'   Argument `\code{var.opts}` only sets the options for the covariance models for kriging the variance matrix if this is the users prefered
-#'   type of approximation. Other optional arguments, e.g., `\code{var.sim}` for the statistics, `\code{var.opts$var.sim}` for kriging the variance matrix,
-#'   specify the local or global  \dfn{nugget} values for each sample point depending on whether or not `\code{set.var}` (used for kriging the statistics)
-#'   equals \code{TRUE}. Both are passed to \code{\link{setCovModel}} and must be data frames of lengths (number of columns) corresponding to the number of covariance
-#'   models of statistics and, respectively, to the number of \emph{Cholesky} decomposed terms in case of kriging the variance matrix.
-#'   If `\code{set.var}` equals \code{TRUE} (default), then local nugget variances are estimated by the variance of the sample average of the statistics.
-#'   Otherwise the values given in `\code{var.sim}` are used as fixed `nugget` variances and replicated to match the number of sample points if required.
+#'   The argument `\code{var.opts}` only sets the options for the covariance models for kriging the variance matrix if this is the users prefered
+#'   type of approximation. Further optional arguments, e.g., `\code{var.sim}` used only for the approximatino of the statistics,
+#'   `\code{var.opts$var.sim}` for kriging the variance matrix, specify the local vector of \dfn{nugget} values for each sample point depending on
+#'   whether or not `\code{set.var}` (which is only used for kriging the statistics) equals \code{TRUE}. Both arguments are passed to
+#'   \code{\link{setCovModel}} and must be data frames of lengths (number of columns) corresponding to the number of covariance
+#'   models of the statistics and, respectively, to the number of \emph{Cholesky} decomposed terms in case of kriging the variance matrix.
+#'   If `\code{set.var=TRUE}` (default), then local nugget variances are estimated by the variance of the sample average of the simulated values of the statistics.
+#'   Otherwise the values given in `\code{var.sim}` are used as fixed `nugget` variances and replicated to match the number of sample points.
 #'  
-#'   The same principle applies in case of kriging the variance matrix. If `\code{intrinsic}` equals \code{TRUE}, then local nugget variances
-#'   for each of the variance-covariances of the  of the statistics are estimated by a bootstrapping procedure. Otherwise the values given by `\code{var.opts$var.sim}`
-#'   (of length one or equal to the number of corresponding sample points) are used directly as local estimates (which then must correspond to
-#'   the other Cholesky decomposed terms). A global nugget value can be also estimated during the REML estimation which is the default option for both
-#'   cases unless this parameter is excluded from the covariance parameter estimation (see \code{\link{setCovModel}}). The default optimization algorithm for
-#'   estimating the covariance parameters is the random starting point method \code{\link[nloptr]{mlsl}} followed by a final local search by the same local algorithm.
-#'   Note that in this case the estimated parameters may vary when starting the REML procedure several times since starting points are chosen as random. All
-#'   options for the optimization can be modified by the argument `\code{controls}`.
+#'   The same applies in case of kriging the variance matrix. If `\code{intrinsic=TRUE}`, then local nugget variances
+#'   for each of the variance-covariances of the statistics are estimated by a bootstrapping procedure. Otherwise the values given by
+#'   `\code{var.opts$var.sim}` (of length one or equal to the number of corresponding sample points) are used directly as local estimates
+#'   (which then must exactly match the order of the Cholesky decomposed terms). A global nugget value can be estimated during the REML
+#'   estimation which is the default option for both cases unless this parameter is excluded from the covariance parameter estimation
+#'   (see \code{\link{setCovModel}}).
+#'  
+#'   The default optimization algorithm for estimating the covariance parameters is \code{\link[nloptr]{mlsl}} followed by a final local search using
+#'   \code{NLOPT_LN_COBYLA}. Note that in this case the estimated parameters may vary when starting the REML procedure several times since starting
+#'   points are chosen as random for \code{\link[nloptr]{mlsl}}. All options for optimization can be modified by the argument `\code{controls}`.
 #' 
 #'   Note that the returned object can also be constructed manually and passed as an input argument to
-#'   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. In this case, first use \code{\link{setCovModel}} to construct
-#' 	 the covariance model, then estimate the parameters by \code{\link{fitCov}} and pass a list of fitted covariance models to function \code{\link{QLmodel}}. 	 
-#'  
-#' 	 Please see function \code{\link{QLmodel}} for an example. 
+#'   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. In this case, first use
+#'   \code{\link{setCovModel}} to construct the covariance model, then estimate the parameters by \code{\link{fitCov}} and pass a list of
+#'   fitted covariance models to function \code{\link{QLmodel}}. The resulting object is the same as obtained by this function. Please see
+#'   the function \code{\link{QLmodel}} for an example. 
 #' 
 #' @seealso \code{\link{setCovModel}}, \code{\link{fitCov}},  \code{\link{QLmodel}}
 #' 
@@ -808,9 +810,9 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 				  function(i)  {
 				     args$var.sim <-
 					 if(intrinsic[i] && M>0) {						 							 
-						 if(any(Lvec[[i+M]] < 0) || anyNA(Lvec[[i+M]])){
+						 if(any(Lvec[[i+M]] < 0) || anyNA(Lvec[[i+M]])){	# stored bootstrap variances
 							if(verbose)
-							  message("Bootstrap variance is negative or has `Na`s. So we set a default nugget variance value.")
+							  message("Bootstrap variance has negative values or `Na`s. Try a default nugget variance value.")
 						    # set small value anyway
 							as.numeric(dfvar[[i]]) 
 						 } else {
@@ -860,39 +862,39 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 if(verbose)
 		   cat("Successfully fitted covariance parameters.\n")		 
 	 }
-	ret <- structure(
+	 ret <- structure(
 			  list("covT" = mods[1:nstat],
 			  	   "var.type" = var.type),
 		     opts = opts,
 			 error = if(length(errId)>0L) errId else NULL,
 			 class = "QLFit")	
 	 
-	if(!is.null(covL))
+	 if(!is.null(covL))
 	  ret$covL <- mods[(nstat+1):length(mods)]
 	  	
-	return ( ret )	
+	 return ( ret )	
 }
 
 #' @name getQLmodel
 #' 
-#' @title Setup the quasi-likelihood estimation model  
+#' @title Setup the quasi-likelihood approximation model all at once  
 #' 
-#' @description  Setup the quasi-likelihood model data
+#' @description Initial setup of the quasi-likelihood approximation model
 #'
-#' @param runs   	object of class \code{simQL} as simulation results from \code{\link{simQLdata}}
-#' @param lb		lower bounds defining the (hyper)box
-#' @param ub 		upper bounds defining the (hyper)box
+#' @param runs   	object of class \code{simQL}, simulation results from \code{\link{simQLdata}}
+#' @param lb		lower bounds defining the (hyper)box of the parameter domain for QL estimation
+#' @param ub 		upper bounds defining the (hyper)box of the parameter domain for QL estimation
 #' @param obs		numeric vector of observed statistics
 #' @param X   		matrix of sample locations (model parameters)
-#' @param useVar   	logical, \code{TRUE} (default), whether to use prediction variances
-#' @param criterion the criterion function to be minimized for parameter estimation (see \code{\link{qle}})
+#' @param useVar   	logical, \code{TRUE} (default), whether to use prediction variances of any kind
+#' @param criterion name of criterion function to be minimized for QL estimation (see \code{\link{qle}})
 #' @param ...		arguments passed to \code{\link{fitSIRFk}}, \code{\link{setQLdata}}, \code{\link{setCovModel}} 
-#'  					and \code{\link{QLmodel}} for fitting kriging covariance models
+#'  				and \code{\link{QLmodel}} for REML estimation of all covariance models
 #'  
 #' @return Object of class \code{\link{QLmodel}}
 #' 
-#' @details The function is a wrapper to \code{\link{setQLdata}} and \code{\link{fitSIRFk}}
-#'  in order to setup the data required for estimating the model parameters.
+#' @details The function is a wrapper of \code{\link{simQLdata}}, \code{\link{QLmodel}}, \code{\link{fitSIRFk}}
+#'  and thus sets up the quasi-likelihood approximation model all at once.
 #' 
 #' @examples
 #' 
@@ -980,27 +982,27 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #' 
 #' @title Update covariance models
 #' 
-#' @description The function updates the current covariance models
-#'  stored in `\code{qsd}`.
+#' @description The function updates the current covariance models stored in `\code{qsd}`.
 #' 
 #' @param qsd			object of class \code{\link{QLmodel}} which is to be updated
 #' @param nextData		object of class \code{QLdata} which includes new simulation results
 #' @param fit 			logical, if \code{TRUE} (default), re-estimate covariance parameters
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param controls	    list of control parameters passed to \code{\link[nloptr]{nloptr}}
-#' @param verbose 		logical, whether to print intermediate information
+#' @param verbose 		logical, \code{FALSE} (default), whether to show intermediate output
 #' 
 #' @return Object of class \code{\link{QLmodel}} as a list of updated covariance models
 #' 
 #' @details The function updates both, the covariance models for kriging the statistics, and, if applicable,
-#'  the ones for kriging the variance matrix of statistics based on the new data \code{nextData}. In practice, the user hardly
+#'  the ones for kriging the variance matrix of statistics based on the new data given by `\code{nextData}`. In practice, the user hardly
 #'  needs to call this function except for empirical studies of how additional sample points might influence the overall predictive
 #'  quality of the quasi-score and/or criterion function approximations.
 #' 
-#'  If `\code{fit}` equals \code{TRUE}, then the function re-estimates the covariance parameters for each statistic separately
+#'  If `\code{fit=TRUE}`, then the function re-estimates the covariance parameters for each statistic separately
 #'  each time a total of `\code{qsd$nfit}` new sample points have been added. Thus, we can choose whether to fit the updated
-#'  covariance models (by the REML estimation) each time, e.g. during the estimation by \code{\link{qle}} if `\code{qsd$nfit}`=1, or after
-#'  each 2nd, 3rd, and so on newly added point in order to limit the computational overhead.
+#'  covariance models (by the REML estimation method) each time, e.g. during the estimation by \code{\link{qle}} if `\code{qsd$nfit}`=1, or after
+#'  each 2nd, 3rd, and so on newly added point in order to limit the computational overhead. If bootstrapping was used to estimate the nugget variance
+#'  of kriging models of the variance matrix, then these are taken from `\code{nextData}`. 
 #' 
 #' @examples
 #' 
