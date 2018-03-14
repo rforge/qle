@@ -2,7 +2,7 @@
 % Please edit documentation in R/qleTest.R
 \name{checkMultRoot}
 \alias{checkMultRoot}
-\title{Inspect estimated parameters}
+\title{Assess plausibility of parameter estimates}
 \usage{
 checkMultRoot(est, par = NULL, opts = NULL, verbose = FALSE)
 }
@@ -36,6 +36,7 @@ Only for the quasi-likelihood approach the function inspects the (numerical) con
 }
 \examples{
  data(normal)
+
  # a dummy estimation result
  OPT <- qle(qsd,qsd$simfn,global.opts=list("maxeval"=0))
  

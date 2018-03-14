@@ -30,19 +30,21 @@ multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 \item{cores}{integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}}
 }
 \value{
-Object of class \code{QSResult} and attribute `\code{roots}`, e.t. the matrix of estimated parameters for which any of
+Object of class \code{QSResult} and attribute `\code{roots}`, i.e. the matrix of estimated parameters for which any of
  the available minimization methods has been successfully applied. If `code{optInfo}` is \code{TRUE}, then the originally estimtation reuslts
- are also returned. The best solution is stored as an attribute named `\code{par}` if any could have been found.
+ are also returned. The best solution is stored as an attribute named `\code{par}` if found any.
 }
 \description{
-The function is multistart version of \code{\link{searchMinimizer}} which selects the best
-	root of the quasi-score (if there is any) or a local minimum from all found minima according to the criteria described in the vignette.
+The function is a multistart version of \code{\link{searchMinimizer}} which selects the best
+	root of the quasi-score (if there is any) or a local minimum from all found minima according to the criteria described
+ in the vignette.
 }
 \details{
 The function performs a number of local searches depending which local method `\code{method}` was passed to
  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
  design based on the sample set stored in `\code{qsd}`. The function evaluates all found solutions and selects the one which 
- is best according to the criteria defined in the vignette.
+ is best according to the criteria defined in the vignette. If none of the criteria match, then the parameter for which the lowest value
+ of the criterion function was found is returned.
 }
 \examples{
  data(normal)

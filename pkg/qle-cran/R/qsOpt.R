@@ -1251,7 +1251,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #'  		local.opts=list("test"=FALSE)) 
 #' 
 #' @author M. Baaske
-#' @rdname qle#' 
+#' @rdname qle 
 #' @useDynLib qle, .registration = TRUE, .fixes = "C_"
 #' @export  
 #' @import parallel stats

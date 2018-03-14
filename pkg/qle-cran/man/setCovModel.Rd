@@ -9,20 +9,19 @@ setCovModel(model = "sirfk", param = NULL, npoints = 0, var.sim = NULL,
   upper = NULL, ...)
 }
 \arguments{
-\item{model}{name of covariance model}
+\item{model}{name of covariance model: `\code{sirfk}` (default), `\code{matern}`, `\code{powexp}`, `\code{exp}`}
 
 \item{param}{numeric vector, \code{NULL} (default), starting values of covariance parameters for estimation}
 
 \item{npoints}{number of sample points already evaluated for covariance parameter estimation}
 
-\item{var.sim}{numeric vector, \code{NULL} (default), local simulation variances (so-called local nugget variances)}
+\item{var.sim}{numeric vector, \code{NULL} (default), local simulation variances (as local nugget variances)}
 
-\item{nugget}{starting value for (global) nugget variance estimation}
+\item{nugget}{starting value for (global nugget) variance estimation}
 
-\item{trend}{trend order ID: either linear (=1) or quadratic (=2) for polynomial trend terms}
+\item{trend}{integer, \code{=2} (default) number of polynomial trend order: either set to linear (=1) or quadratic (=2)}
 
-\item{fixed.param}{vector of names, corresponding to `\code{param}` of covariance parameters, which are hold fixed for covariance
-parameter estimation}
+\item{fixed.param}{vector of names, corresponding to `\code{param}` of covariance parameters, which will be hold fixed for covariance parameter estimation by REML}
 
 \item{lower}{lower bounds of covariance parameters for REML estimation}
 
@@ -31,11 +30,11 @@ parameter estimation}
 \item{...}{additional arguments which can be stored}
 }
 \value{
-Object of class \code{covModel}, a list of following elements
- \item{model}{ integer of covariance function}
- \item{param}{ estimtated covariance parameters}
-	\item{start}{ start point of REML estimation of covariance parameters}
- \item{trend}{ trend order}
+Object of class \code{covModel} as a list of the following objects
+ \item{model}{ integer number of covariance function}
+ \item{param}{ estimtated covariance parameter vector}
+	\item{start}{ start point for REML estimation of covariance parameters}
+ \item{trend}{ trend order number}
  \item{fix.nugget}{ vector of (fixed) values used as local nugget variances}
  \item{free}{ index of free parameters for REML estimation}
 	\item{lower}{ lower bounds of covariance parameters for REML estimation}
@@ -46,21 +45,20 @@ Object of class \code{covModel}, a list of following elements
 Set a covariance model for kriging the sample means of the involved statistics or for the variance matrix of the statistics.
 }
 \details{
-The function defines a covariance model for kriging the sample mean values of an involved statistic. The covariance model
- (including a polynomial trend) defines the spatial dependence between different locations (points) of the
- parameter space. Currently, the function provides the generalized covariance models
- (`\code{sirfk}`, see \code{\link{fitSIRFk}}) of order \eqn{k=1,2} 
- and the Mat\eqn{\textrm{\'{e}}}rn covariance model with scale (or sill) parameter `\code{scale}`, smoothness parameter
- `\code{alpha}`, respectively, `\code{nu}`, and the range parameter `\code{rho}` defined only for the latter. A power exponential
- covariance model named "\code{powexp}" is also supported. 
+The function defines a covariance model for the kriging approximation of the sample mean values of a summary statistic. The covariance model
+ (which might include a polynomial trend) defines the spatial dependence between different locations (points) of the parameter space. Currently, the
+ function provides the generalized covariance models (`\code{sirfk}`, see \code{\link{fitSIRFk}}) of order \eqn{k=1,2} 
+ and the Mat\eqn{\textrm{\'{e}}}rn covariance model with scale (i.e. sill) parameter `\code{scale}`, smoothness parameter
+ `\code{alpha}`, respectively, `\code{nu}`, and the range parameter `\code{rho}` defined only for the latter and the (power)
+ exponential covariance model `\code{powexp}`.  
  
  \subsection{Use of simulation variance}{
  If a vector of simulation variances is statically set by `\code{var.sim}` for each location these are used as (local)
  nugget variance estimations which account for the sampling variability due to the repeated measurements of the statistics
- by simulation. The length should match the number of locations `\code{npoints}` otherwise the given vector components
- are recycled. A global scalar valued nugget, which can captures the variance of the underlying random function, can be set by
- `\code{nugget}` as a starting value for the REML estimation procedure. Clearly, both types of nugget variances have a direct
- influence on the REML estimates.
+ by simulations. The length should match the number of locations `\code{npoints}` otherwise the given vector components
+ are recycled to the number of `\code{npoints}`. A global nugget value, which captures the variance of the underlying random function,
+ could be set by `\code{nugget}` as a starting value for the REML estimation procedure for covariance estimation. Clearly, both types
+ of nugget variances have a direct influence on the REML estimates in terms of smoothness and goodness-of-fit. 
  } 
 
  \subsection{Default parameters}{ 
@@ -70,11 +68,12 @@ The function defines a covariance model for kriging the sample mean values of an
  \code{"phi"=1.0} and power \code{"kappa"=1.5} with \eqn{0<\kappa\leq 2}. 
  The corresponding lower and upper bounds are chosen such that the underlying random function remains
  twice continuously differentiable. Further, setting the names of the covariance parameters in `\code{fixed.param}`,
- excludes these parameters from subsequent REML estimations such that they remain unchanged. 
+ excludes these parameters from subsequent REML estimations such that these are hold fixed and used as given in the
+ starting parameter. 
 
  The above settings are applicable for a wide range of statistics but, however, generally depend on the kind of statistics to be interpolated
  and thus have to be chosen carefully. Note that a valid (generalized) covariance model for kriging requires at least \eqn{q+2} design points
- for the trend order \eqn{k=1} and \eqn{1+(q+1)(q+2)/2} for \eqn{k=2} where \eqn{q} is the dimension of the unknown model parameter.
+ for the trend order \eqn{k=1} and \eqn{1+(q+1)(q+2)/2} for \eqn{k=2} where \eqn{q} is the dimension of the unknown model parameter `\code{param}`.
  }
 }
 \examples{

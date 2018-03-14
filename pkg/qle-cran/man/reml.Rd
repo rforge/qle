@@ -23,7 +23,7 @@ single covariance model in `\code{models}`}
 List of REML function values.
 }
 \description{
-Calculate the REML value (witout constant term) for a given covariance model and data
+Compute the value of the REML function (without constant term) for a given covariance model and data
 }
 \details{
 Given a list of covariance models the function calculates the REML function values at

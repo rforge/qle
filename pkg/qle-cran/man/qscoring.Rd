@@ -14,9 +14,9 @@ qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
 
 \item{opts}{quasi-scoring options, see details}
 
-\item{Sigma}{a pre-specified variance matrix estimate}
+\item{Sigma}{a prespecified variance matrix estimate}
 
-\item{...}{further arguments passed to function \code{\link{covarTx}}}
+\item{...}{further arguments passed to the function \code{\link{covarTx}}}
 
 \item{inverted}{currently ignored}
 
@@ -24,14 +24,14 @@ qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
 
 \item{cvm}{list of covariance models for cross-validation (see \code{\link{prefitCV}})}
 
-\item{Iobs}{logical, \code{FALSE} default, whether to compute observed quasi-information matrix}
+\item{Iobs}{logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate}
 
-\item{pl}{numeric, print level, use \code{pl}>0 to give intermediate output}
+\item{pl}{numeric, print level, use \code{pl}>0 to print intermediate output}
 
 \item{verbose}{\code{FALSE} (default), otherwise print intermediate output}
 }
 \value{
-List of results of quasi-scoring iteration.
+List of results of quasi-scoring iteration with elements:
  \item{convergence}{ integer, why scoring iterations stopped}
  \item{message}{ string, corrsponding to `\code{convergence}`}
  \item{iter}{ number of iterations}
@@ -44,11 +44,11 @@ List of results of quasi-scoring iteration.
  \item{criterion}{ equal to "\code{qle}"}
 }
 \description{
-The function solves the quasi-score equation by a root finding algorithm similar to Fisher's scoring iteration.
+The function numerically solves the quasi-score equation by a root finding algorithm similar to Fisher's scoring method.
 }
 \details{
 The function implements a step-length controlled quasi-scoring iteration with simple bound
- constraints (see, e.g. [1,3]) specifically tailored for quasi-likelihood parameter estimation. Due to the typical
+ constraints (see also [1,3]) specifically tailored for quasi-likelihood parameter estimation. Due to the typical
  nonconvex nature of the (unknown and not further specified) quasi-likelihood function as an objective
  function one needs some kind of globalization strategy in order to stabilize the descent step and to avoid a premature
  termination. Therfore, we use the quasi-deviance function as a monitor function (see vignette) though it does not
@@ -57,16 +57,16 @@ The function implements a step-length controlled quasi-scoring iteration with si
  finding algorithms and need to be addressed elsewhere. 
  
  \subsection{Quasi-scoring under uncertainty}{ 
- The quasi-scoring iteration covers both kinds of prediction variances, kriging-based and those by a CV approach, which account for
- the uncertainty induced by the quasi-score approximation model. By default kriging variances
+ The quasi-scoring iteration includes both kinds of prediction variances, kriging-based and those derived from a cross-validation (CV) approach,
+ which account for the uncertainty induced by the quasi-score approximation model. By default kriging variances
  are included in the computation during all iterations. If fitted covariance models `\code{cvm}` are supplied by the user
  in advance (see \code{\link{prefitCV}}), the variances of prediction errors of each statistic are separately evaluated by the proposed CV
  approach for each new point. For the price of relatively high computational costs those prediction variances
  are intended to increase the robustness against false roots due to simulation and approximation errors of the quasi-score function.
 
  Opposed to this, the user also has the option to carry out a "pure version" of quasi-scoring without accounting for
- these errors. This can be set earlier as an option in \code{\link{QLmodel}}. See also \code{\link{covarTx}} and
- \code{\link{mahalDist}} for details on how to choose the variance matrix approximation of the statistics.
+ these errors. This can be set earlier as an option in \code{\link{QLmodel}} using dual kriging prediction.
+ See also \code{\link{covarTx}} and \code{\link{mahalDist}} for details on how to choose the variance matrix approximation of the statistics.
  }
 
  The following algorithmic options, which can be set by `\code{opts}`, are available:
@@ -78,7 +78,7 @@ The function implements a step-length controlled quasi-scoring iteration with si
 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
 		\item{\code{score_tol}:}{ upper bound on the quasi-score vector components, testing for an approximate root}
      \item{\code{maxiter}:}{ maximum allowed number of iterations}
-		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. order of upper bounds of the parameter space}
+		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. the order of upper bounds of the parameter space}
      \item{\code{fscale}:}{ numeric, default is vector of 1, typical magnitudes of quasi-score components}
 	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual
 							 iterates and further values}
