@@ -33,7 +33,7 @@ Changes with 0.17
 
 6) Use a last local search at maximum iterations if at global phase with highest weight 	
 
-7) Added multistart support if the algorithm is in global phase. The best root found so far (for the criteria see the vigntte)
+7) Added multi start support if the algorithm is in global phase or local phase. The best root found so far (for the criteria see the vigntte)
    is selected and used for minitoring the progress, e.g. whether to switch to the local phase again or termination. 
    COMMENT: Consistency checks and best root selection are now done only for "real" roots, e.i. quasi-score vector/quasi-deviance
    when these are zero in finite precision (acc. to given tolerances)	  
@@ -41,7 +41,7 @@ Changes with 0.17
 8) Added scaling option of parameter vector and quasi-score vector used in line search of quasi-scoring to test stopping conditions 		  
    
 9) Function `qleTest` now additionally can be used to test a different parameter than the estimated one (including another observed
-   vector of statistics)
+   vector of statistics). This also implements a multistart optimization.
 		  
 Current known issues
 --------------------
@@ -52,9 +52,7 @@ Current known issues
 		
 	
 TODO
-----
-	o qleTest: modify with new arguments, par, obs  
-	
-	o nlm: (Quasi-)Newton for Mahalanobis criterion function with constant variance matrix,
+----	
+	o provide 'nlm' routine: (Quasi-)Newton for Mahalanobis criterion function with constant variance matrix,
 	 	gradient as quasi-score and quasi-information as Hessian    
 	
