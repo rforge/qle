@@ -1953,7 +1953,7 @@ Instead, it is strongly recommended to use a local cluster object (see
 \code{makeCluster}).} for details) or distributing the tasks to a
 multi-processor cluster. This mostly reduces the computational overhead produced by auxiliary
 computational tasks. The package \pkg{qle} automatically compiles when
-installed. The current version used for the examples of this vignette is 0.17.
+installed. The current version used for the examples of this vignette is 0.17-1.
 %
 \section*{Acknowledgments}
 The authors would like to thank the German Science Foundation (DFG) for financial support of
