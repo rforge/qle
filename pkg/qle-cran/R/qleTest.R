@@ -120,7 +120,7 @@
 						 "|score_max|"=max(abs(qd$score)))
 				
 				if(!is.null(qd$Iobs)){								# computed only for criterion `qle` not `mahal`					
-					ret$minor <- .isPosDef(qd$Iobs)					# check pos. def. for criterion `qle`
+					ret[1] <- .isPosDef(qd$Iobs)					# check pos. def. for criterion `qle`
 					qIinv <- try(gsiInv(qd$I),silent=TRUE)			
 					if(!is.numeric(qIinv) || anyNA(qIinv) || .isError(qIinv) ) {		
 						message(.makeMessage("Failed to invert quasi-information."))
