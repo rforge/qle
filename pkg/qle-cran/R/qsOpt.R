@@ -685,15 +685,15 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					   obs = NULL, info = TRUE, check = TRUE, 
 					     restart = TRUE, pl = 0L, verbose = FALSE)
 {
-	if(check)
-	 .checkArguments(qsd,x0,...)
-    stopifnot(is.numeric(pl) && pl >= 0L )
+	stopifnot(is.numeric(pl) && pl >= 0L )
 	
 	x0 <- 
 	 if(is.matrix(x0))
 		structure(as.numeric(x0),names=colnames(x0))	
 	 else unlist(x0)
- 	
+	if(check)
+	  .checkArguments(qsd,x0,...)
+  
     fun.name <- ""
 	nms <- names(x0)	
 	# current sample points

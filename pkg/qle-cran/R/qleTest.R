@@ -90,8 +90,7 @@
 
 .evalRoots <- function(QD, par = NULL, opts = NULL)
 {			
-	 
-	 opts <-
+    opts <-
 	  if(is.null(opts))
 	   list("ftol_abs"=1e-6, "score_tol"=1e-3)  		
 	  else {		 
@@ -115,19 +114,26 @@
 			function(qd) {
 				if(.isError(qd)) 
 				  return (qd)
-			   	qIinv <- try(gsiInv(qd$I),silent=TRUE)			
-				if(!is.numeric(qIinv) || anyNA(qIinv) || .isError(qIinv) ) {		
-					msg <- .makeMessage("Failed to invert quasi-information.")
-					message(msg)
-				   .qleError(message=msg,call=sys.call(),error=qIinv)
+			  								
+				ret <- c("minor"=0,									# if not pos. def. then this root is excluded
+						 "value"=qd$value,							
+						 "|score_max|"=max(abs(qd$score)))
+				
+				if(!is.null(qd$Iobs)){								# computed only for criterion `qle` not `mahal`					
+					ret$minor <- .isPosDef(qd$Iobs)					# check pos. def. for criterion `qle`
+					qIinv <- try(gsiInv(qd$I),silent=TRUE)			
+					if(!is.numeric(qIinv) || anyNA(qIinv) || .isError(qIinv) ) {		
+						message(.makeMessage("Failed to invert quasi-information."))
+						return(ret)						
+					}					
+					M <- qIinv %*% qd$Iobs
+					ret <-
+					 c(ret,
+						"|det|"=abs(1-det(M)),
+						"|max|"=max(abs(diag(M)-rep(1,xdim))),
+						"|trace|"=abs(1-sum(diag(M))/xdim))					
 				}
-				M <- qIinv%*%qd$Iobs				
-				structure(c("minor"=.isPosDef(qd$Iobs),				# if not pos. def. then this root is excluded
-							"value"=qd$value,							
-						   	"|det|"=abs(1-det(M)),
-							"|max|"=max(abs(diag(M)-rep(1,xdim))),
-							"|trace|"=abs(1-sum(diag(M))/xdim), 
-							"|score_max|"=max(abs(qd$score))))
+				ret
 			}),silent=TRUE)
 	
 	if(inherits(X,"try-error"))
