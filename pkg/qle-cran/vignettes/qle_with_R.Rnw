@@ -1193,7 +1193,7 @@ qsd <- getQLmodel(sim, lb, ub, obs=c("N"=1),
 and, as a first crude estimate of the model parameter, we apply the
 quasi-scoring iteration without using further simulations.
 <<>>=
-S0 <- qscoring(qsd,x0=c("rho"=0.8),verbose=TRUE)
+S0 <- qscoring(qsd,x0=c("rho"=0.8))
 print(S0)
 @
 %
@@ -1493,7 +1493,7 @@ qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean")
 and start searching from the parameter \code{x0} for a root of the QS
 vector as a crude first estimate of the model parameter.
 <<>>=
-QS <- qscoring(qsd, x0=c("mu"=5,"sigma"=3.0), verbose=TRUE)
+QS <- qscoring(qsd, x0=c("mu"=5,"sigma"=3.0))
 print(QS)
 @
 The estimated root is already quite satisfactory. However, in practice we would
@@ -1746,7 +1746,7 @@ We could also apply the quasi-scoring iteration.
 <<>>=
 qscoring(qsd,x0,
   opts=list("ftol_rel"=1e-6,"slope_tol"=1e-4),
-  cvm=cvm,verbose=TRUE)
+  cvm=cvm)
 @
 Here both methods find a solution to the QS vector where the latter ends up in a
 local minimizer according to the convergence code. In general, the quasi-scoring
