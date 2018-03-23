@@ -55,7 +55,7 @@ data(normal)
 
 # design matrix and statistics
 X <- as.matrix(qsd$qldata[,1:2])
-Tstat <- qsd$qldata[grep("^mean.",names(qsd$qldata))]
+Tstat <- qsd$qldata[grep("^mean[.]",names(qsd$qldata))]
 
 # construct but do not re-estimate
 # covariance parameters by REML for CV models
