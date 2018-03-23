@@ -1003,7 +1003,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
       return (RES[[1]])
 	
 	# check results again
-	ok <- which(sapply(RES,function(x) !.isError(x) & x$convergence >= 0L))
+	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L))	
 	if(length(ok) == 0L){
 		msg <- .makeMessage("All local searches did not converge.")
 		message(msg)
