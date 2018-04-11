@@ -877,3 +877,79 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 		}
      )
 }
+
+#' @name Select subset of statistics
+#' 
+#' @title Optimal selection of a number of statistics
+#' 
+#' @description The function finds a subset of statistics of size at most equal to `\code{kmax}`
+#' which are optimal in the sense of highest contributions to minimize the expected estimation error
+#' of the model parameter using the quasi-information. 
+#' 
+#' @param theta 	list or matrix of points where to compute the criterion function
+#' 				 	and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`
+#' @param qsd		object of class \code{\link{QLmodel}} 
+#' @param kmax   	number of (optimal) statistics to be selected
+#' @param ...		further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}
+#' @param cl		cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
+#' @param verbose  	logical, \code{TRUE} for intermediate output
+#' 
+#' @return A list which consists of 
+#' 	\item{id}{ indices of corresponding statistics}
+#' 	\item{names}{ names of statistics (if provided)}
+#'  \item{prop}{ proportion of contribution of each selected statistic to each parameter} 
+#'  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of contribution to the quasi-information}  
+#' 
+#' @rdname optStat
+#' 
+#' @examples
+#'  data(normal)
+#'  optStat(c("mu"=2,"sigma"=1),qsd,kmax=2)[[1]]
+#' 
+#' @author M. Baaske
+#' @export 
+optStat <- function(theta, qsd, kmax, ..., cl = NULL, verbose=FALSE) 
+{	
+	p <- length(qsd$covT)
+	q <- attr(qsd$qldata,"xdim")
+	if(kmax > p || q > kmax)	
+		stop("`kmax` must be at most equal to the number of available statistics and at least equal to the number of model parameter.")
+	
+	# quasi-deviance
+	QD <- quasiDeviance(theta,qsd,...,cl=cl,verbose=verbose) 
+	# evaluate points
+	ret <- doInParallel(QD,
+			FUN=function(x,q,p) {
+				V <- attr(x,"Sigma")	  
+				nms <- colnames(V)
+				if(is.null(nms)){
+					nms <- paste0("V",1:p)
+					attr(V,"dimnames") <- list(nms,nms)
+				}
+				S <- try(eigen(V),silent=TRUE)
+				if(inherits(S,"try-error"))
+					stop("Could not compute eigenvalue decomposition.") 
+				L <- (x$jac %*% S$vectors %*% diag(1/sqrt(S$values)))^2 
+				L <- L/rowSums(L)
+				colnames(L) <- nms
+				# sort each row (as parameters)
+				M <- lapply(1:nrow(L),function(i) sort(L[i,], decreasing=TRUE))
+				m <- as.integer(kmax/q)
+				T <- unlist(lapply(M,"[",c(1:m)))	
+				T <- T[!duplicated(names(T))]
+				
+				i <- (m+1)
+				while( length(T) < kmax && i <= p) {			
+					ix <- which.max(sapply(M,"[[",i))
+					T <- c(T,unlist(M[[ix]][i]))
+					T <- T[!duplicated(names(T))]
+					i <- i+1
+				}	
+				id <- pmatch(names(T),colnames(V))
+				names(M) <- names(theta)
+				structure(list("id"=id, "names"=names(T),
+								"prop"=apply(L, 1, function(x) sum(x[id])), "sorted"=M))		
+			}, q=q, p=p,
+			cl=cl)	
+	return( ret )
+}
