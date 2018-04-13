@@ -878,14 +878,15 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
      )
 }
 
-#' @name Select subset of statistics
+#' @name Subset of statistics
 #' 
-#' @title Optimal selection of a number of statistics
+#' @title Optimal subset selection of statistics
 #' 
-#' @description The function finds a subset of `\code{kmax}` statistics of size at most equal to \code{p}
-#' (at least of size equal to the length of `\code{theta}`) available statistics which are optimal in the sense of
-#' highest contributions to the quasi-information matrix. Thus, this (smaller) subset minimizes the approximated estimation
-#' error of the model parameter based on an eigenvalue decomposition of the variance-covariance matrix of the statistics. 
+#' @description The function finds a subset of `\code{kmax}` statistics of size at most equal to overall \code{p}
+#' available statistics (and at least of size equal to the length of `\code{theta}`) which are optimal in the sense of
+#' highest contributions to the quasi-information matrix. Thus, this smaller subset minimizes the approximated estimation
+#' error of the model parameter based on an eigenvalue decomposition of the variance-covariance matrix of the statistics among all
+#' all `\code{kmax}` sized subsets. 
 #' Since both matrices depend on `\code{theta}` so does the chosen optimal subset of statistics. However, using a list of
 #' parameters as `\code{theta}` returns a list of corresponding subsets. One can then easily choose the most frequent subset among 
 #' all computed ones either using a sample of parameters distributed over the whole parameter space or some appropriate smaller region,
@@ -895,7 +896,7 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' 				 	and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`
 #' @param qsd		object of class \code{\link{QLmodel}} 
 #' @param kmax   	number of (optimal) statistics to be selected equal at m
-#' @param cumprop	numeric vector of proportions (0 < \code{prop} <= 1) of minimum contributions to each parameter 					
+#' @param cumprop	numeric vector of proportions (0 < \code{cumprop} <= 1) of minimum contributions to each parameter 					
 #' @param ...		further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}
 #' @param cl		cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' @param verbose  	logical, \code{TRUE} for intermediate output
