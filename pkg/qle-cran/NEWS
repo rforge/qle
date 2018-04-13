@@ -43,13 +43,25 @@ Changes with 0.17
 9) Function `qleTest` now additionally can be used to test a different parameter than the estimated one (including another observed
    vector of statistics). This also implements a multistart optimization.
 		  
+
+
+Changes with 0.17-3
+-------------------
+
+1) fixing name conflicts with user naming of statistics in grep function
+
+2) add function `optStat` for selection of kmax < p subset of informative statistics (where p is the number of available statistics)
+   in the fitted QL model  
+
+
+
 Current known issues
 --------------------
 	o flip of sign in quasi-score vector (qscoring)	  
 		The implementation of the quasi-scoring iteration has some trouble with the correct
 		sign of the quasi-score components for values near zero mostly due to finite precision problems
 		
-		
+
 	
 TODO
 ----	
