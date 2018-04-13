@@ -882,14 +882,20 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' 
 #' @title Optimal selection of a number of statistics
 #' 
-#' @description The function finds a subset of statistics of size at most equal to `\code{kmax}`
-#' which are optimal in the sense of highest contributions to minimize the expected estimation error
-#' of the model parameter using the quasi-information. 
+#' @description The function finds a subset of `\code{kmax}` statistics of size at most equal to \code{p}
+#' (at least of size equal to the length of `\code{theta}`) available statistics which are optimal in the sense of
+#' highest contributions to the quasi-information matrix. Thus, this (smaller) subset minimizes the approximated estimation
+#' error of the model parameter based on an eigenvalue decomposition of the variance-covariance matrix of the statistics. 
+#' Since both matrices depend on `\code{theta}` so does the chosen optimal subset of statistics. However, using a list of
+#' parameters as `\code{theta}` returns a list of corresponding subsets. One can then easily choose the most frequent subset among 
+#' all computed ones either using a sample of parameters distributed over the whole parameter space or some appropriate smaller region,
+#' where, e.g., the starting point lies in or a first guess of the true model parameter is suspected. 
 #' 
 #' @param theta 	list or matrix of points where to compute the criterion function
 #' 				 	and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`
 #' @param qsd		object of class \code{\link{QLmodel}} 
-#' @param kmax   	number of (optimal) statistics to be selected
+#' @param kmax   	number of (optimal) statistics to be selected equal at m
+#' @param cumprop	numeric vector of proportions (0 < \code{prop} <= 1) of minimum contributions to each parameter 					
 #' @param ...		further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}
 #' @param cl		cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' @param verbose  	logical, \code{TRUE} for intermediate output
@@ -897,7 +903,7 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' @return A list which consists of 
 #' 	\item{id}{ indices of corresponding statistics}
 #' 	\item{names}{ names of statistics (if provided)}
-#'  \item{prop}{ proportion of contribution of each selected statistic to each parameter} 
+#'  \item{cumprop}{ cumulated proportions of contribution of selected statistics to each of the parameter components} 
 #'  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of contribution to the quasi-information}  
 #' 
 #' @rdname optStat
@@ -908,18 +914,24 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' 
 #' @author M. Baaske
 #' @export 
-optStat <- function(theta, qsd, kmax, ..., cl = NULL, verbose=FALSE) 
+optStat <- function(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL, verbose=FALSE) 
 {	
 	p <- length(qsd$covT)
 	q <- attr(qsd$qldata,"xdim")
 	if(kmax > p || q > kmax)	
-		stop("`kmax` must be at most equal to the number of available statistics and at least equal to the number of model parameter.")
+	 stop("`kmax` must be at most equal to the number of available statistics and at least equal to the number of model parameter.")
+	if(length(cumprop) > 1L){
+		if(length(cumprop) != q)
+		  stop("`cumprop` must be of length equal to number of parmater components or a scalar value.")
+	 	else { stopifnot(all(cumprop<=1) && all(cumprop>0)) }
+	} else cumprop <- rep(cumprop,q)
 	
 	# quasi-deviance
-	QD <- quasiDeviance(theta,qsd,...,cl=cl,verbose=verbose) 
-	# evaluate points
+	QD <- quasiDeviance(theta,qsd,...,value.only=FALSE,cl=cl,verbose=verbose) 
+	
+	# evaluate statistics at theta
 	ret <- doInParallel(QD,
-			FUN=function(x,q,p) {
+			FUN=function(x,q,p,kmax,prop) {
 				V <- attr(x,"Sigma")	  
 				nms <- colnames(V)
 				if(is.null(nms)){
@@ -928,28 +940,42 @@ optStat <- function(theta, qsd, kmax, ..., cl = NULL, verbose=FALSE)
 				}
 				S <- try(eigen(V),silent=TRUE)
 				if(inherits(S,"try-error"))
-					stop("Could not compute eigenvalue decomposition.") 
-				L <- (x$jac %*% S$vectors %*% diag(1/sqrt(S$values)))^2 
+				  return(S) 
+				L <- (x$jac %*% S$vectors %*% diag(1/sqrt(S$values)))^2
+				# relative to total contribution
 				L <- L/rowSums(L)
 				colnames(L) <- nms
-				# sort each row (as parameters)
+				# sort each row as contribution of each statistic to each parameter
 				M <- lapply(1:nrow(L),function(i) sort(L[i,], decreasing=TRUE))
-				m <- as.integer(kmax/q)
-				T <- unlist(lapply(M,"[",c(1:m)))	
-				T <- T[!duplicated(names(T))]
-				
-				i <- (m+1)
-				while( length(T) < kmax && i <= p) {			
-					ix <- which.max(sapply(M,"[[",i))
-					T <- c(T,unlist(M[[ix]][i]))
-					T <- T[!duplicated(names(T))]
-					i <- i+1
-				}	
+				# find either kmax best statistics or until cumulative proportions
+				# for each parameter component are greater than prop				
+			    T <- sapply(M,"[",1)
+				if( kmax > q && any(T < prop)) {
+					stp <- FALSE
+					for(i in 2:p){
+						B <- sapply(M,"[",i)
+						ix <- order(B,decreasing=TRUE)					
+						for(k in ix){
+						  if(names(B[k]) %in% names(T))
+							next
+						  else {
+							 T <- c(T,B[k])
+							 if(length(T) == kmax || 
+								all(sapply(M, function(x) sum(x[names(T)])) >= prop) ){
+							   stp <- TRUE
+							   break;					     
+						   	 }
+						  }
+					    }
+						if(stp) break
+					}		
+				}
+			    names(M) <- names(theta)
 				id <- pmatch(names(T),colnames(V))
-				names(M) <- names(theta)
 				structure(list("id"=id, "names"=names(T),
-								"prop"=apply(L, 1, function(x) sum(x[id])), "sorted"=M))		
-			}, q=q, p=p,
+					"cumprop"=apply(L, 1, function(x) sum(x[id])), "sorted"=M))		
+			}, q=q, p=p, kmax=kmax, prop=cumprop,
 			cl=cl)	
+			
 	return( ret )
 }
