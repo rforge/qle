@@ -5,7 +5,8 @@
 \alias{optStat}
 \title{Optimal selection of a number of statistics}
 \usage{
-optStat(theta, qsd, kmax, ..., cl = NULL, verbose = FALSE)
+optStat(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL,
+  verbose = FALSE)
 }
 \arguments{
 \item{theta}{list or matrix of points where to compute the criterion function
@@ -13,7 +14,9 @@ and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{kmax}{number of (optimal) statistics to be selected}
+\item{kmax}{number of (optimal) statistics to be selected equal at m}
+
+\item{cumprop}{numeric vector of proportions (0 < \code{prop} <= 1) of minimum contributions to each parameter}
 
 \item{...}{further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}}
 
@@ -25,13 +28,18 @@ and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`}
 A list which consists of 
 	\item{id}{ indices of corresponding statistics}
 	\item{names}{ names of statistics (if provided)}
- \item{prop}{ proportion of contribution of each selected statistic to each parameter} 
+ \item{cumprop}{ cumulated proportions of contribution of selected statistics to each of the parameter components} 
  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of contribution to the quasi-information}
 }
 \description{
-The function finds a subset of statistics of size at most equal to `\code{kmax}`
-which are optimal in the sense of highest contributions to minimize the expected estimation error
-of the model parameter using the quasi-information.
+The function finds a subset of `\code{kmax}` statistics of size at most equal to \code{p}
+(at least of size equal to the length of `\code{theta}`) available statistics which are optimal in the sense of
+highest contributions to the quasi-information matrix. Thus, this (smaller) subset minimizes the approximated estimation
+error of the model parameter based on an eigenvalue decomposition of the variance-covariance matrix of the statistics. 
+Since both matrices depend on `\code{theta}` so does the chosen optimal subset of statistics. However, using a list of
+parameters as `\code{theta}` returns a list of corresponding subsets. One can then easily choose the most frequent subset among 
+all computed ones either using a sample of parameters distributed over the whole parameter space or some appropriate smaller region,
+where, e.g., the starting point lies in or a first guess of the true model parameter is suspected.
 }
 \examples{
  data(normal)
