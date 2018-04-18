@@ -10,13 +10,13 @@ optStat(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL,
 }
 \arguments{
 \item{theta}{list or matrix of points where to compute the criterion function
-and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`}
+and to choose `\code{kmax}` statistics given the QL model `\code{qsd}`}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{kmax}{number of (optimal) statistics to be selected equal at m}
+\item{kmax}{number of statistics to be selected (\eqn{q \leq \code{kmax} < p})}
 
-\item{cumprop}{numeric vector of proportions (0 < \code{cumprop} <= 1) of minimum contributions to each parameter}
+\item{cumprop}{numeric vector of proportions (\eqn{0 < \code{cumprop} \leq 1}) of minimum contributions to each parameter}
 
 \item{...}{further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}}
 
@@ -28,22 +28,24 @@ and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`}
 A list which consists of 
 	\item{id}{ indices of corresponding statistics}
 	\item{names}{ names of statistics (if provided)}
- \item{cumprop}{ cumulated proportions of contribution of selected statistics to each of the parameter components} 
- \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of contribution to the quasi-information}
+ \item{cumprop}{ cumulated proportions of contributions of selected statistics to each of the parameter components} 
+ \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of proportional contributions to the quasi-information}
 }
 \description{
-The function finds a subset of `\code{kmax}` statistics of size at most equal to overall \code{p}
-available statistics (and at least of size equal to the length of `\code{theta}`) which are optimal in the sense of
-highest contributions to the quasi-information matrix. Thus, this smaller subset minimizes the approximated estimation
-error of the model parameter based on an eigenvalue decomposition of the variance-covariance matrix of the statistics among all
-all `\code{kmax}` sized subsets. 
-Since both matrices depend on `\code{theta}` so does the chosen optimal subset of statistics. However, using a list of
-parameters as `\code{theta}` returns a list of corresponding subsets. One can then easily choose the most frequent subset among 
-all computed ones either using a sample of parameters distributed over the whole parameter space or some appropriate smaller region,
-where, e.g., the starting point lies in or a first guess of the true model parameter is suspected.
+The function finds a subset of \eqn{kmax < p}, where \code{p} is the number of available statistics
+(and at least of size equal to the length \code{q} of the parameter `\code{theta}`) which leads to the largest
+overall contribution to the quasi-information matrix given `\code{kmax}` different statistics and thus minimizes the
+expected estimation error of the model parameter. Based on the eigenvalue decomposition of the variance-covariance
+matrix of the statistics this subset is chosen among all subsets of size `\code{kmax}`. Since both matrices depend on
+`\code{theta}` so does the chosen subset of statistics. However, using a list of parameters as `\code{theta}` returns
+a list of corresponding subsets. One can then easily choose the most frequent subset among all computed ones given either
+a sample of parameters distributed over the whole parameter space or an appropriate smaller region, where, e.g., the
+starting point is chosen from or the true model parameter is expected to lie in.
 }
 \examples{
  data(normal)
+ # must select all statistics and thus using the
+ # full information since we only have to statistics available 
  optStat(c("mu"=2,"sigma"=1),qsd,kmax=2)[[1]]
 
 }
