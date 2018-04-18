@@ -882,21 +882,23 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' 
 #' @title Optimal subset selection of statistics
 #' 
-#' @description The function finds a subset of `\code{kmax}` statistics of size at most equal to overall \code{p}
-#' available statistics (and at least of size equal to the length of `\code{theta}`) which are optimal in the sense of
-#' highest contributions to the quasi-information matrix. Thus, this smaller subset minimizes the approximated estimation
-#' error of the model parameter based on an eigenvalue decomposition of the variance-covariance matrix of the statistics among all
-#' all `\code{kmax}` sized subsets. 
-#' Since both matrices depend on `\code{theta}` so does the chosen optimal subset of statistics. However, using a list of
-#' parameters as `\code{theta}` returns a list of corresponding subsets. One can then easily choose the most frequent subset among 
-#' all computed ones either using a sample of parameters distributed over the whole parameter space or some appropriate smaller region,
-#' where, e.g., the starting point lies in or a first guess of the true model parameter is suspected. 
+#' @description The function finds a subset of at most \eqn{kmax <= p} statistics, where \code{p} is the number of available statistics
+#' in the list `\code{qsd$covT}` (and at least of size equal to the length \code{q} of the parameter `\code{theta}`) and thus minimizes the expected
+#' estimation error of the parameter when this subset is used for estimation. Based on the eigenvalue decomposition of the
+#' variance-covariance matrix of the statistics this subset is chosen among all subsets of size at most equal to `\code{kmax}` or for
+#' which all proportional contributions to each parameter component are greater than or equal to `\code{cumprop}` whatever happens first.
+#' 
+#' Since both matrices depend on `\code{theta}` so does the chosen subset of statistics. However, using a list of parameters as `\code{theta}`
+#' returns a list of corresponding subsets. One can then easily choose the most frequent subset among all computed ones given either
+#' a sample of parameters distributed over the whole parameter space or an appropriate smaller region, where, e.g., the
+#' starting point is chosen from or the true model parameter is expected to lie in. 
 #' 
 #' @param theta 	list or matrix of points where to compute the criterion function
-#' 				 	and to choose the `\code{kmax}` best statistics given the QL model `\code{qsd}`
+#' 				 	and to choose `\code{kmax}` statistics given the QL model `\code{qsd}`
 #' @param qsd		object of class \code{\link{QLmodel}} 
-#' @param kmax   	number of (optimal) statistics to be selected equal at m
-#' @param cumprop	numeric vector of proportions (0 < \code{cumprop} <= 1) of minimum contributions to each parameter 					
+#' @param kmax   	number of statistics to be selected (q <= \code{kmax} <= p)
+#' @param cumprop	numeric vector either of length one (then replicated) or equal to the length of `\code{theta}` which sets the
+#' 				    proportions (0 < \code{cumprop} <= 1) of minimum overall contributions to each parameter component given the statistics 					
 #' @param ...		further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}
 #' @param cl		cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' @param verbose  	logical, \code{TRUE} for intermediate output
@@ -904,13 +906,15 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' @return A list which consists of 
 #' 	\item{id}{ indices of corresponding statistics}
 #' 	\item{names}{ names of statistics (if provided)}
-#'  \item{cumprop}{ cumulated proportions of contribution of selected statistics to each of the parameter components} 
-#'  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of contribution to the quasi-information}  
+#'  \item{cumprop}{ cumulated proportions of contributions of selected statistics to each of the parameter components} 
+#'  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of proportional contributions to the quasi-information}  
 #' 
 #' @rdname optStat
 #' 
 #' @examples
 #'  data(normal)
+#'  # must select all statistics and thus using the
+#'  # full information since we only have to statistics available 
 #'  optStat(c("mu"=2,"sigma"=1),qsd,kmax=2)[[1]]
 #' 
 #' @author M. Baaske
@@ -919,9 +923,10 @@ optStat <- function(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL, verbose=F
 {	
 	p <- length(qsd$covT)
 	q <- attr(qsd$qldata,"xdim")
+	stopifnot(length(cumprop)>0L)
 	if(kmax > p || q > kmax)	
-	 stop("`kmax` must be at most equal to the number of available statistics and at least equal to the number of model parameter.")
-	if(length(cumprop) > 1L){
+	 stop("`kmax` must be at most equal to the number of available statistics and at least equal to the number of model parameter.")	
+ 	if(length(cumprop) > 1L){
 		if(length(cumprop) != q)
 		  stop("`cumprop` must be of length equal to number of parmater components or a scalar value.")
 	 	else { stopifnot(all(cumprop<=1) && all(cumprop>0)) }
