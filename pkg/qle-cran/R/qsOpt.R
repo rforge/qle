@@ -2300,8 +2300,8 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 	if(anyNA(S) || !is.matrix(S))
 		warning("Variance matrix has `NaN` values. A matrix?")
 	if( rcond(S) < sqrt(.Machine$double.eps)) {
-	  warning(" Variance matrix is nearly ill conditioned.")
-	  if( (is.pos = .isPosDef(X)) != 0L )
+	  warning(" Variance matrix is ill-conditioned.")
+	  if( (is.pos = .isPosDef(S)) != 0L )
 		 return(.qleError(message=.makeMessage("Variance matrix not positive definite: ",is.pos),
 				  call=match.call(), S=structure(S,is.pos=is.pos))) 
  	}
