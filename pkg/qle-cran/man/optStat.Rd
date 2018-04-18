@@ -14,9 +14,10 @@ and to choose `\code{kmax}` statistics given the QL model `\code{qsd}`}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{kmax}{number of statistics to be selected (\eqn{q \leq \code{kmax} < p})}
+\item{kmax}{number of statistics to be selected (q <= \code{kmax} <= p)}
 
-\item{cumprop}{numeric vector of proportions (\eqn{0 < \code{cumprop} \leq 1}) of minimum contributions to each parameter}
+\item{cumprop}{numeric vector either of length one (then replicated) or equal to the length of `\code{theta}` which sets the
+proportions (0 < \code{cumprop} <= 1) of minimum overall contributions to each parameter component given the statistics}
 
 \item{...}{further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}}
 
@@ -32,13 +33,14 @@ A list which consists of
  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of proportional contributions to the quasi-information}
 }
 \description{
-The function finds a subset of \eqn{kmax < p}, where \code{p} is the number of available statistics
-(and at least of size equal to the length \code{q} of the parameter `\code{theta}`) which leads to the largest
-overall contribution to the quasi-information matrix given `\code{kmax}` different statistics and thus minimizes the
-expected estimation error of the model parameter. Based on the eigenvalue decomposition of the variance-covariance
-matrix of the statistics this subset is chosen among all subsets of size `\code{kmax}`. Since both matrices depend on
-`\code{theta}` so does the chosen subset of statistics. However, using a list of parameters as `\code{theta}` returns
-a list of corresponding subsets. One can then easily choose the most frequent subset among all computed ones given either
+The function finds a subset of at most \eqn{kmax <= p} statistics, where \code{p} is the number of available statistics
+in the list `\code{qsd$covT}` (and at least of size equal to the length \code{q} of the parameter `\code{theta}`) and thus minimizes the expected
+estimation error of the parameter when this subset is used for estimation. Based on the eigenvalue decomposition of the
+variance-covariance matrix of the statistics this subset is chosen among all subsets of size at most equal to `\code{kmax}` or for
+which all proportional contributions to each parameter component are greater than or equal to `\code{cumprop}` whatever happens first.
+
+Since both matrices depend on `\code{theta}` so does the chosen subset of statistics. However, using a list of parameters as `\code{theta}`
+returns a list of corresponding subsets. One can then easily choose the most frequent subset among all computed ones given either
 a sample of parameters distributed over the whole parameter space or an appropriate smaller region, where, e.g., the
 starting point is chosen from or the true model parameter is expected to lie in.
 }
