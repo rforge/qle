@@ -65,9 +65,9 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 						 call=sys.call()),
 			   class = c("error", "condition"), error = e))
    },finally = {
-	   if(!is.null(cl)){
+	   if(noCluster && !is.null(cl)){
 		   if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
-			  message(.makeMessage("Failed to stop stop cluster object."))
+			  message(.makeMessage("Failed to stop cluster object."))
 		   cl <- NULL
 		   invisible(gc)
 	  }

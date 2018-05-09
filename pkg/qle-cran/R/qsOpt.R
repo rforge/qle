@@ -1479,9 +1479,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	  stop("Weights for global sampling must be positive!")
   	mWeightsGL <- length(globals$weights)
 	
-	# parallel options: seeding, the seed is stored if given	
+	# parallel options: seeding, the seed is stored if given
+	noCluster <- is.null(cl)
 	tryCatch({		
-		if(is.null(cl)){		
+		if(noCluster){		
 			cores <- getOption("mc.cores",1L)
 			if(getOption("qle.multicore","lapply") == "mclapply"){
 				if(!is.null(iseed)){
@@ -2040,7 +2041,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				class = c("qle","error"), call = sys.call(), error=e)	
 							
 		}, finally = {
-		  if(!is.null(cl)) {
+		  if(noCluster && !is.null(cl)) {
 			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
 			   message(.makeMessage("Failed to stop cluster object."))
 		  	cl <- NULL			
