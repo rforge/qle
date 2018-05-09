@@ -11,7 +11,8 @@
 #' @importFrom digest digest
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 					cores = getOption("mc.cores",1L), 						# force sequential processing if cores=1L
-					  cache = getOption("qle.cache",FALSE))
+					  cache = getOption("qle.cache",FALSE),
+			  		   	  fun = getOption("qle.multicore","lapply"))
 {
 	SIM <- if(cache) {
 			for(i in 1:length(X))
@@ -39,7 +40,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
     
    tryCatch({
 		noCluster <- is.null(cl)		
-	    if(noCluster && length(X) > 1L && cores > 1L){
+	    if(noCluster && cores > 1L && fun == "mclapply" ){
 			parallel::mclapply(X, SIM, ...)
 		} else if(noCluster && (length(X)==1L || cores==1L)){
 			noCluster <- FALSE
@@ -69,10 +70,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 		   if(inherits(try(stopCluster(cl),silent=TRUE),"try-error")){
 			   rm(cl)			   
 			   message("Error in stopping cluster.")
-		   } else {
-			   cl <- NULL
-			   invisible(gc())
-		   } 
+		   } else {  cl <- NULL  } 
 	  }
    })
 }
