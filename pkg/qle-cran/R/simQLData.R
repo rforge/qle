@@ -39,11 +39,14 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
     
    tryCatch({
 		noCluster <- is.null(cl)		
-	    if(noCluster && (length(X)==1L || cores==1L)){
+	    if(noCluster && length(X) > 1L && cores > 1L){
+			parallel::mclapply(X, SIM, ...)
+		} else if(noCluster && (length(X)==1L || cores==1L)){
 			noCluster <- FALSE
 			lapply(X, SIM, ...)		  
 		} else {
 			if(noCluster){
+				## only a 'local' cluster is supported here
 				type <- if(Sys.info()["sysname"]=="Linux")
 							"FORK" else "PSOCK"
 				try(cl <- parallel::makeCluster(cores,type=type),silent=FALSE)				
