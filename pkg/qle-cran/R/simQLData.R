@@ -50,14 +50,13 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 				## only a 'local' cluster is supported here
 				type <- if(Sys.info()["sysname"]=="Linux")
 							"FORK" else "PSOCK"
-				try(cl <- parallel::makeCluster(cores,type=type),silent=FALSE)				
+				cl <- parallel::makeCluster(cores,type=type)				
 		    }
-			if(is.null(cl))
-			  stop("Could not initialize cluster object.")	
 			if(any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))){
 			  clusterSetRNGStream(cl,iseed)
 			  parallel::parLapplyLB(cl, X = X, fun = SIM, ...)
-			} else stop(paste0("Unsupported cluster object: ",class(cl)))			
+			} else
+			 stop(paste0("Failed to initialize cluster: unsupported cluster class: ",class(cl)))			
 	    }
    },error = function(e) {
 			return(
@@ -66,11 +65,11 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 						 call=sys.call()),
 			   class = c("error", "condition"), error = e))
    },finally = {
-	   if(noCluster && !is.null(cl)){
-		   if(inherits(try(stopCluster(cl),silent=TRUE),"try-error")){
-			   rm(cl)			   
-			   message("Error in stopping cluster.")
-		   } else {  cl <- NULL  } 
+	   if(!is.null(cl)){
+		   if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
+			  message(.makeMessage("Failed to stop stop cluster object."))
+		   cl <- NULL
+		   invisible(gc)
 	  }
    })
 }

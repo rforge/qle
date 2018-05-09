@@ -1478,23 +1478,24 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	if(any(globals$weights < 0L))
 	  stop("Weights for global sampling must be positive!")
   	mWeightsGL <- length(globals$weights)
-	# parallel options: seeding
-	# the seed is stored if given
-	noCluster <- is.null(cl)
-	tryCatch({
-		if(noCluster){
+	
+	# parallel options: seeding, the seed is stored if given	
+	tryCatch({		
+		if(is.null(cl)){		
 			cores <- getOption("mc.cores",1L)
-			type <- if(Sys.info()["sysname"]=="Linux")
-					  "FORK" else "PSOCK"			
-			if(cores > 1L) 
-			  try(cl <- parallel::makeCluster(cores,type=type),silent=FALSE)
-		    # re-initialize in any case (see `set.seed`)		    
-			if(!is.null(cl)){
-				clusterSetRNGStream(cl,iseed)			  	 
-			} else noCluster <- FALSE
+			if(getOption("qle.multicore","lapply") == "mclapply"){
+				if(!is.null(iseed)){
+				 # set seed for parallel	
+				}				  
+			} else {
+				type <- if(Sys.info()["sysname"]=="Linux") "FORK" else "PSOCK"			
+			    if(cores > 1L) 
+			      cl <- parallel::makeCluster(cores,type=type)
+			    if(!is.null(iseed)) clusterSetRNGStream(cl,iseed)			    
+			}
 		}				
-	},error = function(e)  {
-		noCluster <- FALSE
+	},error = function(e)  {		
+	    cl <- NULL
 		message(.makeMessage("Could not initialize cluster object."))
 	})	
 	   	
@@ -2039,13 +2040,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				class = c("qle","error"), call = sys.call(), error=e)	
 							
 		}, finally = {
-		  if(noCluster) {
-			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error")){
-			  	rm(cl)				
-				message("Error in stopping cluster.")
-		  	} else {
-				cl <- NULL				
-			}
+		  if(!is.null(cl)) {
+			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
+			   message(.makeMessage("Failed to stop cluster object."))
+		  	cl <- NULL			
 			invisible(gc())
 		  }
 		}
@@ -2054,7 +2052,6 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	# stop on error 
 	if(.isError(dummy))
 	 return(dummy)
-	
  
 	## only for estimte theta=(xt,ft)	
 	ctls["stopval",c(2,4)] <- c(ft,ft < ctls["stopval","cond"])	
