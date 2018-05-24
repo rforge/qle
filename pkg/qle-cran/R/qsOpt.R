@@ -1057,7 +1057,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
 #' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
-#' @param cluster.multi.start logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for local searches or
+#' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
 #'   a multicore forking which requires to set the \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} two cores.
 #' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster} 
 #' @param iseed			integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster
@@ -1501,7 +1501,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	    cl <- NULL
 		message(.makeMessage("Could not initialize cluster object."))
 	})	
-	   	
+		   	
  	# select criterion function	
 	criterionFun <- 
 		switch(qsd$criterion,
@@ -1571,7 +1571,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 							  multi.start=status[["global"]]>1L, pl=pl,
-							   cl=if(cluster.multi.start) cl else NULL, verbose=pl>0L)
+							   cl=if(use.cluster) cl else NULL, verbose=pl>0L)
 				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
@@ -1605,7 +1605,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X),
-										    cl=if(cluster.multi.start) cl else NULL)	
+										    cl=if(use.cluster) cl else NULL)	
 								  
 							  }, error = function(e){
 								  msg <- .makeMessage("Testing approximate root failed: ",
@@ -1966,10 +1966,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					  # `x` is a local minimum
 					  updateQLmodel(qsd, rbind("d"=Snext$par,"x"=Stest$par), 
 							 structure(c(newSim,newObs),nsim=c(nsim,locals$nobs),class="simQL"),						 
-							 fit=TRUE, cl=cl, verbose=pl>0L)					 
+							 fit=TRUE, cl=if(use.cluster) cl else NULL, verbose=pl>0L)					 
 				 } else {
-					  updateQLmodel(qsd, Snext$par, newSim,						 
-							 fit=TRUE, cl=cl, verbose=pl>0L)
+					  updateQLmodel(qsd, Snext$par, newSim, fit=TRUE,
+						cl=if(use.cluster) cl else NULL, verbose=pl>0L)
 				 }
 									
 				# check results of kriging
@@ -1996,7 +1996,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, control=control,
 						Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-						  multi.start=TRUE, pl=pl, cl=if(cluster.multi.start) cl else NULL,
+						  multi.start=TRUE, pl=pl, cl=if(use.cluster) cl else NULL,
 						   verbose=pl>0L)
 				
 				# overwrite last sample point if local minimization was successful
