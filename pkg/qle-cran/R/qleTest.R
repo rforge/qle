@@ -601,10 +601,10 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 						# not in parallel!
 						multiSearch(x0=par0,qsd=est$qsd,...,   		
 						 cvm=est$cvm,obs=obs,inverted=TRUE,check=FALSE,
-						   multi.start=(multi.start > 1L),cl=NULL,verbose=FALSE,cores=1L)		# multi.start = 2L, then always multi-start
+						   multi.start=(multi.start > 1L),cl=NULL,verbose=FALSE)		# multi.start = 2L, then always multi-start
 					},
 					cl=cl), opt.args))
-	} else {																					# never multi-start but restart if provided another routine
+	} else {																			# never multi-start but restart if provided another routine
 		if(verbose)
 			cat("Re-estimate parameters:","\n")
 		#including restart if more than one method is given

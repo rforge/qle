@@ -1507,12 +1507,12 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		switch(qsd$criterion,
 			"mahal" = {				  		  
 				  function(x,...) {				  
-					mahalDist(x,qsd,Sigma,cvm=cvm,inverted=TRUE,check=FALSE,...,cl=cl)
+					mahalDist(x,qsd,Sigma,cvm=cvm,inverted=TRUE,check=FALSE,...,cl=if(use.cluster) cl else NULL)
 				  }  
 			 },
 			 "qle" = {				  
 				 function(x,...)
-					quasiDeviance(x,qsd,NULL,cvm=cvm,check=FALSE,...,cl=cl)					
+					quasiDeviance(x,qsd,NULL,cvm=cvm,check=FALSE,...,cl=if(use.cluster) cl else NULL)					
 			 }, { stop("Unknown criterion function!") }
 		) 
  
