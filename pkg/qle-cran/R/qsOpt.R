@@ -1058,7 +1058,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param cluster.multi.start logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for local searches or
-#'   a multicore forking which requires to set the `\code{options("qle.multicore"="mclapply")`} using at least `\code{options("mc.cores"=2)`} two cores.
+#'   a multicore forking which requires to set the \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} two cores.
 #' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster} 
 #' @param iseed			integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster
 #' @param plot 			if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)
@@ -1571,7 +1571,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 							  multi.start=status[["global"]]>1L, pl=pl,
-							   cl=ifelse(cluster.multi.start,cl,NULL), verbose=pl>0L)
+							   cl=if(cluster.multi.start) cl else NULL, verbose=pl>0L)
 				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
@@ -1605,7 +1605,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X),
-										    cl=ifelse(cluster.multi.start,cl,NULL))	
+										    cl=if(cluster.multi.start) cl else NULL)	
 								  
 							  }, error = function(e){
 								  msg <- .makeMessage("Testing approximate root failed: ",
@@ -1996,7 +1996,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, control=control,
 						Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-						  multi.start=TRUE, pl=pl, cl=ifelse(cluster.multi.start,cl,NULL),
+						  multi.start=TRUE, pl=pl, cl=if(cluster.multi.start) cl else NULL,
 						   verbose=pl>0L)
 				
 				# overwrite last sample point if local minimization was successful
