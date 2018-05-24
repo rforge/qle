@@ -7,7 +7,7 @@
 qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
   global.opts = list(), local.opts = list(), method = c("qscoring",
   "bobyqa", "direct"), qscore.opts = list(), control = list(),
-  errType = "kv", pl = 0, cluster.multi.start = FALSE, cl = NULL,
+  errType = "kv", pl = 0, use.cluster = FALSE, cl = NULL,
   iseed = NULL, plot = FALSE)
 }
 \arguments{
@@ -39,14 +39,14 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
+\item{use.cluster}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
+a multicore forking which requires to set the \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} two cores.}
+
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
 
 \item{iseed}{integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster}
 
 \item{plot}{if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)}
-
-\item{use.cluster}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
-a multicore forking which requires to set the \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} two cores.}
 }
 \value{
 List of the following objects:

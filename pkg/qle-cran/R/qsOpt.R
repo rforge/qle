@@ -1262,7 +1262,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"),
 				   qscore.opts = list(), control = list(),
-				    errType = "kv", pl = 0, cluster.multi.start = FALSE,
+				    errType = "kv", pl = 0, use.cluster = FALSE,
 					 cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
