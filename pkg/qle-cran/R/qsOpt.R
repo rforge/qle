@@ -1557,7 +1557,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				if(useCV <- (errId > 1)) {
 					if(pl > 0L)
 					 cat("Update cross-validation covariance models...\n")
-					cvm <- try(prefitCV(qsd,type=errType,cl=cl),silent=TRUE) 
+					cvm <- try(prefitCV(qsd,type=errType,cl=if(use.cluster) cl else NULL),silent=TRUE) 
 					if(.isError(cvm)) {						
 						cvm <- NULL
 						message("Prefit of CV models failed during final surrogate minimization.")			
