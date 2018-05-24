@@ -6,7 +6,7 @@
 \usage{
 multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
   multi.start = FALSE, cl = NULL, pl = 0L, verbose = FALSE,
-  cores = getOption("mc.cores", 1L))
+  cores = getOption("mc.cores", 2L))
 }
 \arguments{
 \item{x0}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}

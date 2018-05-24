@@ -7,7 +7,8 @@
 qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
   global.opts = list(), local.opts = list(), method = c("qscoring",
   "bobyqa", "direct"), qscore.opts = list(), control = list(),
-  errType = "kv", pl = 0, cl = NULL, iseed = NULL, plot = FALSE)
+  errType = "kv", pl = 0, cluster.multi.start = FALSE, cl = NULL,
+  iseed = NULL, plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -37,6 +38,9 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \item{errType}{type of prediction variances, choose one of "\code{kv,cv,max}" (see details)}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
+
+\item{cluster.multi.start}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for local searches or
+a multicore forking which requires to set the `\code{options("qle.multicore"="mclapply")`} using at least `\code{options("mc.cores"=2)`} two cores.}
 
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
 

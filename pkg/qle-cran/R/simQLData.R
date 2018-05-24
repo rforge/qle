@@ -10,7 +10,7 @@
 # internal
 #' @importFrom digest digest
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
-					cores = getOption("mc.cores",1L), 						# force sequential processing if cores=1L
+					cores = getOption("mc.cores",2L), 						# force sequential processing if cores=1L
 					  cache = getOption("qle.cache",FALSE),
 			  		   	  fun = getOption("qle.multicore","lapply"))
 {

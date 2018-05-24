@@ -941,7 +941,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @export 
 multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 		         		 multi.start=FALSE, cl=NULL, pl = 0L, verbose=FALSE,
-						 	cores=getOption("mc.cores",1L))
+						 	cores=getOption("mc.cores",2L))
 {	 	
 	if(!(nstart > 0L))
 	 stop("Number of multistart points must be greater than zero!")
@@ -986,7 +986,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		   cat("Multi-start local search...\n")
+		   cat("Multi-start local search (",nstart," points) \n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
@@ -1057,6 +1057,8 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
 #' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
+#' @param cluster.multi.start logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for local searches or
+#'   a multicore forking which requires to set the `\code{options("qle.multicore"="mclapply")`} using at least `\code{options("mc.cores"=2)`} two cores.
 #' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster} 
 #' @param iseed			integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster
 #' @param plot 			if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)
@@ -1260,7 +1262,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"),
 				   qscore.opts = list(), control = list(),
-				    errType = "kv", pl = 0, 
+				    errType = "kv", pl = 0, cluster.multi.start = FALSE,
 					 cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
@@ -1568,7 +1570,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(xs, qsd=qsd, method=method, opts=qscore.opts, control=control,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-							  multi.start=status[["global"]]>1L, pl=pl, cl=cl, verbose=pl>0L)
+							  multi.start=status[["global"]]>1L, pl=pl,
+							   cl=ifelse(cluster.multi.start,cl,NULL), verbose=pl>0L)
 				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
@@ -1601,7 +1604,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 							      # from `xt` fails to converge
 								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
-										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X), cl=cl)	
+										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X),
+										    cl=ifelse(cluster.multi.start,cl,NULL))	
 								  
 							  }, error = function(e){
 								  msg <- .makeMessage("Testing approximate root failed: ",
@@ -1991,8 +1995,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 				# always multistart and include last (global) sample point `Snext$par` as a starting point
 				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, control=control,
 						Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
-						check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-						multi.start=TRUE, pl=pl, cl=cl, verbose=pl>0L)
+						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
+						  multi.start=TRUE, pl=pl, cl=ifelse(cluster.multi.start,cl,NULL),
+						   verbose=pl>0L)
 				
 				# overwrite last sample point if local minimization was successful
 				if(!.isError(S0) && S0$convergence >= 0L){					
