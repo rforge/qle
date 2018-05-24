@@ -40,7 +40,7 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
 \item{cluster.multi.start}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for local searches or
-a multicore forking which requires to set the `\code{options("qle.multicore"="mclapply")`} using at least `\code{options("mc.cores"=2)`} two cores.}
+a multicore forking which requires to set the \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} two cores}
 
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
 
