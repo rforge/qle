@@ -956,7 +956,13 @@ optStat <- function(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL, verbose=F
 				# find either kmax best statistics or until cumulative proportions
 				# for each parameter component are greater than prop				
 			    T <- sapply(M,"[",1)
-				if( kmax > q && any(T < prop)) {
+				dup <- duplicated(names(T))
+				# use only non duplicated names
+				if(any(dup)){
+				 T[names(T[dup])[1]] <- max(T[dup]) 
+				 T <- T[!dup] 
+				}
+				if( kmax > q && min(T) < min(prop) ) {
 					stp <- FALSE
 					for(i in 2:p){
 						B <- sapply(M,"[",i)
@@ -977,9 +983,16 @@ optStat <- function(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL, verbose=F
 					}		
 				}
 			    names(M) <- names(theta)
-				id <- pmatch(names(T),colnames(V))
+				id <- na.omit(pmatch(names(T),colnames(V)))
+				# rank matrix
+				rankM <- matrix(0,nr=q,nc=p)
+				dimnames(rankM) <- list(names(theta),nms)
+				for(i in 1:nrow(rankM))
+					rankM[i,] <- pmatch(colnames(rankM),names(M[[i]]))
+				
 				structure(list("id"=id, "names"=names(T),
-					"cumprop"=apply(L, 1, function(x) sum(x[id])), "sorted"=M))		
+					"cumprop"=apply(L, 1, function(x) sum(x[id])),
+					"sorted"=M, "rankMat"=rankM))		
 			}, q=q, p=p, kmax=kmax, prop=cumprop,
 			cl=cl)	
 			
