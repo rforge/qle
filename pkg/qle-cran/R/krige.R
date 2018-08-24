@@ -896,7 +896,7 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' @param theta 	list or matrix of points where to compute the criterion function
 #' 				 	and to choose `\code{kmax}` statistics given the QL model `\code{qsd}`
 #' @param qsd		object of class \code{\link{QLmodel}} 
-#' @param kmax   	number of statistics to be selected (q <= \code{kmax} <= p)
+#' @param kmax   	number of statistics to be selectnred (q <= \code{kmax} <= p)
 #' @param cumprop	numeric vector either of length one (then replicated) or equal to the length of `\code{theta}` which sets the
 #' 				    proportions (0 < \code{cumprop} <= 1) of minimum overall contributions to each parameter component given the statistics 					
 #' @param ...		further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}
@@ -985,7 +985,7 @@ optStat <- function(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL, verbose=F
 			    names(M) <- names(theta)
 				id <- na.omit(pmatch(names(T),colnames(V)))
 				# rank matrix
-				rankM <- matrix(0,nr=q,nc=p)
+				rankM <- matrix(0,nrow=q,ncol=p)
 				dimnames(rankM) <- list(names(theta),nms)
 				for(i in 1:nrow(rankM))
 					rankM[i,] <- pmatch(colnames(rankM),names(M[[i]]))
