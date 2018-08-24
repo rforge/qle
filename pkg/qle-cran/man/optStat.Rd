@@ -14,7 +14,7 @@ and to choose `\code{kmax}` statistics given the QL model `\code{qsd}`}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{kmax}{number of statistics to be selected (q <= \code{kmax} <= p)}
+\item{kmax}{number of statistics to be selectnred (q <= \code{kmax} <= p)}
 
 \item{cumprop}{numeric vector either of length one (then replicated) or equal to the length of `\code{theta}` which sets the
 proportions (0 < \code{cumprop} <= 1) of minimum overall contributions to each parameter component given the statistics}
