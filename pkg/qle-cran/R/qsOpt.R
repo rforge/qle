@@ -1058,9 +1058,11 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
-#'   a multicore forking which requires to set the \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} two cores.
+#'   a multicore forking which requires to set \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} cores.
 #' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster} 
-#' @param iseed			integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster
+#' @param iseed			integer, seed number, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster or
+#' 						  for parallel processing by "\code{mclapply}", if available on non windows platforms. Note that only using the RNG L'Ecuyer-CMRG"
+#' 						  leads to reproducible results. Only for \code{iseed} different from \code{NULL} a seed is set including any cluster worker.
 #' @param plot 			if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)
 #'
 #' @return List of the following objects:
@@ -1178,9 +1180,10 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #'  (see \code{\link{clusterExport}} and \code{\link{clusterApply}}).
 #'  If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
 #'  for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link{clusterSetRNGStream}},
-#'  for reproducible results of estimation in case a local cluster object is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
-#'  using a prespecified cluster object in `\code{cl}`, then the user is responsible for seeding whereas the seed can be passed to the function
-#'  and is then stored in the return value, see attribute `\code{optInfo}$iseed`.  
+#'  for reproducible results of estimation in case a cluster object is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. 
+#'  Seeding is either done via setting \code{iseed} once the user calls the function \code{\link{qle}} or beforehand using a cluster defined elsewhere
+#'  in the user calling program. Then the user should set \code{iseed=NULL} in order to not reinitialize the seed. The function stores the value of the seed in
+#'  attribute `\code{optInfo}$iseed` of the final result.  
 #' 
 #'  The following controls `\code{local.opts}` for the local search phase are available:
 #'   \itemize{
@@ -1483,20 +1486,40 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	
 	# parallel options: seeding, the seed is stored if given
 	noCluster <- is.null(cl)
-	tryCatch({		
-		if(noCluster){		
-			cores <- getOption("mc.cores",1L)
-			if(getOption("qle.multicore","lapply") == "mclapply"){
-				if(!is.null(iseed)){
-				 # set seed for parallel	
-				}				  
-			} else {
-				type <- if(Sys.info()["sysname"]=="Linux") "FORK" else "PSOCK"			
-			    if(cores > 1L) 
-			      cl <- parallel::makeCluster(cores,type=type)
-			    if(!is.null(iseed)) clusterSetRNGStream(cl,iseed)			    
-			}
-		}				
+	# default is no parallel processing because qle estimation
+	# might be prefered to be run as a single thread on one core only
+	cores <- getOption("mc.cores",1L)
+
+	tryCatch({
+		if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)						
+		
+		if(cores > 1L || !noCluster) {			
+			if(noCluster && getOption("qle.multicore","lapply") == "mclapply"){
+				# Only for L'Ecuyer-CMRG we get reproducible results					   
+				if(.Platform$OS.type != "windows"){
+					if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
+						set.seed(iseed)
+				} else {
+					options("mc.cores"=1L)
+					message(.makeMessage("Parallel processing by 'mclapply' is not available on a windows platform. Consider to use a cluster object."))
+				}
+			} else {			
+				if(noCluster){
+					## only a 'local' cluster is supported here
+					type <- if(Sys.info()["sysname"] == "Linux")
+								"FORK" else "PSOCK"
+					cl <- parallel::makeCluster(cores,type=type)				
+				}
+				if(any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))){
+					# Only for L'Ecuyer-CMRG we get reproducible results for a cluster
+					if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
+						parallel::clusterSetRNGStream(cl,iseed)
+				} else {
+					stop(paste0("Failed to initialize cluster: unsupported cluster class: ",class(cl)))
+				}
+			}			
+		} else if(!is.null(iseed)) set.seed(iseed)		
+			
 	},error = function(e)  {		
 	    cl <- NULL
 		message(.makeMessage("Could not initialize cluster object."))
@@ -2047,7 +2070,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 							
 		}, finally = {
 		  if(noCluster && !is.null(cl)) {
-			if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
+			if(inherits(try(parallel::stopCluster(cl),silent=TRUE),"try-error"))
 			   message(.makeMessage("Failed to stop cluster object."))
 		  	cl <- NULL			
 			invisible(gc())

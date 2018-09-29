@@ -8,6 +8,7 @@
 # Functions to collect the simulation results
 
 # internal
+# default: create and use a local cluster object of size 2
 #' @importFrom digest digest
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 					cores = getOption("mc.cores",2L), 						# force sequential processing if cores=1L
@@ -38,26 +39,42 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 		        })
 		   } else FUN	    
     
+   noCluster <- is.null(cl)
+   if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
+   
    tryCatch({
-		noCluster <- is.null(cl)		
-	    if(noCluster && cores > 1L && fun == "mclapply" ){
-			parallel::mclapply(X, SIM, ...)
-		} else if(noCluster && (length(X)==1L || cores==1L)){
-			noCluster <- FALSE
-			lapply(X, SIM, ...)		  
-		} else {
-			if(noCluster){
-				## only a 'local' cluster is supported here
-				type <- if(Sys.info()["sysname"]=="Linux")
-							"FORK" else "PSOCK"
-				cl <- parallel::makeCluster(cores,type=type)				
+		if(cores > 1L || !noCluster) {
+			if(noCluster && fun == "mclapply" ){
+				# Only for L'Ecuyer-CMRG we get reproducible results
+				if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
+				  set.seed(iseed)		   
+			    if(.Platform$OS.type != "windows")
+					parallel::mclapply(X, SIM, ...)
+				else {
+				  options(mc.cores=1L)
+				  lapply(X, SIM, ...)
+				}
+			} else {
+				if(noCluster){
+					## only a 'local' cluster is supported here
+					type <- if(Sys.info()["sysname"] == "Linux")
+								"FORK" else "PSOCK"
+					cl <- parallel::makeCluster(cores,type=type)				
+			    }
+				if(any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))){
+					# Only for L'Ecuyer-CMRG we get reproducible results for a cluster				
+					if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
+					  parallel::clusterSetRNGStream(cl,iseed)
+				    parallel::parLapply(cl, X = X, fun = SIM, ...)
+				} else {
+				   stop(paste0("Failed to initialize cluster: unsupported cluster class: ",class(cl)))
+			    }
 		    }
-			if(any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))){
-			  clusterSetRNGStream(cl,iseed)
-			  parallel::parLapplyLB(cl, X = X, fun = SIM, ...)
-			} else
-			 stop(paste0("Failed to initialize cluster: unsupported cluster class: ",class(cl)))			
-	    }
+		} else {
+			noCluster <- FALSE
+			lapply(X, SIM, ...)	
+		}
+		
    },error = function(e) {
 			return(
 			  structure(
@@ -66,7 +83,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 			   class = c("error", "condition"), error = e))
    },finally = {
 	   if(noCluster && !is.null(cl)){
-		   if(inherits(try(stopCluster(cl),silent=TRUE),"try-error"))
+		   if(inherits(try(parallel::stopCluster(cl),silent=TRUE),"try-error"))
 			  message(.makeMessage("Failed to stop cluster object."))
 		   cl <- NULL
 		   invisible(gc)
@@ -232,7 +249,7 @@ varCHOLdecomp <- function(matList) {
 	doIt <- function(i,x) {
 		m <- try(chol(x[[i]],pivot = FALSE), silent=TRUE )
 		if(inherits(m,"try-error") || anyNA(m) )
-		 return( .qleError(message="Cholseky decomposition failed: ",
+		 return(.qleError(message="Cholseky decomposition failed: ",
 				   call=match.call(),error=m))
 		as.vector(m[col(m)>=row(m)])
 	}

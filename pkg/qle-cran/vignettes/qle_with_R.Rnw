@@ -1375,7 +1375,7 @@ parameter for each observed value by our quasi-likelihood approach.
 cl <- makeCluster(2)
 clusterSetRNGStream(cl)
 clusterExport(cl,list("qle"))
-OPTS <- parLapplyLB(cl,obs0[[1]],
+OPTS <- parLapply(cl,obs0[[1]],
           function(obs,...) qle(...,obs=obs),
          qsd=qsd,
          sim=simfn, 
@@ -1455,7 +1455,7 @@ characterise the model outcome.
 set.seed(123)
 # setting the number of cores>1
 # uses parallel simulations and computations
-options(mc.cores=2)
+options(mc.cores=2L)
 simfunc <- function(pars) {	
 	x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
 	c("T1"=median(x),"T2"=mad(x))	

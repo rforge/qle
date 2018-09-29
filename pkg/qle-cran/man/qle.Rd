@@ -40,11 +40,13 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
 \item{use.cluster}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
-a multicore forking which requires to set the \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} two cores.}
+a multicore forking which requires to set \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} cores.}
 
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
 
-\item{iseed}{integer seed, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster}
+\item{iseed}{integer, seed number, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster or
+for parallel processing by "\code{mclapply}", if available on non windows platforms. Note that only using the RNG L'Ecuyer-CMRG"
+leads to reproducible results. Only for \code{iseed} different from \code{NULL} a seed is set including any cluster worker.}
 
 \item{plot}{if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)}
 }
@@ -167,9 +169,10 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  (see \code{\link{clusterExport}} and \code{\link{clusterApply}}).
  If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
  for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link{clusterSetRNGStream}},
- for reproducible results of estimation in case a local cluster object is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. If
- using a prespecified cluster object in `\code{cl}`, then the user is responsible for seeding whereas the seed can be passed to the function
- and is then stored in the return value, see attribute `\code{optInfo}$iseed`.  
+ for reproducible results of estimation in case a cluster object is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. 
+ Seeding is either done via setting \code{iseed} once the user calls the function \code{\link{qle}} or beforehand using a cluster defined elsewhere
+ in the user calling program. Then the user should set \code{iseed=NULL} in order to not reinitialize the seed. The function stores the value of the seed in
+ attribute `\code{optInfo}$iseed` of the final result.  
 
  The following controls `\code{local.opts}` for the local search phase are available:
   \itemize{
