@@ -1376,7 +1376,10 @@ cl <- makeCluster(2)
 clusterSetRNGStream(cl)
 clusterExport(cl,list("qle"))
 OPTS <- parLapply(cl,obs0[[1]],
-          function(obs,...) qle(...,obs=obs),
+          function(obs,...) { 
+			  options(mc.cores=1L)
+			  qle(...,obs=obs)
+		  },
          qsd=qsd,
          sim=simfn, 
          cond=cond,
