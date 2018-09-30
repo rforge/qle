@@ -40,12 +40,13 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
 \item{use.cluster}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
-a multicore forking which requires to set \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} cores.}
+a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at
+least \code{options(mc.cores=2L)} cores.}
 
-\item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
+\item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
 \item{iseed}{integer, seed number, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster or
-for parallel processing by "\code{mclapply}", if available on non windows platforms. Note that only using the RNG L'Ecuyer-CMRG"
+for parallel processing by "\code{mclapply}", if available on non windows platforms. Note that only using the RNG L'Ecuyer-CMRG
 leads to reproducible results. Only for \code{iseed} different from \code{NULL} a seed is set including any cluster worker.}
 
 \item{plot}{if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)}
@@ -159,20 +160,29 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  is somewhat ad hoc but may reflect the users preference on guiding the whole estimation more biased towards either a local
  or global search. In addition the local weights can be dynamically adjusted if `\code{useWeights}` is \code{FALSE}
  depending on the current progress of estimation. In this case the first weight given by `\code{locals.opts$weights}` is 
- initially used for this kind of adjustment.   
+ initially used for this kind of adjustment. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
+ loading required packages on each cluster/compute node, which are used in the model simulation function (see \code{\link{clusterExport}}
+ and \code{\link{clusterApply}}). 
  }
 
- Some notes: For a 2D parameter estimation problem the function can visualize the sampling and selection process, which
- requires an active 2D graphical device in advance. The function can also be run in an cluster environment
- using the `\code{parallel}` package. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
- loading required packages on each cluster node, which are used in the simulation function
- (see \code{\link{clusterExport}} and \code{\link{clusterApply}}).
- If no cluster object is supplied, a local cluster is set up based on forking (under Linux) or as a socket connection
- for other OSs. One can also set an integer seed value `\code{iseed}` to initialize each worker, see \code{\link{clusterSetRNGStream}},
- for reproducible results of estimation in case a cluster object is used, i.e. \code{cl=NULL} and option \code{mc.cores>1}. 
+ \subsection{Parallel options}{
+ Parallel processing of all computations is supported either by the multicore approach (spawning/forking tasks by "\code{mclapply}" for non Windows-based systems) using the parallel
+ package or a (user-defined) cluster object, e.g. created by \code{\link{makeCluster}}, currently of class \code{"MPIcluster","SOCKcluster","cluster"} which supports calling
+ \code{\link{parLapply}}. By default there is no parallel processing. A cluster object is automatically created for functions which also could take such object as an argument (if not provided)
+ the locally on a single machine and finalized after termination.
+ The cluster is set up based on local forking (under Linux) or as a local \code{PSOCK} connection with a number of cpus available for other operating systems. The option "\code{mc.cores}", e.g. \code{options(mc.cores=2L},
+ sets the number of cores used for both types of parallel computations. One can also set an integer value `\code{iseed}` as a seed to initialize each worker/thread, see also \code{\link{clusterSetRNGStream}},
+ for reproducible results of estimation in case a cluster object is used or \code{mc.cores>1} and RNG kind L'Ecuyer-CMRG. 
  Seeding is either done via setting \code{iseed} once the user calls the function \code{\link{qle}} or beforehand using a cluster defined elsewhere
- in the user calling program. Then the user should set \code{iseed=NULL} in order to not reinitialize the seed. The function stores the value of the seed in
- attribute `\code{optInfo}$iseed` of the final result.  
+ in the user calling program. Then the user should set \code{iseed=NULL} in order to not reinitialize the seed. The seed passed is stored in the attribute `\code{optInfo}$iseed` of the
+ final return value. If no cluster object is provided, the user sets \code{mc.cores>1L} and \code{options(qle.multicore="mclapply")}, then most computations and model simulations are performed
+ by function "\code{mclapply}" on a single machine. Moreover, model simulations can be performed in a cluster environment `\code{cl}` whereas all other computations are spawned to the cpus of a single
+ machine if \code{use.cluster=FALSE}. For time consuming model simulations it is recommended to prespecify a cluster object in the user calling program once and pass it to the main function \code{\link{qle}} for
+ estimation of the model parameters. Auxiliary computations should be run in parallel on a local multicore machine, e.g. setting \code{options(qle.multicore="mclapply")} and an appropriate number of cores \code{mc.cores>1}.   
+ }
+ 
+ For a 2D parameter estimation problem the function can visualize the sampling and selection process, which
+ requires an active 2D graphical device in advance.    
 
  The following controls `\code{local.opts}` for the local search phase are available:
   \itemize{

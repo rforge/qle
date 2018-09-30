@@ -1127,6 +1127,24 @@ of \code{predictKM()}, evaluating the corresponding kriging or CV
 based prediction variances by \code{varKM()} or, respectively,
 \code{crossValTx()}.
 %
+\subsection{Options for parallel processing}\label{subsec:parallel}
+The package provides two built-in types of parallel processing all
+computations and model simulations based on the \pkg{parallel} package. Both
+types can be combined for application of \pkg{qle} in a HPC environment of a
+number of compute nodes or CPUs. First, computations  can be run in parallel by
+spawning/forking tasks to multiple cores of a single system (see
+\code{mclapply}\footnote{Note that \code{mclapply} is not available on
+Windows-based platforms due to OS limitations, however, then run by
+\code{lapply}.}) or distributing the computations (including the computational expensive model simulations)
+to compute nodes of a HPC using a number of local CPUs at each node as a kind of
+nested parallel processing. The user can pass any valid cluster object of class
+\code{"MPIcluster","SOCKcluster","cluster"} which support
+calling \code{parallel::parLapply()} to functions of the package
+\pkg{qle}. Note that no computations are done in parallel by default since this
+gives the most flexibility to use the package for all kinds of simulation
+studies. For details of how to choose different options for parallel
+computations please see the manual of the function \code{qle}.
+%
 \subsection{M/M/1 queue}\label{subsec:mmq}
 %\SweaveInput{mm1q.Rnw}
 As an introductory example we consider the following single-server queueing
@@ -1152,6 +1170,7 @@ by a kriging surface, see Figure \ref{fig:mm1q1}.
 <<>>=
 library(qle)
 library(graphics)
+options(mc.cores=2L)
 RNGkind("L'Ecuyer-CMRG")
 set.seed(1356)
 @
@@ -1460,7 +1479,7 @@ characterise the model outcome.
 set.seed(123)
 # again: use a local cluster object
 options(mc.cores=2L)
-# for multicore parallel processing set
+# for multicore parallel processing instead of a cluster object:
 # options(qle.multicore="mclapply")
 simfunc <- function(pars) {	
 	x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
@@ -1949,20 +1968,11 @@ R-Forge at (\url{http://r-forge.r-project.org/projects/qle}). It uses a
 NAMESPACE and depends on the package \pkg{parallel} \citep{pkg:stats} and
 \pkg{nloptr} \citep{pkg:nloptr} among others (see above). To reproduce the
 examples of the vignette, which are also provided as separate \proglang{R}
-source files, we recommend the package \pkg{spatstat}.\par
-%
-Many functions, where appropriate, include the option to be used in a parallel
-environment (based on the package \pkg{parallel}) either by spawning tasks to multiple
-cores of a single system (see \code{mclapply}\footnote{Note that \code{mclapply}
-is not available on Windows systems due to OS limitations.
-Instead, it is strongly recommended to use a local cluster object (see
-\code{makeCluster}).} for details) or distributing the tasks to a
-multi-processor cluster. This mostly reduces the computational overhead produced by auxiliary
-computational tasks. The package \pkg{qle} automatically compiles when
-installed.
+source files, we recommend the package \pkg{spatstat}. The package \pkg{qle}
+automatically compiles when installed.
 %
 \section*{Acknowledgments}
-The authors would like to thank the German Science Foundation (DFG) for financial support of
+The author would like to thank the German Science Foundation (DFG) for financial support of
 this research within the framework of the priority program ''Life$\infty$``
 (SPP 1466).
 %
