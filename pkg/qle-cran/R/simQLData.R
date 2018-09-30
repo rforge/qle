@@ -7,11 +7,10 @@
 #
 # Functions to collect the simulation results
 
-# internal
-# default: create and use a local cluster object of size 2
+# internal, default: create and use a local cluster object of size one
 #' @importFrom digest digest
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
-					cores = getOption("mc.cores",2L), 						# force sequential processing if cores=1L
+					cores = getOption("mc.cores",1L), 						# force sequential processing if cores=1L
 					  cache = getOption("qle.cache",FALSE),
 			  		   	  fun = getOption("qle.multicore","lapply"))
 {

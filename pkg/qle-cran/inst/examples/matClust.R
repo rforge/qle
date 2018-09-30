@@ -7,7 +7,7 @@ library(spatstat)
 # set options
 options(mc.cores=8)
 RNGkind("L'Ecuyer-CMRG")
-set.seed(297)
+#set.seed(297)
 
 simStat <- function(X,cond){
  x <- Kest(X,r=cond$rr,correction="best")
@@ -108,7 +108,7 @@ qsd <- getQLmodel(sim,lb,ub,obs0,
 #qsd$covL
 
 # cross-validation: fitting CV covariance models
-cvm <- prefitCV(qsd, reduce=FALSE, verbose=TRUE)
+cvm <- prefitCV(qsd, reduce=FALSE, cl=cl,verbose=TRUE)
 
 # starting point for local search
 x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
@@ -140,10 +140,11 @@ quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]$value
 
 # multistart version of finding a root
 # ... passed to searchMinimizer
+options(mc.cores=8L)
 method <- c("qscoring","bobyqa","cobyla")
 S0 <- multiSearch(x0=x0,qsd=qsd,method=method,opts=opts,
 		 check=FALSE,cvm=cvm,nstart=50,optInfo=TRUE,multi.start=TRUE,
-		 cl=cl,cores=8L,pl=1,verbose=TRUE)
+		 cl=cl,cores=getOption("mc.cores"),pl=1,verbose=TRUE)
  
 # best found root
 (roots <- attr(S0,"roots"))
@@ -205,7 +206,11 @@ qs.opts <- list("xscale"=c(10,0.1,1),
 				"ftol_abs"=1e-4,
 				"score_tol"=1e-4)
 
-#debug(qle)		
+# use multicores (mclapply) for computations other
+# than simulating the model, i.e. 'use.cluster=FALSE'
+options(qle.multicore="lapply")
+
+# start estimation
 OPT <- qle(qsd, simClust, cond=cond,  
 		qscore.opts = qs.opts,
 		global.opts = list("maxiter"=10,"maxeval" = 20,
@@ -220,7 +225,8 @@ OPT <- qle(qsd, simClust, cond=cond,
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
 						  "test"=TRUE),				# testing is enabled
 		method = c("qscoring","bobyqa","direct"),		
-		errType="max", iseed=297, cl=cl, pl=10)								
+		errType="max", iseed=297, cl=cl, pl=10,
+		use.cluster = FALSE)						# cluster is only used for model simulation			
 
 print(OPT,pl=10)
 
@@ -279,7 +285,6 @@ checkMultRoot(OPT,par=rbind("QS"=QS$par,"S0"=S0$par))
 par0 <- OPT$par #+c(0.1,0.001,0.01)
 obs0 <- OPT$qsd$obs
 
-undebug(qleTest)
 Stest <- qleTest(OPT,												# estimation results
 		  par0=par0,												# parameter to test
 		   obs0=obs0,												# alternative observed statistics
@@ -287,14 +292,7 @@ Stest <- qleTest(OPT,												# estimation results
 		     method=c("qscoring","bobyqa","direct"),				# possible restart methods
 		   	  opts=qs.opts, control=list("ftol_abs"=1e-8),			# minimization options 
 			   multi.start=2L, cl=cl, verbose=TRUE)					# multi-start and parallel options	
-	   
-	   
-	   Stest2 <- qleTest(OPT,												# estimation results
-			 	 sim=simClust,cond=cond,nsim=100,	
-			  	 method=c("qscoring","bobyqa","direct"),				# possible restart methods
-			   	 opts=qs.opts, control=list("ftol_abs"=1e-8),			# minimization options 
-			     cl=NULL, verbose=TRUE)					# multi-start and parallel options		   
-	   
+   
 print(Stest)
 
 # check

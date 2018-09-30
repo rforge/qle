@@ -49,6 +49,8 @@ for parallel processing by "\code{mclapply}", if available on non windows platfo
 leads to reproducible results. Only for \code{iseed} different from \code{NULL} a seed is set including any cluster worker.}
 
 \item{plot}{if \code{TRUE}, plot newly sampled points (for 2D-parameter estimation problems only)}
+
+\item{cores}{number of cpu cores (multicores) for parallel processing either by 'mclapply' or a local FORK/SOCK/PSOCK cluster object}
 }
 \value{
 List of the following objects:

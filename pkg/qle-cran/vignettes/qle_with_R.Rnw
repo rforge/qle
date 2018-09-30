@@ -1377,8 +1377,7 @@ clusterSetRNGStream(cl)
 clusterExport(cl,list("qle"))
 OPTS <- parLapply(cl,obs0[[1]],
           function(obs,...) { 
-			  options(mc.cores=1L)
-			  qle(...,obs=obs)
+			qle(...,obs=obs)
 		  },
          qsd=qsd,
          sim=simfn, 
@@ -1425,8 +1424,11 @@ Finally, we can apply the MC goodness-of-fit test (see Section
 \ref{subsec:testing}) of the estimated parameter based on the same observations
 \code{obs0}.
 <<>>=
+# use a local cluster object
+options(mc.cores=2L) 
+options(qle.multicore="lapply") # redundant
 Stest <- qleTest(OPT,sim=simfn,cond=cond,obs=obs0)
-Stest
+print(Stest)
 @
 The results show a good match of the empirical and predicted error
 measures. Note that the errors resulting from the test are not directly
@@ -1456,9 +1458,10 @@ absolute deviation} (from the median) as our informative statistics to
 characterise the model outcome.
 <<>>=
 set.seed(123)
-# setting the number of cores>1
-# uses parallel simulations and computations
+# again: use a local cluster object
 options(mc.cores=2L)
+# for multicore parallel processing set
+# options(qle.multicore="mclapply")
 simfunc <- function(pars) {	
 	x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
 	c("T1"=median(x),"T2"=mad(x))	
@@ -1587,7 +1590,7 @@ Finally, we can perform a goodness-of-fit test of the estimated parameter.
 <<>>=
 Stest <- qleTest(OPT,method=c("qscoring","bobyqa"),
 		   sim=simfunc,nsim=1000)
-Stest
+print(Stest)
 @
 The results not only show that the null hypothesis cannot be rejected but also
 provide us with empirical and predicted estimation errors of the parameter.
@@ -1671,7 +1674,7 @@ ub <- c("kappa"=30,"R"=0.25,"mu"=5)
 We initialize the workers of a local cluster (FORK) which also applies in more
 general cases of parallel environments in principle.
 <<eval=FALSE>>=
-cl <- makeCluster(8)
+cl <- makeCluster(8L)
 clusterSetRNGStream(cl)
 clusterCall(cl,fun=function(x) library("spatstat", character.only=TRUE))
 clusterExport(cl=cl,varlist=c("simStat"), envir=environment())
@@ -1788,10 +1791,10 @@ OPT <- qle(qsd, simClust, cond=cond,
                 "ftol_abs"=1e-2, # lower bound on criterion value, triggers testing
                 "weights"=c(0.55), # constant weight factor
                 "eta"=c(0.025,0.075), # ignored, automatic adjustment of weights
-                "test"=TRUE), # testing is enabled
+                "test"=TRUE), # testing approximate root is enabled
 		method = c("qscoring","bobyqa","direct"), # restart methods		
 		errType="max", # use max of kriging and CV error
-        iseed=297, cl=cl) # set seed and pass cluster object for re-use
+        iseed=297, cl=cl) # store seed and use given cluster object
 @
 The result of the quasi-likelihood estimation is 
 <<>>=
@@ -1844,8 +1847,8 @@ Stest <- qleTest(OPT, # estimation results
           obs0=obs0, # alternative observed statistics
           sim=simClust,cond=cond,nsim=100,
           method=c("qscoring","bobyqa","direct"), # restart methods
-          opts=qs.opts, control=list("ftol_abs"=1e-8), # minimization options 
-          multi.start=1L, cl=cl, verbose=TRUE) # multi-start and parallel options
+          opts=qs.opts,control=list("ftol_abs"=1e-8), # minimization options 
+          multi.start=1L,cl=cl,verbose=TRUE) # multi-start and parallel options
 @
 <<>>=
 print(Stest)
@@ -1956,7 +1959,7 @@ Instead, it is strongly recommended to use a local cluster object (see
 \code{makeCluster}).} for details) or distributing the tasks to a
 multi-processor cluster. This mostly reduces the computational overhead produced by auxiliary
 computational tasks. The package \pkg{qle} automatically compiles when
-installed. The current version used for the examples of this vignette is 0.18.
+installed.
 %
 \section*{Acknowledgments}
 The authors would like to thank the German Science Foundation (DFG) for financial support of

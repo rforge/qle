@@ -941,12 +941,13 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @export 
 multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 		         		 multi.start=FALSE, cl=NULL, pl = 0L, verbose=FALSE,
-						 	cores=getOption("mc.cores",2L))
+						 	cores=getOption("mc.cores",1L))
 {	 	
 	if(!(nstart > 0L))
 	 stop("Number of multistart points must be greater than zero!")
  	
     args <- list(...)
+	# no restart here
 	args$restart <- NULL
 	
 	S0 <- if(!is.null(x0)){
@@ -1059,6 +1060,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
 #'   a multicore forking which requires to set \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} cores.
+#' @param cores			number of cpu cores (multicores) for parallel processing either by 'mclapply' or a local FORK/SOCK/PSOCK cluster object
 #' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster} 
 #' @param iseed			integer, seed number, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster or
 #' 						  for parallel processing by "\code{mclapply}", if available on non windows platforms. Note that only using the RNG L'Ecuyer-CMRG"
@@ -1263,10 +1265,9 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @importFrom graphics points
 qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
-				  method = c("qscoring","bobyqa","direct"),
-				   qscore.opts = list(), control = list(),
-				    errType = "kv", pl = 0, use.cluster = FALSE,
-					 cl = NULL, iseed = NULL, plot=FALSE)
+				  method = c("qscoring","bobyqa","direct"),   qscore.opts = list(),
+				   control = list(), errType = "kv", pl = 0, use.cluster = FALSE,
+				     cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
 	.printInfo = function(){		
@@ -1486,13 +1487,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 	
 	# parallel options: seeding, the seed is stored if given
 	noCluster <- is.null(cl)
-	# default is no parallel processing because qle estimation
-	# might be prefered to be run as a single thread on one core only
-	cores <- getOption("mc.cores",1L)
-
-	tryCatch({
-		if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)						
-		
+	if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
+	
+	tryCatch({	
+		cores <- getOption("mc.cores",1L)
 		if(cores > 1L || !noCluster) {			
 			if(noCluster && getOption("qle.multicore","lapply") == "mclapply"){
 				# Only for L'Ecuyer-CMRG we get reproducible results					   
@@ -1500,7 +1498,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
 						set.seed(iseed)
 				} else {
-					options("mc.cores"=1L)
+					options(mc.cores=1L)
 					message(.makeMessage("Parallel processing by 'mclapply' is not available on a windows platform. Consider to use a cluster object."))
 				}
 			} else {			
