@@ -1060,7 +1060,6 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
 #'   a multicore forking which requires to set \code{options("qle.multicore"="mclapply")} using at least \code{options("mc.cores"=2)} cores.
-#' @param cores			number of cpu cores (multicores) for parallel processing either by 'mclapply' or a local FORK/SOCK/PSOCK cluster object
 #' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster} 
 #' @param iseed			integer, seed number, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster or
 #' 						  for parallel processing by "\code{mclapply}", if available on non windows platforms. Note that only using the RNG L'Ecuyer-CMRG"
