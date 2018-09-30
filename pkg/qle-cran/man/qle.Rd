@@ -35,13 +35,13 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 
 \item{control}{list of control arguments passed to any of the routines defined in `\code{method}`}
 
-\item{errType}{type of prediction variances, choose one of "\code{kv,cv,max}" (see details)}
+\item{errType}{type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
 \item{use.cluster}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
-a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at
-least \code{options(mc.cores=2L)} cores.}
+a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at least a number of cpus 
+   cores \code{>1}, e.g. \code{options(mc.cores=2L)}.}
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 

@@ -1056,11 +1056,11 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #' @param method		vector of names of local search methods which are applied in consecutive order	
 #' @param qscore.opts   list of control arguments passed to \code{\link{qscoring}}
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
-#' @param errType		type of prediction variances, choose one of "\code{kv,cv,max}" (see details)  
+#' @param errType		type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
-#'   a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at
-#'   least \code{options(mc.cores=2L)} cores.
+#'   a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at least a number of cpus 
+#' 	 cores \code{>1}, e.g. \code{options(mc.cores=2L)}.
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}" 
 #' @param iseed			integer, seed number, \code{NULL} (default) for default seeding of the random number generator (RNG) stream for each worker in the cluster or
 #' 						  for parallel processing by "\code{mclapply}", if available on non windows platforms. Note that only using the RNG L'Ecuyer-CMRG
