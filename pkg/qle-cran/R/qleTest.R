@@ -602,8 +602,8 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 						# not in parallel!
 						multiSearch(x0=par0,qsd=est$qsd,...,   		
 						 cvm=est$cvm,obs=obs,inverted=TRUE,check=FALSE,
-						   multi.start=(multi.start > 1L),cl=NULL,						# multi.start = 2L, then always multi-start
-						    verbose=FALSE,cores=cores,fun="mclapply") 
+						   multi.start=(multi.start>1L),cl=NULL,						# multi.start = 2L, then always multi-start
+						   cores=cores,verbose=FALSE) 
 					},
 					cl=cl), opt.args))
 	} else {																			# never multi-start but restart if provided another routine

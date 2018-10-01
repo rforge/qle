@@ -906,11 +906,10 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param nstart 	  number of random samples from which to start local searches (if `\code{x0}`=\code{NULL}, then ignored)
 #' @param optInfo 	  logical, \code{FALSE} (default), whether to store original local search results
 #' @param multi.start logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge 
+#' @param cores		  integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}
 #' @param cl 	 	  cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' @param pl		  print level, use \code{pl}>0 to print intermediate results
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
-#' @param cores		  integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}
-#' @param fun		  character, multicore parllel option \code{getOption("qle.multicore","lapply")} default, only for multistart searches and ignored otherwise
 #' 
 #' @details The function performs a number of local searches depending which local method `\code{method}` was passed to
 #'  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
@@ -942,8 +941,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @author M. Baaske 
 #' @export 
 multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
-		         		 multi.start = FALSE, cl = NULL, pl = 0L, verbose = FALSE,
-						 	cores = getOption("mc.cores",1L), fun = getOption("qle.multicore","lapply"))
+		         		 multi.start = FALSE, cores = 1L, cl = NULL, pl = 0L, verbose = FALSE)
 {	 	
 	if(!(nstart > 0L))
 	 stop("Number of multistart points must be greater than zero!")
@@ -996,7 +994,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 					FUN=function(x,...){
 						searchMinimizer(x,...)						# including a restart by default
 					},
-					cl=cl,cores=cores,fun=fun,qsd=qsd), args))		
+					cl=cl,cores=cores,fun="mclapply",qsd=qsd), args))		
    	
 	} else { RES <- list(S0) }	
 	
