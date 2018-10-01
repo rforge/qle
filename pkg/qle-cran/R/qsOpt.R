@@ -916,7 +916,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #'  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
 #'  design based on the sample set stored in `\code{qsd}`. The function evaluates all found solutions and selects the one which 
 #'  is best according to the criteria defined in the vignette. If none of the criteria match, then the parameter for which the lowest value
-#'  of the criterion function was found is returned. 
+#'  of the criterion function was found is returned. Multistart searches can be done using a cluster object. Then for each generated/given obervation
+#'  a number of \code{cores>1} multistart searches is performed in parallel if \code{fun="mclapply"} using the local cores of each cluster node. 
 #' 
 #' @return Object of class \code{QSResult} and attribute `\code{roots}`, i.e. the matrix of estimated parameters for which any of
 #'  the available minimization methods has been successfully applied. If `code{optInfo}` is \code{TRUE}, then the originally estimtation reuslts

@@ -47,7 +47,8 @@ The function performs a number of local searches depending which local method `\
  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
  design based on the sample set stored in `\code{qsd}`. The function evaluates all found solutions and selects the one which 
  is best according to the criteria defined in the vignette. If none of the criteria match, then the parameter for which the lowest value
- of the criterion function was found is returned.
+ of the criterion function was found is returned. Multistart searches can be done using a cluster object. Then for each generated/given obervation
+ a number of \code{cores>1} multistart searches is performed in parallel if \code{fun="mclapply"} using the local cores of each cluster node.
 }
 \examples{
  data(normal)
