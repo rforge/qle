@@ -5,9 +5,8 @@ library(qle)
 library(spatstat)
 
 # set options
-options(mc.cores=8)
+options(mc.cores=8L)
 RNGkind("L'Ecuyer-CMRG")
-#set.seed(297)
 
 simStat <- function(X,cond){
  x <- Kest(X,r=cond$rr,correction="best")
@@ -140,11 +139,10 @@ quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]$value
 
 # multistart version of finding a root
 # ... passed to searchMinimizer
-options(mc.cores=8L)
 method <- c("qscoring","bobyqa","cobyla")
 S0 <- multiSearch(x0=x0,qsd=qsd,method=method,opts=opts,
 		 check=FALSE,cvm=cvm,nstart=50,optInfo=TRUE,multi.start=TRUE,
-		 cl=cl,cores=getOption("mc.cores"),pl=1,verbose=TRUE)
+		 cl=cl,pl=1,verbose=TRUE)
  
 # best found root
 (roots <- attr(S0,"roots"))
@@ -152,6 +150,7 @@ S0 <- multiSearch(x0=x0,qsd=qsd,method=method,opts=opts,
 stopifnot(!is.na(id))
 attr(roots,"par")
 RES <- attr(S0,"optRes")
+length(RES)
 attr(S0,"hasError")
 
 # try a single one 
@@ -291,7 +290,7 @@ Stest <- qleTest(OPT,												# estimation results
 		    sim=simClust,cond=cond,nsim=100,	
 		     method=c("qscoring","bobyqa","direct"),				# possible restart methods
 		   	  opts=qs.opts, control=list("ftol_abs"=1e-8),			# minimization options 
-			   multi.start=2L, cl=cl, verbose=TRUE)					# multi-start and parallel options	
+			   multi.start=1L, cl=cl, verbose=TRUE)					# multi-start and parallel options	
    
 print(Stest)
 

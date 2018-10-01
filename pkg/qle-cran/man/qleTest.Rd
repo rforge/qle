@@ -6,7 +6,8 @@
 \usage{
 qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
   nsim = 100, obs = NULL, alpha = 0.05, multi.start = 0L,
-  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
+  na.rm = TRUE, cores = 1L, cl = NULL, iseed = NULL,
+  verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
@@ -30,6 +31,8 @@ qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
 \item{multi.start}{integer, \code{=0,1,2}, level of multi start root finding (see details)}
 
 \item{na.rm}{logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of re-estimated parameters}
+
+\item{cores}{number of cores for multistart searches for each given/generated observation, only if \code{multi.start>0} enabled and ignored otherwise}
 
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
 

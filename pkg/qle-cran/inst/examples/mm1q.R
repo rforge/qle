@@ -5,8 +5,10 @@
 library(qle)
 library(graphics)
 
+# set parallel options
+options(mc.cores=8L)
+options(qle.multicore="mclapply")
 RNGkind("L'Ecuyer-CMRG")
-set.seed(1356)
 
 cond <- list("n"=25)
 simfn <- function(tet,cond){
@@ -31,7 +33,7 @@ S0 <- qscoring(qsd,x0=c("rho"=0.8),
 x <- S0$par 
 quasiDeviance(x,qsd,verbose=TRUE)[[1]]
 
-# opt
+# estimate parameter
 OPT <- qle(qsd,simfn,cond=cond,	     	
 		global.opts = list("maxeval"=5, "NmaxLam"=5),
 		local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,

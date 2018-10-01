@@ -910,6 +910,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param pl		  print level, use \code{pl}>0 to print intermediate results
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #' @param cores		  integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}
+#' @param fun		  character, multicore parllel option \code{getOption("qle.multicore","lapply")} default, only for multistart searches and ignored otherwise
 #' 
 #' @details The function performs a number of local searches depending which local method `\code{method}` was passed to
 #'  \code{\link{searchMinimizer}}. Either the starting points are given by `\code{x0}` or are generated as an augmented 
@@ -939,9 +940,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @rdname multiSearch
 #' @author M. Baaske 
 #' @export 
-multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
-		         		 multi.start=FALSE, cl=NULL, pl = 0L, verbose=FALSE,
-						 	cores=getOption("mc.cores",1L))
+multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
+		         		 multi.start = FALSE, cl = NULL, pl = 0L, verbose = FALSE,
+						 	cores = getOption("mc.cores",1L), fun = getOption("qle.multicore","lapply"))
 {	 	
 	if(!(nstart > 0L))
 	 stop("Number of multistart points must be greater than zero!")
@@ -954,8 +955,9 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 	   if(!is.list(x0))
 		 x0 <- .ROW2LIST(x0)
 	   # use only first provided method, usually `qscoring`
-	   # if non convergence then do a multistart search
-	   do.call(searchMinimizer,c(list(x0=x0[[1]],qsd=qsd,restart=FALSE),args))
+	   # if non convergence then do a multistart search if enabled
+	   # otherwise use a restart with some nloptr minimization routine				
+	   do.call(searchMinimizer,c(list(x0=x0[[1]],qsd=qsd,restart=!multi.start),args))
 	 } else NULL
 	
 	if(!is.null(S0)){
@@ -993,7 +995,7 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 					FUN=function(x,...){
 						searchMinimizer(x,...)						# including a restart by default
 					},
-					cl=cl,cores=cores,qsd=qsd), args))		
+					cl=cl,cores=cores,fun=fun,qsd=qsd), args))		
    	
 	} else { RES <- list(S0) }	
 	
@@ -1180,17 +1182,18 @@ multiSearch <- function(x0=NULL, qsd, ..., nstart=10, optInfo=FALSE,
 #'  \subsection{Parallel options}{
 #'  Parallel processing of all computations is supported either by the multicore approach (spawning/forking tasks by "\code{mclapply}" for non Windows-based systems) using the parallel
 #'  package or a (user-defined) cluster object, e.g. created by \code{\link{makeCluster}}, currently of class \code{"MPIcluster","SOCKcluster","cluster"} which supports calling
-#'  \code{\link{parLapply}}. By default there is no parallel processing. A cluster object is automatically created for functions which also could take such object as an argument (if not provided)
-#'  the locally on a single machine and finalized after termination.
-#'  The cluster is set up based on local forking (under Linux) or as a local \code{PSOCK} connection with a number of cpus available for other operating systems. The option "\code{mc.cores}", e.g. \code{options(mc.cores=2L},
-#'  sets the number of cores used for both types of parallel computations. One can also set an integer value `\code{iseed}` as a seed to initialize each worker/thread, see also \code{\link{clusterSetRNGStream}},
-#'  for reproducible results of estimation in case a cluster object is used or \code{mc.cores>1} and RNG kind L'Ecuyer-CMRG. 
+#'  the function \code{\link{parLapply}}. By default there is no parallel processing. A cluster object will be automatically created for functions which also could take such object as an argument
+#'  (if \code{NULL}) locally on a single host and finalized after function termination.
+#'  In this case, the cluster is set up based on a local forking (under Linux) or as a local \code{PSOCK} connection with a number of CPUs available for other operating systems. The option
+#'  "\code{mc.cores}", e.g. \code{options(mc.cores=2L}, sets the number of cores used for both types of parallel computations. One can also set an integer value `\code{iseed}` as a seed to
+#'  initialize each worker/thread, see also \code{\link{clusterSetRNGStream}}, for reproducible results of any function involving random outputs if \code{mc.cores>1} and RNG kind L'Ecuyer-CMRG. 
 #'  Seeding is either done via setting \code{iseed} once the user calls the function \code{\link{qle}} or beforehand using a cluster defined elsewhere
 #'  in the user calling program. Then the user should set \code{iseed=NULL} in order to not reinitialize the seed. The seed passed is stored in the attribute `\code{optInfo}$iseed` of the
 #'  final return value. If no cluster object is provided, the user sets \code{mc.cores>1L} and \code{options(qle.multicore="mclapply")}, then most computations and model simulations are performed
-#'  by function "\code{mclapply}" on a single machine. Moreover, model simulations can be performed in a cluster environment `\code{cl}` whereas all other computations are spawned to the cpus of a single
-#'  machine if \code{use.cluster=FALSE}. For time consuming model simulations it is recommended to prespecify a cluster object in the user calling program once and pass it to the main function \code{\link{qle}} for
-#'  estimation of the model parameters. Auxiliary computations should be run in parallel on a local multicore machine, e.g. setting \code{options(qle.multicore="mclapply")} and an appropriate number of cores \code{mc.cores>1}.   
+#'  by function "\code{mclapply}" on a single host. In particular, the user-defined stochastic model simulations can be performed in a cluster environment `\code{cl}` whereas all other
+#'  computations are spawned to the cpus of a single host setting \code{use.cluster=FALSE}. We recommend to specify a cluster object once in the user calling program and pass it to functions which take 
+#'  an cluster object as their argument, e.g. \code{\link{qle}}. Auxiliary computations, e.g. local optimizations or root findings by \code{\link{multiSearch}}, should be run in parallel on a single host
+#'  with many CPUs, e.g. setting \code{options(qle.multicore="mclapply")} and \code{mc.cores>1}.
 #'  }
 #'  
 #'  For a 2D parameter estimation problem the function can visualize the sampling and selection process, which

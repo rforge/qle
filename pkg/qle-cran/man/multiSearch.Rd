@@ -6,7 +6,8 @@
 \usage{
 multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
   multi.start = FALSE, cl = NULL, pl = 0L, verbose = FALSE,
-  cores = getOption("mc.cores", 1L))
+  cores = getOption("mc.cores", 1L), fun = getOption("qle.multicore",
+  "lapply"))
 }
 \arguments{
 \item{x0}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
@@ -28,6 +29,8 @@ multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 \item{verbose}{if \code{TRUE} (default), print intermediate output}
 
 \item{cores}{integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}}
+
+\item{fun}{character, multicore parllel option \code{getOption("qle.multicore","lapply")} default, only for multistart searches and ignored otherwise}
 }
 \value{
 Object of class \code{QSResult} and attribute `\code{roots}`, i.e. the matrix of estimated parameters for which any of

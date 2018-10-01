@@ -1128,22 +1128,20 @@ based prediction variances by \code{varKM()} or, respectively,
 \code{crossValTx()}.
 %
 \subsection{Options for parallel processing}\label{subsec:parallel}
-The package provides two built-in types of parallel processing all
-computations and model simulations based on the \pkg{parallel} package. Both
-types can be combined for application of \pkg{qle} in a HPC environment of a
-number of compute nodes or CPUs. First, computations  can be run in parallel by
-spawning/forking tasks to multiple cores of a single system (see
-\code{mclapply}\footnote{Note that \code{mclapply} is not available on
-Windows-based platforms due to OS limitations, however, then run by
-\code{lapply}.}) or distributing the computations (including the computational expensive model simulations)
-to compute nodes of a HPC using a number of local CPUs at each node as a kind of
-nested parallel processing. The user can pass any valid cluster object of class
-\code{"MPIcluster","SOCKcluster","cluster"} which support
-calling \code{parallel::parLapply()} to functions of the package
-\pkg{qle}. Note that no computations are done in parallel by default since this
-gives the most flexibility to use the package for all kinds of simulation
-studies. For details of how to choose different options for parallel
-computations please see the manual of the function \code{qle}.
+The package provides two built-in types of parallel processing including the
+stochastic model simulations based on the \pkg{parallel} package. Both types can be
+combined in a HPC environment using a number of compute nodes or multiple CPUs
+of a single host. First, computations can be run in parallel by
+spawning the computations to multiple CPU cores (see
+\code{mclapply}\footnote{Note that \code{mclapply} is not available on Windows-based platforms,
+however, then run sequentially by \code{lapply}.}) or distributing the
+computations (including model simulations) to different compute nodes of a
+HPC using a number of local CPUs at each node as a kind of nested parallel processing. The user can
+pass any valid cluster object of class
+\code{"MPIcluster","SOCKcluster","cluster"} which supports calling
+\code{parallel::parLapply()} to the \pkg{qle} and others of the package. Note
+that by default computations are processed sequentially using a single CPU/core.
+Please see the manual for details of all parallel options.
 %
 \subsection{M/M/1 queue}\label{subsec:mmq}
 %\SweaveInput{mm1q.Rnw}

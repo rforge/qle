@@ -413,6 +413,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @param alpha			significance level for testing the hypothesis
 #' @param multi.start   integer, \code{=0,1,2}, level of multi start root finding (see details)
 #' @param na.rm 		logical, \code{TRUE}  (default), whether to remove `NA` values from the matrix of re-estimated parameters
+#' @param cores 		number of cores for multistart searches for each given/generated observation, only if \code{multi.start>0} enabled and ignored otherwise
 #' @param cl			cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' @param iseed			integer, the seed for initializing the cluster workers for parallel computations 
 #' @param verbose   	logical, \code{TRUE} for intermediate output
@@ -470,7 +471,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @export
 qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 		             nsim = 100, obs = NULL, alpha = 0.05, multi.start = 0L,
-					  na.rm = TRUE, cl = NULL, iseed = NULL, verbose = FALSE)
+					  na.rm = TRUE, cores = 1L, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
 	if(.isError(est))
 	  stop("Estimation result has errors. Please see attribute `error`.")    
@@ -601,7 +602,8 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 						# not in parallel!
 						multiSearch(x0=par0,qsd=est$qsd,...,   		
 						 cvm=est$cvm,obs=obs,inverted=TRUE,check=FALSE,
-						   multi.start=(multi.start > 1L),cl=NULL,verbose=FALSE)		# multi.start = 2L, then always multi-start
+						   multi.start=(multi.start > 1L),cl=NULL,						# multi.start = 2L, then always multi-start
+						    verbose=FALSE,cores=cores,fun="mclapply") 
 					},
 					cl=cl), opt.args))
 	} else {																			# never multi-start but restart if provided another routine
