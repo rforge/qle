@@ -5,7 +5,7 @@ library(qle)
 library(spatstat)
 
 # set options
-options(mc.cores=8L)
+options(mc.cores=2L)
 RNGkind("L'Ecuyer-CMRG")
 
 simStat <- function(X,cond){
@@ -73,7 +73,7 @@ lb <- c("kappa"=20,"R"=0.01,"mu"=1)
 ub <- c("kappa"=35,"R"=0.25,"mu"=5)
 
 # general approach to initialize a (local) cluster object
-cl <- makeCluster(8)
+cl <- makeCluster(4L)
 clusterSetRNGStream(cl)
 clusterCall(cl,fun=function(x) library("spatstat", character.only=TRUE))
 clusterExport(cl=cl,varlist=c("simStat","searchMinimizer"), envir=environment())
@@ -141,8 +141,8 @@ quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]$value
 # ... passed to searchMinimizer
 method <- c("qscoring","bobyqa","cobyla")
 S0 <- multiSearch(x0=x0,qsd=qsd,method=method,opts=opts,
-		 check=FALSE,cvm=cvm,nstart=50,optInfo=TRUE,multi.start=TRUE,
-		 cl=cl,pl=1,verbose=TRUE)
+		 check=FALSE,cvm=cvm,nstart=50,optInfo=TRUE,
+		  multi.start=TRUE,cl=cl,pl=1,verbose=TRUE)
  
 # best found root
 (roots <- attr(S0,"roots"))
@@ -207,12 +207,12 @@ qs.opts <- list("xscale"=c(10,0.1,1),
 
 # use multicores (mclapply) for computations other
 # than simulating the model, i.e. 'use.cluster=FALSE'
-options(qle.multicore="lapply")
+# options(qle.multicore="lapply")
 
 # start estimation
 OPT <- qle(qsd, simClust, cond=cond,  
 		qscore.opts = qs.opts,
-		global.opts = list("maxiter"=10,"maxeval" = 20,
+		global.opts = list("maxiter"=10,"maxeval" = 4,
 				"weights"=c(50,10,5,1,0.1),
 				"NmaxQI"=5,"nstart"=100,
 				"xscale"=c(10,0.1,1)),
@@ -251,10 +251,10 @@ attr(local,"Sigma")
 ## extract Stest results ##
 Stest <- track[[length(track)]]$Stest
 
-#multistart
+# do a multisearch from different randomly chosen starting points
 method <- c("qscoring","bobyqa","cobyla")
 S0 <- multiSearch(OPT$par,OPT$qsd,method,opts,check=FALSE,
-		cvm=OPT$cvm,nstart=125,optInfo=TRUE,
+		cvm=OPT$cvm,nstart=50,optInfo=TRUE,
 		 multi.start=TRUE,cl=cl,verbose=TRUE)
 
 # best found root
@@ -287,10 +287,10 @@ obs0 <- OPT$qsd$obs
 Stest <- qleTest(OPT,												# estimation results
 		  par0=par0,												# parameter to test
 		   obs0=obs0,												# alternative observed statistics
-		    sim=simClust,cond=cond,nsim=100,	
+		    sim=simClust,cond=cond,nsim=50,	
 		     method=c("qscoring","bobyqa","direct"),				# possible restart methods
 		   	  opts=qs.opts, control=list("ftol_abs"=1e-8),			# minimization options 
-			   multi.start=1L, cl=cl, verbose=TRUE)					# multi-start and parallel options	
+			   multi.start=1L, cl=cl, cores=2L,verbose=TRUE)					# multi-start and parallel options	
    
 print(Stest)
 

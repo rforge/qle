@@ -48,7 +48,7 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 				if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
 				  set.seed(iseed)		   
 			    if(.Platform$OS.type != "windows")
-					parallel::mclapply(X, SIM, ...)
+					parallel::mclapply(X, SIM, ..., mc.cores = cores)
 				else {
 				  options(mc.cores=1L)
 				  lapply(X, SIM, ...)
