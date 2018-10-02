@@ -1192,7 +1192,8 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #'  by function "\code{mclapply}" on a single host. In particular, the user-defined stochastic model simulations can be performed in a cluster environment `\code{cl}` whereas all other
 #'  computations are spawned to the cpus of a single host setting \code{use.cluster=FALSE}. We recommend to specify a cluster object once in the user calling program and pass it to functions which take 
 #'  an cluster object as their argument, e.g. \code{\link{qle}}. Auxiliary computations, e.g. local optimizations or root findings by \code{\link{multiSearch}}, should be run in parallel on a single host
-#'  with many CPUs, e.g. setting \code{options(qle.multicore="mclapply")} and \code{mc.cores>1}.
+#'  with many CPUs, e.g. setting \code{options(qle.multicore="mclapply")} and \code{mc.cores>1}. For parallel computations without using a cluster object on a local host simply set both options to "\code{mclapply}"
+#'  and \code{mc.cores>1}.  
 #'  }
 #'  
 #'  For a 2D parameter estimation problem the function can visualize the sampling and selection process, which
