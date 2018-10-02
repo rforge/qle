@@ -81,6 +81,19 @@ NULL
 #' @author M. Baaske
 NULL
 
+#' QLE estimation results of the normal model
+#' 
+#' The results of estimating the parameters of the normal model by Quasi-likelihood. 
+#' 
+#' @docType data
+#' @keywords datasets
+#' @name OPT
+#' @usage data(qleresult)
+#' @format A list named `\code{OPT}` of class \code{\link{qle}}, see function \code{\link{qle}}
+#' @author M. Baaske
+NULL
+
+
 #' Matern cluster process data 
 #' 
 #' A data set of quasi-likelihood estimation results of estimating the parameters of a Matern cluster
