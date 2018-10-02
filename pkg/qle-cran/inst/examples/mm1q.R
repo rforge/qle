@@ -9,6 +9,7 @@ library(graphics)
 options(mc.cores=8L)
 options(qle.multicore="mclapply")
 RNGkind("L'Ecuyer-CMRG")
+set.seed(1326)
 
 cond <- list("n"=25)
 simfn <- function(tet,cond){
@@ -38,7 +39,7 @@ OPT <- qle(qsd,simfn,cond=cond,
 		global.opts = list("maxeval"=5, "NmaxLam"=5),
 		local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,
 				"lam_max"=1e-5,"test"=TRUE),
-		method = c("qscoring","bobyqa","direct"), iseed=1356, pl=10) 
+		method = c("qscoring","bobyqa","direct"), iseed=1326, pl=10) 
 
 #plot statistics
 op <- par(xaxs='i', yaxs='i')

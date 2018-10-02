@@ -3,7 +3,7 @@
 # only with global phase searches
 
 library(qle)
-options(mc.cores=8)
+options(mc.cores=8L)
 
 # define a statistical model bysimulation function
 simfunc <- function(pars) {	
@@ -46,7 +46,7 @@ OPT$why
 ## testing with criterion `mahal`
 ## here: no Iobs for best root selection
 S0 <- multiSearch(theta0, qsd=qsd, method=c("bobyqa","cobyla","direct"),
-		 nstart=25,	multi.start=TRUE, optInfo=TRUE,pl=10, verbose=TRUE)
+		 nstart=25,	multi.start=TRUE, optInfo=TRUE, pl=10, verbose=TRUE)
  
 ## found roots
 attr(S0,"roots")

@@ -6,7 +6,7 @@ library(qle)
 data(normal)
 
 # setting number of local cores
-options(mc.cores=8)
+options(mc.cores=8L)
 
 ## one step minimization
 ## no sammpling
@@ -18,14 +18,9 @@ options(mc.cores=8)
 
 # main estimation with new evaluations
 # (simulations of the statistical model)
-OPT <- qle(qsd,qsd$simfn,nsim=10,
+OPT <- qle(qsd,qsd$simfn,nsim=20,
 		global.opts=list("maxeval"=10),
 		pl=10)
-
-# both: root finding and minimizing criterion function
-OPT <- qle(qsd,qsd$simfn,nsim=10,
-		global.opts=list("maxeval"=10),
-		local.opts=list("weights"=c(0.5),"useWeights"=FALSE),pl=10)
 
 ## intermediate results
 # attr(OPT,"tracklist")
