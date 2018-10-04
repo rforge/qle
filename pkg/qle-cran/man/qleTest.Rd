@@ -59,8 +59,12 @@ with attributes:
 	 \item{info}{ list of the following elements: indices of re-estimation results where the inversion of the quasi-information matrix failed,
       the re-estimated parameters have `NA`s, criterion function minimizations failed or did not converge numerically,
       the integer seed value `\code{iseed}`}
-
- @details The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
+}
+\description{
+Monte Carlo hypothesis testing
+}
+\details{
+The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
  model w.r.t. to the estimated parameter explains the observed statistics, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} based
  on a Monte Carlo approach (see vignette). Due to the approximate nature of the assumed statistical model for the observed statistics the
  exact distribution of the test statistics, that is, the Mahalanobis distance or quasi-deviance, is generally unknown and therefore
@@ -88,9 +92,6 @@ with attributes:
  excluded from the test results and stored in the attribute `\code{info}`. In addition, as part of the returned data frame `\code{param}`
  the empirical standard error, predicted standard error (based on the average inverse quasi-information matrix), the root mean square error,
  the bias and sample mean value of the re-estimated parameters are also available. For a full example we refer the reader to the package vignette.
-}
-\description{
-Monte Carlo hypothesis testing
 }
 \author{
 M. Baaske

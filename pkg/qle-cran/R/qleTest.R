@@ -415,26 +415,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #' @param iseed			integer, the seed for initializing the cluster workers for parallel computations 
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
-#' @return An object of class \code{qleTest} as a list of:
-#'  \item{param}{ data frame of estimated parameters and error measures}
-#' 	\item{test}{ the test result}
-#'  \item{Stest}{ name of the test} 
-#' 
-#' with attributes:
-#' 
-#' 	 \item{msem}{ mean square error matrix of re-estimated parameters}
-#'   \item{aiqm}{ average inverse quasi-information matrix over all re-estimated parameters}
-#' 	 \item{qi}{ inverse quasi-information matrix at the parameter to be tested `\code{est$par}`}
-#'   \item{relEF}{ relative difference of the empirial and predicted standard error of the parameter to be tested} 
-#'   \item{obs}{ list of simulated statistics either at the estimated parameter or at the optional parameter `\code{par0}`}
-#'   \item{optRes}{ results from re-estimating the model parameters for each simulated observation `\code{obs}`}
-#'	 \item{mean.score}{ average quasi-score, respectively, average gradient of the MD at the re-estimated parameters}
-#' 	 \item{criterion}{ name of criterion function used as a test statistic: "\code{qle}" or "\code{mahal}"}  
-#' 	 \item{info}{ list of the following elements: indices of re-estimation results where the inversion of the quasi-information matrix failed,
-#'       the re-estimated parameters have `NA`s, criterion function minimizations failed or did not converge numerically,
-#'       the integer seed value `\code{iseed}`}
-#' 
-#'  @details The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
+#' @details The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that is, whether the statistical
 #'  model w.r.t. to the estimated parameter explains the observed statistics, against the alternative \eqn{H_1:\,\hat{\theta}\neq\theta_0} based
 #'  on a Monte Carlo approach (see vignette). Due to the approximate nature of the assumed statistical model for the observed statistics the
 #'  exact distribution of the test statistics, that is, the Mahalanobis distance or quasi-deviance, is generally unknown and therefore
@@ -462,6 +443,25 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 #'  excluded from the test results and stored in the attribute `\code{info}`. In addition, as part of the returned data frame `\code{param}`
 #'  the empirical standard error, predicted standard error (based on the average inverse quasi-information matrix), the root mean square error,
 #'  the bias and sample mean value of the re-estimated parameters are also available. For a full example we refer the reader to the package vignette.
+#' 
+#' @return An object of class \code{qleTest} as a list of:
+#'  \item{param}{ data frame of estimated parameters and error measures}
+#' 	\item{test}{ the test result}
+#'  \item{Stest}{ name of the test} 
+#' 
+#' with attributes:
+#' 
+#' 	 \item{msem}{ mean square error matrix of re-estimated parameters}
+#'   \item{aiqm}{ average inverse quasi-information matrix over all re-estimated parameters}
+#' 	 \item{qi}{ inverse quasi-information matrix at the parameter to be tested `\code{est$par}`}
+#'   \item{relEF}{ relative difference of the empirial and predicted standard error of the parameter to be tested} 
+#'   \item{obs}{ list of simulated statistics either at the estimated parameter or at the optional parameter `\code{par0}`}
+#'   \item{optRes}{ results from re-estimating the model parameters for each simulated observation `\code{obs}`}
+#'	 \item{mean.score}{ average quasi-score, respectively, average gradient of the MD at the re-estimated parameters}
+#' 	 \item{criterion}{ name of criterion function used as a test statistic: "\code{qle}" or "\code{mahal}"}  
+#' 	 \item{info}{ list of the following elements: indices of re-estimation results where the inversion of the quasi-information matrix failed,
+#'       the re-estimated parameters have `NA`s, criterion function minimizations failed or did not converge numerically,
+#'       the integer seed value `\code{iseed}`}
 #' 
 #' @author M. Baaske
 #' @rdname qleTest
