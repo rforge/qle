@@ -1220,7 +1220,6 @@ and, as a first crude estimate of the model parameter, we apply the
 quasi-scoring iteration without using further simulations.
 <<eval=FALSE>>=
 S0 <- qscoring(qsd,x0=c("rho"=0.8))
-print(S0)
 @
 <<echo=FALSE>>=
 OPT <- mm1q$OPT
