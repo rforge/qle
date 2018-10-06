@@ -11,7 +11,7 @@ options(qle.multicore="mclapply")
 RNGkind("L'Ecuyer-CMRG")
 set.seed(1326)
 
-cond <- list("n"=25)
+cond <- list("n"=100)
 simfn <- function(tet,cond){
 	mean(rgeom(cond$n,prob=1-tet[1]))
 }
@@ -20,7 +20,7 @@ lb <- c("rho"=0.05)
 ub <- c("rho"=0.95)
 
 nsim <- 10
-X <- multiDimLHS(N=10,lb=lb,ub=ub,
+X <- multiDimLHS(N=9,lb=lb,ub=ub,
 		method="maximinLHS",type="matrix")
 
 sim <- simQLdata(sim=simfn,cond=cond,nsim=nsim,X=X)
@@ -35,11 +35,11 @@ x <- S0$par
 quasiDeviance(x,qsd,verbose=TRUE)[[1]]
 
 # estimate parameter
-OPT <- qle(qsd,simfn,cond=cond,	     	
+OPT <- qle(qsd,simfn,cond=cond,
 		global.opts = list("maxeval"=5, "NmaxLam"=5),
-		local.opts = list("nextSample"="score","weights"=0.5,"ftol_abs"=1e-4,
-				"lam_max"=1e-5,"test"=TRUE),
-		method = c("qscoring","bobyqa","direct"), iseed=1326, pl=10) 
+		local.opts = list("nextSample"="score","weights"=0.5,
+				"ftol_abs"=1e-4,"lam_max"=1e-5),
+		method = c("qscoring","bobyqa","direct"), iseed=1326) 
 
 #plot statistics
 op <- par(xaxs='i', yaxs='i')
@@ -61,6 +61,7 @@ legend("topleft", c("Number of customers in the system",
 par(op)
 
 # next
+dev.new()
 op <- par(xaxs='i', yaxs='i')
 p <- seq(lb,ub,by=0.0001)
 QD <- quasiDeviance(X,qsd,value.only=TRUE)
@@ -85,6 +86,7 @@ points(cbind(Xnew,0),pch=8,cex=2,col="green")
 par(op)
 
 # Quasi-deviance
+dev.new()
 op <-par(xaxs='i', yaxs='i')
 qd <- quasiDeviance(as.matrix(p),OPT$qsd)
 y <- sapply(qd,"[[","value")
@@ -118,6 +120,64 @@ OPT$value			# // <- ok.
 ## testing: test H_0: \theta_0 = par0
 ## same observed statistics as for estimation
 Stest <- qleTest(OPT,par0=OPT$par,obs0=c("N"=1),
-		   sim=simfn,cond=cond,nsim=500,multi.start=1L)
+		   sim=simfn,cond=cond,nsim=1000,multi.start=1L)
 
 print(Stest)
+
+# save
+mm1q <- list("qsd"=qsd,"OPT"=OPT,"sim"=sim,"S0"=S0,"Stest"=Stest)
+save(mm1q,file="mm1q.rda")
+
+
+## A short simulation study: comparing MLE and QLE:
+tet0 <- c("rho"=0.5)
+obs0 <- simQLdata(sim=simfn,cond=cond,nsim=1000,X=tet0)
+
+mle <- do.call(rbind,
+		lapply(obs0[[1]],function(y,n){
+					tet <- 1-1/(1+y[[1]])
+					c("mle.rho"=tet,"mle.var"=(tet*(1-tet)^2)/n)
+				}, n=cond$n))
+x <- mle[,1]-tet0
+(mle.var <- c(sum(x^2)/length(x),mean(mle[,2])))
+
+# qle
+cl <- makeCluster(8L)
+clusterSetRNGStream(cl)
+clusterExport(cl,list("qle"))
+OPTS <- parLapply(cl,obs0[[1]],
+		function(obs,...) { 
+			qle(...,obs=obs)
+		},
+		qsd=OPT$qsd,
+		sim=simfn, 
+		cond=cond,
+		global.opts = list("maxeval"=5,"NmaxLam"=10),
+		local.opts = list("nextSample"="score","weights"=0.5,
+				"ftol_abs"=1e-4,"lam_max"=1e-6,"useWeights"=TRUE),
+		method = c("qscoring","bobyqa","direct"))
+
+# get results
+QLE <- do.call(rbind,
+		lapply(OPTS,
+				function(x) {
+					c("qle"=x$par,"qle.var"=1/as.numeric(x$final$I))
+				}))
+y <- QLE[,1]-tet0
+# MSE and average estimated variance of the parameters
+(qle.var <- c(sum(y^2)/length(y),mean(QLE[,2])))
+rbind(mle.var,qle.var)
+
+stopCluster(cl)
+
+# testing
+Stest0 <- qleTest(OPT,sim=simfn,cond=cond,obs=obs0,cl=cl)
+
+mm1q$OPTS <- OPTS
+mm1q$Stest0 <- Stest0
+mm1q$tet0 <- tet0
+mm1q$obs0 <- obs0
+save(mm1q,file="mm1q.rda")
+
+stopCluster(cl)
+

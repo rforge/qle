@@ -506,6 +506,6 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 			  nErrors=nErrors,
 			  nIgnored=nIgnored,
 			  message=msg,
-			  call=sys.call(),
+			  call=match.call(),
 			  class=c("QLdata","data.frame"))
 }
