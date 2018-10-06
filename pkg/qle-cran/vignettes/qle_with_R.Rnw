@@ -1390,7 +1390,7 @@ simulation variance and approximation error of $\bar{y}$ induced by kriging
 the statistics. This effect can be best exemplified by a short simulation
 study as shown next.\par
 %
-We randomly generate observations at the ''true`` parameter value $\rho=0.5$.
+We randomly generate observations at the ''true`` parameter $\rho=0.5$.
 <<eval=FALSE>>=
 tet0 <- c("rho"=0.5)
 obs0 <- simQLdata(sim=simfn,cond=cond,nsim=100,X=tet0)
@@ -1767,7 +1767,7 @@ each statistic by the their magnitudes of the mean squared CV error:
 <<eval=FALSE>>=
 crossValTx(qsd, cvm, type = "mse")
 @
-<<echo=FALSE>>
+<<echo=FALSE>>=
 matclust$MSE
 @
 Again, the first one is more sensitive to left-out sample points of
@@ -1782,7 +1782,7 @@ error by the CV approach.
 <<eval=FALSE>>=
 crossValTx(qsd, cvm, type = "ascve")
 @
-<<echo=FALSE>>
+<<echo=FALSE>>=
 matclust$ASCVE
 @
 For values close to one the actual error (estimated by the CV approach) would be
