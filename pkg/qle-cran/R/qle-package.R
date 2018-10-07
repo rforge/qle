@@ -96,6 +96,27 @@ NULL
 NULL
 
 
+#' QLE estimation results of M/M/1 queue
+#' 
+#' The results of estimating the parameter of M/M/1 queue by Quasi-likelihood. 
+#' 
+#' @docType data
+#' @keywords datasets
+#' @name mm1q
+#' @usage data(mm1q)
+#' @format A list named `\code{mm1q}` with elements 
+#' \itemize{
+#' 	   \item{qsd}{ initial quasi-likelihood approximation model}
+#'     \item{OPT}{ the results of estimation by \code{\link{qle}}}
+#'     \item{Stest}{ score test results }
+#' 	   \item{OPTS}{ results from simulation study, see the vignette}
+#' 	   \item{Stest0}{ Score test after estimating the model parameter }
+#' 	   \item{tet0}{ original parameter value}
+#' 	   \item{obs0}{ generated observed statistics for simulation study}
+#'   }
+#' @author M. Baaske
+NULL
+
 #' Matern cluster process data 
 #' 
 #' A data set of quasi-likelihood estimation results of estimating the parameters of a Matern cluster
