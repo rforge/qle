@@ -1,7 +1,5 @@
-# Example: apply `qle` to normal model with criterion `mahal`
-# and check `multiSearch` and testing hypothesis while estimation
-# only with global phase searches
-
+# Example: apply `qle` to normal model with criterion `score`
+# The following code is also part of the vignette
 library(qle)
 
 ## a local cluster
