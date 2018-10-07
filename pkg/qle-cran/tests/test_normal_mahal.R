@@ -36,8 +36,8 @@ qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean",
 
 # force only global searches and testing
 OPT <- qle(qsd,simfunc,nsim=10,
-		global.opts=list("stopval"=0,"maxeval"=10),
-		local.opts=list("ftol_abs"=0, "test"=TRUE),
+		global.opts=list("stopval"=0,"maxeval"=3),
+		local.opts=list("ftol_abs"=0),
 		method=c("bobyqa","cobyla","direct"),pl=10)
 
 OPT$final
@@ -46,7 +46,7 @@ OPT$why
 ## testing with criterion `mahal`
 ## here: no Iobs for best root selection
 S0 <- multiSearch(theta0, qsd=OPT$qsd, method=c("bobyqa","cobyla","direct"),
-		 nstart=25,	multi.start=TRUE, optInfo=TRUE, pl=10, verbose=TRUE)
+		 nstart=5,	multi.start=TRUE, optInfo=TRUE, pl=10, verbose=TRUE)
  
 ## found roots
 attr(S0,"roots")
