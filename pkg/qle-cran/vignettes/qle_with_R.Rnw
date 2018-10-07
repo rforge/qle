@@ -1456,7 +1456,9 @@ Score test &
 \end{tabular}
 \caption{Empirical mean squared error (MSE) and average variance
 $\overline{Var}$ of the re-estimated parameters for $1000$ observations using the quasi-likelihood 
-approach and maximum likelihood method.}
+approach and maximum likelihood method compared to the results of the Score
+test without new evaluation points.
+}
 \label{tab:err}
 \end{table}
 %
@@ -1501,13 +1503,17 @@ We define a simulation function which simply draws 10 random numbers at
 parameter $\theta=(\mu,\sigma)$ using the median and the \emph{mean
 absolute deviation} (from the median) as our informative statistics to
 characterise the model outcome.
-<<>>=
-# use the local cluster
+<<echo=FALSE>>=
+data(normal)
+OPT <- qsd$OPT
+QS <- qsd$QS
+simfunc <- qsd$simfn
+@
+<<eval=FALSE>>=
+# use a local cluster
 cl <- makeCluster(8L)
 clusterSetRNGStream(cl,1234)
-## Multicore parallel processing:
-# options(qle.multicore="mclapply")
-# options(mc.cores=2L) 
+# simulation function
 simfunc <- function(pars) {	
 	x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
 	c("T1"=median(x),"T2"=mad(x))	
@@ -1516,7 +1522,7 @@ simfunc <- function(pars) {
 The simple box constraints below, \code{lb} and \code{ub}, define the parameter
 search space as lower and, respectively, upper bounds of the unknown parameter
 of equal length.
-<<>>= 
+<<eval=FALSE>>= 
 lb <- c("mu"=0.5,"sigma"=0.1)
 ub <- c("mu"=8.0,"sigma"=5.0)
 @
@@ -1524,7 +1530,7 @@ We choose a \emph{maximin design} as a pilot design in order to construct the
 initial approximation of the QS vector using the quasi-deviance as a
 criterion function. We initially sample \code{N} design points and simulate
 \code{nsim} times at each point.
-<<>>=
+<<eval=FALSE>>=
 sim <- simQLdata(sim=simfunc,
    nsim=10,N=8,lb=lb,ub=ub,method="maximinLHS")
 # reset number of simulations (10 x 10)  
@@ -1534,17 +1540,19 @@ Although, in this example, we could simulate an observed value \code{obs} of the
 statistics we use the population mean and standard deviation in order to exemplify
 the achievable precision of the method as if the statistics could have been
 observed without error.
-<<>>= 
+<<eval=FALSE>>= 
 obs <- structure(c("T1"=2,"T2"=1),class="simQL")
 @
 Then, using the default values, we set up the approximation model by
-<<>>=
+<<eval=FALSE>>=
 qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean")
 @
 and start searching from the parameter \code{x0} for a root of the QS
 vector as a crude first estimate of the model parameter.
-<<>>=
+<<eval=FALSE>>=
 QS <- qscoring(qsd, x0=c("mu"=5,"sigma"=3.0))
+@
+<<>>=
 print(QS)
 @
 The estimated root is already quite satisfactory. However, in practice we would
@@ -1554,14 +1562,16 @@ in our case, minimizing the quasi-deviance for monitoring the estimation
 progress. The weights for generating candidate points are automatically
 adjusted starting at the given weight \code{0.5}. As before, we test each newly
 found minimizer whether it could be an approximate root.
-<<>>=
+<<eval=FALSE>>=
 OPT <- qle(qsd,
         simfunc,		
-        nsim=10,
-        global.opts=list("maxeval"=5),
-        local.opts=list("lam_max"=1e-4,"weights"=0.5,
+        nsim=20,
+        global.opts=list("maxeval"=50),
+        local.opts=list("lam_max"=1e-3,"weights"=0.5,
         "useWeights"=FALSE,"test"=TRUE),cl=cl)
-print(OPT)
+@
+<<>>=
+OPT
 @
 \begin{figure}[t!]
 \centering
@@ -1629,6 +1639,8 @@ by \code{Sigma}.
 obs0 <- simQLdata(simfunc,X=OPT$par,nsim=1000,mode="matrix")[[1]]
 var(obs0)
 attr(OPT$final,"Sigma")
+@
+<<eval=FALSE>>=
 stopCluster(cl)
 @
 %Finally, we can perform a goodness-of-fit test of the estimated parameter.

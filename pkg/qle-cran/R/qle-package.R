@@ -77,6 +77,8 @@ NULL
 #'    \itemize{
 #' 	   \item{simfn}{ simulation function }
 #'     \item{sim}{ simulation results at design points, class `\code{simQL}`}
+#'	   \item{OPT}{ result from call to estimation function \code{qle}}
+#' 	   \item{QS}{ quasi-scoring iteration results after initial approximation} 
 #' 	  }
 #' @author M. Baaske
 NULL
