@@ -394,11 +394,11 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 				locopts <- list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
 								"xtol_rel" = 1.0e-6, "maxeval" = 100)
 			}	
-			if(verbose)
-			  message("Do a final local search of covariance parameters.")
+		
 			res0 <- nloptr::nloptr(res$solution, fn, lb = model$lower, ub = model$upper, opts = locopts,
 					 y = y, Xs = Xs, P = P, model = model, free = model$free,
 					  verbose = verbose)
+		
 			if(inherits(res0,"error") || is.null(res0) || anyNA(res0$solution)){
 			   warning(.makeMessage("Local function call to 'nloptr' failed after global optimization."))
 			   res$final <- res0
