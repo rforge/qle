@@ -127,7 +127,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  In this case, if for some value of the criterion function its value exceeds `\code{local.opts$ftol_abs}`, then the corresponding minimizer is tested for an approximate root.
  Otherwise the last evaluation point is used as a starting point for next local searches  by a multistart approach when the algorithm is in its global phase.
  Note that this approach has the potential to escape regions where the criterion function value is quite low but, however, is not considered trustworthy as an
- approximate root. If testing is disabled, then a local minimizer whose criterion function dropds below the upper bound `\code{local.opts$ftol_abs}` is considered
+ approximate root. If testing is disabled, then a local minimizer whose criterion function drops below the upper bound `\code{local.opts$ftol_abs}` is considered
  as a root of the quasi-score and the algorithm stays in or switches to its local phase. The same holds, if the quasi-score vector matches the numerical tolerance for 
  being zero. A multistart approach for searching a minimizer during the local phase is only enabled if any of the local search methods fail to converge since most of the
  time the iteration is started from a point which is already near a root. The re-estimation of parameters during the test procedure also uses

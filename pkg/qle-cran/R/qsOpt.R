@@ -810,12 +810,13 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 										control["algorithm"] <- "NLOPT_LN_BOBYQA"
 										message(paste0("Using default derivative-free method: ",control$algorithm))									
 									}
-									ret <- do.call(nloptr::nloptr, list(x0, eval_f=fn, lb=qsd$lower,
-													ub=qsd$upper, opts=control))
+									ret <- do.call(nloptr::nloptr,
+											list(x0, eval_f=fn, lb=qsd$lower, ub=qsd$upper, opts=control))
+									
 									structure(list("par"=ret$solution,
 												   "value"=ret$objective,
 												   "iter"=ret$iterations,
-												   "convergence"=ret$status,
+												   "convergence"=ret$status,	# 0 for success
 												   "message"=ret$message))									
 								},
 								{
@@ -1140,7 +1141,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #'  In this case, if for some value of the criterion function its value exceeds `\code{local.opts$ftol_abs}`, then the corresponding minimizer is tested for an approximate root.
 #'  Otherwise the last evaluation point is used as a starting point for next local searches  by a multistart approach when the algorithm is in its global phase.
 #'  Note that this approach has the potential to escape regions where the criterion function value is quite low but, however, is not considered trustworthy as an
-#'  approximate root. If testing is disabled, then a local minimizer whose criterion function dropds below the upper bound `\code{local.opts$ftol_abs}` is considered
+#'  approximate root. If testing is disabled, then a local minimizer whose criterion function drops below the upper bound `\code{local.opts$ftol_abs}` is considered
 #'  as a root of the quasi-score and the algorithm stays in or switches to its local phase. The same holds, if the quasi-score vector matches the numerical tolerance for 
 #'  being zero. A multistart approach for searching a minimizer during the local phase is only enabled if any of the local search methods fail to converge since most of the
 #'  time the iteration is started from a point which is already near a root. The re-estimation of parameters during the test procedure also uses
@@ -1621,7 +1622,7 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 					varS <- S0$varS	
 					status[["minimized"]] <- TRUE
 					
-					if(S0$convergence == 1L){										# found root of quasi-score
+					if(max(abs(S0$score)) < qscore.opts$score_tol){						# either 'score_tol' reached (real root of quasi-score)
 						status[["global"]] <- 0L									# start local phase
 					} else if(locals$test && ft > locals$ftol_abs) { 				# quasi-deviance can be distinguished from zero
 					     if(pl > 0L)
@@ -1658,9 +1659,11 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 								  2L															# switch to global in case of error
 							} else if(attr(Stest$test,"passed")) { 1L }						    # found approximate root  
 							  else 2L 
-				  	 } else if(ft < locals$ftol_abs) {											# second approximate root criterion
+				  	
+				  } else if(ft < locals$ftol_abs) {											# second approximate root criterion
 						 status[["global"]] <- 0L 
-					 } else { status[["global"]] <- 2L }										# no root at all switch to global sampling
+				  } else { status[["global"]] <- 2L }										# no root at all switch to global sampling
+				  
 				} else {																		
 					status[["global"]] <- 2L										
 					status[["minimized"]] <- FALSE
