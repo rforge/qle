@@ -893,8 +893,12 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 #'  
 #' @return Object of class \code{\link{QLmodel}}
 #' 
-#' @details The function is a wrapper of \code{\link{simQLdata}}, \code{\link{QLmodel}}, \code{\link{fitSIRFk}}
-#'  and thus sets up the quasi-likelihood approximation model all at once.
+#' @details The function is a wrapper of the functions \code{\link{QLmodel}}, \code{\link{fitSIRFk}}
+#'  and thus sets up the quasi-likelihood approximation model all at once given the simulation results
+#'  of the initial design \code{runs}. Note that the bound constraints \code{lb,ub} can be different from the ones 
+#'  used to construct the initial design by \code{\link{simQLdata}}. This allows to use, for example, an enlarged
+#'  parameter space for the design points and a smaller one for the QL parameter estimation which might prevent the
+#'  algorithm from exceeding the parameter space during optimization.
 #' 
 #' @examples
 #' 

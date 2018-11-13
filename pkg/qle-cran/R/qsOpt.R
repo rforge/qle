@@ -610,7 +610,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' @param control 	  list of control arguments passed to the auxiliary routines
 #' @param ...		  further arguments passed to \code{\link{covarTx}}
 #' @param obs		  numeric vector of observed statistics, overwrites `\code{qsd$obs}`
-#' @param info		  additional information at found minimizer
+#' @param optInfo	  logical, \code{FALSE} (default), not yet used argument (ignored)
 #' @param check		  logical, \code{TRUE} (default), whether to check input arguments
 #' @param restart 	  logical, \code{TRUE} (default), whether to restart optimization in case of non convergence
 #' @param pl		  numeric value (>=0), the print level 
@@ -682,7 +682,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' @importFrom nloptr direct directL cobyla bobyqa lbfgs neldermead
 searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					 opts = list(), control = list(), ...,  
-					   obs = NULL, info = TRUE, check = TRUE, 
+					   obs = NULL, optInfo = FALSE, check = TRUE, 
 					     restart = TRUE, pl = 0L, verbose = FALSE)
 {
 	stopifnot(is.numeric(pl) && pl >= 0L )
@@ -701,6 +701,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	if(xdim != length(x0))
 	 stop("Dimension of `x0` does not match.")
 	
+ 	# init tracklist for error tracking
+ 	tracklist <- structure(list(),class="QDtrack") 
+
 	# may overwrite (observed) statistics	
 	if(!is.null(obs)) {
 		obs <- unlist(obs)
@@ -735,7 +738,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		} else NULL
 	}
 	
-    if(!is.null(S0) && (.isError(S0) || S0$convergence < 0L)){
+    if(!is.null(S0) && (.isError(S0) || S0$convergence < 0L)){	   
 	   if(pl > 0L) { 
 		 msg <- .makeMessage("Minimization by `",fun.name,"` did not converge: ")
 		 if(!is.null(S0$convergence))
@@ -754,7 +757,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 			if(pl > 0L) 
 			  message("No convergence and only one method supplied.")
 			return(S0)	
-	   }		
+	   }
+	   tracklist <- c(tracklist,S0)	
     }
 	
 	if(is.null(S0) || (restart && S0$convergence < 0L)) {	  	
@@ -829,20 +833,23 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 						)		 
 					  }, error = function(e) {e})
 			    
-				if(!inherits(S0,"error") && S0$convergence >= 0L) {				
+				if(!inherits(S0,"error") && S0$convergence >= 0L) {	
+					# check bounds for 'nloptr' routines
+					S0$bounds <- which(S0$par >= qsd$upper | S0$par <= qsd$lower)
 					break
 				} else {
 					msg <- .makeMessage("Minimization failed by: ",fun.name,".")
 					message(msg, if(inherits(S0,"error")) conditionMessage(S0) else "",sep=" ")
 				  	method <- method[-1]
+					tracklist <- c(tracklist,S0)	
 				}
-			}
-			S0
+			}			
+			S0			
 		}, error = function(e) {
 			 msg <- .makeMessage("Surrogate minimization failed: ",
 					  conditionMessage(e))
 			 message(msg)
-			 return(.qleError(message=msg,call=sys.call(),error=e,method=fun.name))			
+			 return(.qleError(message=msg,call=sys.call(),error=e,method=fun.name,tracklist=tracklist))			
 		}, finally = { 
 			 if(!.qdDealloc())
 			   stop("Could not release C memory.")
@@ -854,13 +861,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
  	  names(S0$par) <- nms     
  	
     if(class(S0) != "QSResult") {	 
-	  S0 <- structure(
+	  	S0 <- structure(
 	    	    c(S0,list("method"=fun.name,				   	  
 						  "criterion"=qsd$criterion,						 
 				 		  "start"=x0)),
 	  		   class="QSResult")
-		 
-	  if(info){
+	
 		qd <- tryCatch({				
 				if(qsd$criterion == "qle")
 				  quasiDeviance(S0$par,qsd,...,check=FALSE,verbose=verbose)					
@@ -875,21 +881,24 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	 		S0 <- structure(
 					  c(S0,qd[[1]][which(!(names(qd[[1]]) %in% names(S0)))],
 					     "Qnorm"=0.5*sum(qd[[1]]$score^2)),
-					 Sigma = attr(qd,"Sigma"),
+					 Sigma = attr(qd,"Sigma"),					
 				   class = "QSResult")				 	
 	 	} else { 
 			message(qd$message)
-			return(structure(S0, error = qd))
+			return(structure(S0, tracklist = tracklist, error = qd))
 		}
-	  }
+	  
     }	
+	
 	if(verbose){
 	  cat(paste0("Successful minimization by: ",fun.name," (status = ",S0$convergence,")","\n\n"))
 	  if(pl >= 10L){
 		  print(S0)
 		  cat("\n\n")
 	  }
-    }  		
+    }
+	if(length(tracklist>0L))
+	 attr(S0,"tracklist") <- tracklist
     return(S0)   
 }
 
@@ -1034,9 +1043,9 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 		return(.qleError(message=msg,call=match.call(),error=roots))
  	}
 
-	structure(RES[[ok[id]]],									# best choice
-		"roots"=if(optInfo) roots else NULL,        			# successful optimizations
-		"optRes"=if(optInfo) c(RES,list(S0)) else NULL,			# all results
+	structure(RES[[ok[id]]],												# best choice
+		"roots"=if(optInfo) roots else NULL,        						# successful optimizations
+		"optRes"=if(optInfo) c(list(S0),RES[hasError]) else NULL,			# first result and failed optimization results
 		"hasError"=hasError) 	
 }
 
@@ -1276,9 +1285,9 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @export  
 #' @import parallel stats
 #' @importFrom graphics points
-qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
+qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
-				  method = c("qscoring","bobyqa","direct"),   qscore.opts = list(),
+				  method = c("qscoring","bobyqa","direct"), qscore.opts = list(),
 				   control = list(), errType = "kv", pl = 0, use.cluster = FALSE,
 				     cl = NULL, iseed = NULL, plot=FALSE)
 {		
@@ -1309,9 +1318,10 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		if(pl > 1L) {
 		    cat("Iterations......",paste0("global=",nglobal,", local=",nlocal,"\n"))
 			cat("Sampling:.......",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
-			cat("Local search:...",paste0(ifelse(status[["minimized"]],"success","failed"),"\n"))			
+			cat("Local search:...",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed"),"\n"))			
+			
 			if(locals$nextSample=="score")
-				cat("weight factor:..",w,"\n")
+			 cat("weight factor:..",w,"\n")
 			cat("\n")
 			df <- as.data.frame(
 					cbind(
@@ -1488,6 +1498,8 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 		  row.names = xnames, check.names = FALSE)
 	 } else NULL
 
+	# weight factor
+	w <- 0L
 	# local weights
 	if(any(locals$weights > 1L) || any(locals$weights < 0L))
 		stop("Weights for local sampling must be
@@ -1852,9 +1864,9 @@ qle <- function(qsd, sim, ... , nsim, x0 = NULL, obs = NULL,
 						if(.isError(Spar)){
 							msg <- .makeMessage("Could not evaluate criterion function at selected candidate.")
 							message(msg)
-						 	.qleError(message=msg,call=match.call(),error=Spar)							
+						 	.qleError(message=msg,call=match.call(),error=structure(Spar,"weight"=w))							
 						} else {
-						 Spar[[1]]
+						 structure(Spar[[1]],"weight"=w)
 					    }
 						
 					}, error = function(e) {						

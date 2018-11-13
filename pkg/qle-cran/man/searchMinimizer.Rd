@@ -5,8 +5,9 @@
 \title{Minimize a criterion function}
 \usage{
 searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
-  opts = list(), control = list(), ..., obs = NULL, info = TRUE,
-  check = TRUE, restart = TRUE, pl = 0L, verbose = FALSE)
+  opts = list(), control = list(), ..., obs = NULL,
+  optInfo = FALSE, check = TRUE, restart = TRUE, pl = 0L,
+  verbose = FALSE)
 }
 \arguments{
 \item{x0}{(named) numeric vector, the starting point}
@@ -23,7 +24,7 @@ searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
 
 \item{obs}{numeric vector of observed statistics, overwrites `\code{qsd$obs}`}
 
-\item{info}{additional information at found minimizer}
+\item{optInfo}{logical, \code{FALSE} (default), not yet used argument (ignored)}
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 

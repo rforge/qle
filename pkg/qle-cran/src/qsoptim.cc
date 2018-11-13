@@ -21,7 +21,7 @@ qfs_result qfscoring(double *x, int n, double &f, int &fntype,
 
 void backtr(int n, double *xold, double &fold, double *d, double *g, double *x,
 			double &f, int &check, int &fntype, double &stepmax, double &slope,
-			 double &delta, double &rellen, qfs_options qfs, int &bounds, int pl, int &info);
+			 double &delta, double &rellen, qfs_options qfs, int pl, int &info);
 
 // projection into box constraints
 double med(double x, double y, double z, int &info);
@@ -40,11 +40,11 @@ SEXP getStatus(qfs_result status);
  * @param g 	pointer to gradient vector
  * @param info  integer, >0 if it reaches any bound constraints
  */
-void fnQS(double *x, qfs_options qfs, double &f, int type, int &bounds, int &info) {
+void fnQS(double *x, qfs_options qfs, double &f, int type, int &info) {
   ql_model qlm = qfs->qlm;
   int i=0, n=qlm->dx;
 
-  projmid(x,n,qlm->lower,qlm->upper, bounds);
+  projmid(x,n,qlm->lower,qlm->upper, qfs->bounds);
   if( (qlm->info = qlm->intern_qfScore(x)) != NO_ERROR) {		// compute score (always unscaled)
   	  WRR("Could not compute monitor function.")
   	 f=R_NaN;
@@ -216,7 +216,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 
     static const char *nms[] =
      {"convergence", "message", "iter", "value", "par",
-     "score", "sig2", "I", "Iobs", "varS", "start", "Qnorm",
+     "score", "sig2", "I", "Iobs", "varS", "start", "bounds", "Qnorm",
 	 "method", "criterion", ""};
 
     SEXP R_ret = R_NilValue;
@@ -234,9 +234,10 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     SET_VECTOR_ELT(R_ret, 8, R_Iobs);
     SET_VECTOR_ELT(R_ret, 9, R_varS);
     SET_VECTOR_ELT(R_ret, 10, R_start);
-    SET_VECTOR_ELT(R_ret, 11, ScalarReal(qnorm));
-    SET_VECTOR_ELT(R_ret, 12, mkString("qscoring"));
-    SET_VECTOR_ELT(R_ret, 13, mkString("qle"));
+    SET_VECTOR_ELT(R_ret, 11, ScalarInteger(qfs.bounds));
+    SET_VECTOR_ELT(R_ret, 12, ScalarReal(qnorm));
+    SET_VECTOR_ELT(R_ret, 13, mkString("qscoring"));
+    SET_VECTOR_ELT(R_ret, 14, mkString("qle"));
     setVmatAttrib(&qlm, R_VmatNames, R_ret);
     SET_CLASS_NAME(R_ret,"QSResult")
 
@@ -273,7 +274,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 					 int &info)
 {
    int i=0, niter=0, check=0, stopflag=0,
-       bounds=0, Nmax=qfs->max_iter, pl=qfs->pl;
+       Nmax=qfs->max_iter, pl=qfs->pl;
 
    // temp pointers
    ql_model qlm = qfs->qlm;
@@ -288,7 +289,7 @@ qfs_result qfscoring(double *x,			 	/* start */
    CALLOCX(xold,n,double);
 
    /* first compute monitor */
-   fnQS(x,qfs,f,fntype,bounds,info);
+   fnQS(x,qfs,f,fntype,info);
    if(info){
    	 FREE_WORK
    	 LOG_ERROR(NaN_ERROR,"`fnQS`: cannot evaluate monitor function.")
@@ -348,7 +349,7 @@ qfs_result qfscoring(double *x,			 	/* start */
          }
          /* Line search:
           *  dynamically switch between both monitor functions */
-         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,slope,delta,rellen,qfs,bounds,pl,info);
+         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,slope,delta,rellen,qfs,pl,info);
          if(info > 0){
         	 FREE_WORK
 			 qfs->num_iter=niter;
@@ -360,7 +361,7 @@ qfs_result qfscoring(double *x,			 	/* start */
          if(pl >= 10) {
            Rprintf("iteration......... %d \n", niter);
            Rprintf("objective......... %3.12f (fntype=%d) \n", f, fntype);
-           Rprintf("at bounds......... %d \n", bounds);
+           Rprintf("at bounds......... %d \n", qfs->bounds);
            Rprintf("step max...........%3.4f \n", stepmax);
            Rprintf("step size..........%3.12f (check=%d) \n", delta, check);
            Rprintf("slope............ %3.12f \n\n", slope);
@@ -380,11 +381,11 @@ qfs_result qfscoring(double *x,			 	/* start */
         		FREE_WORK
 				qfs->num_iter=niter;
         		if(check == 1)
-        		 fnQS(x,qfs,f,fntype,bounds,info);      								/* re-compute objective  */
+        		 fnQS(x,qfs,f,fntype,info);      								/* re-compute objective  */
         		return (rellen < 1.5e-3 ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	/* rellen is length of scaled direction */
            	 } else {
         		fntype = (fntype > 0 ? 0 : 1);											/* type of monitor function */
-        		fnQS(x,qfs,f,fntype,bounds,info);
+        		fnQS(x,qfs,f,fntype,info);
         		if(info) break;
         		fnGrad(qfs,g,d,fntype,info);
         		if(info) break;
@@ -482,7 +483,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 
 void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		double &f, int &check,  int &fntype, double &stepmax, double &slope,
-		 double &delta, double &rellen, qfs_options qfs, int &bounds, int pl, int &info) {
+		 double &delta, double &rellen, qfs_options qfs, int pl, int &info) {
 
   int i=0;
   double s=1., tmp=0., dirlen=0.,
@@ -534,7 +535,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 	  delta=s;
 	  for (i=0; i<n; ++i)
 	  	x[i] = xold[i] + s * d[i];
-	  fnQS(x,qfs,f,fntype,bounds,info);
+	  fnQS(x,qfs,f,fntype,info);
 	  if(info > 0) break;
 	  if(f <= fold + alpha * s * slope) 			  /* set some required decrease */
 	  	return;

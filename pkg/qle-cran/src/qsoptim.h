@@ -36,6 +36,7 @@ typedef struct qfs_options_s {
 
   int num_iter, num_eval; /* used */
   int pl, info, doIobs;	  /* print level */
+  int bounds;
 
   double grad_tol,        /* stopping criteria */
   	     ftol_stop,
@@ -51,7 +52,7 @@ typedef struct qfs_options_s {
 
   qfs_options_s(ql_model _qlm, SEXP R_options) :
 	  qlm(_qlm), num_iter(0), num_eval(0), pl(0), info(0), doIobs(FALSE),
-	  typf(0), typx(0)
+	  bounds(0), typf(0), typx(0)
   {
     pl = asInteger(getListElement( R_options, "pl"));
     doIobs = asInteger(getListElement( R_options, "Iobs"));

@@ -1811,8 +1811,7 @@ A first run of a global search leads to the following result.
 \code{x0}:
 <<>>=
 x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
-searchMinimizer(x0,qsd,info=TRUE,
-		method="direct",cvm=cvm,verbose=TRUE)
+searchMinimizer(x0,qsd,method="direct",cvm=cvm,verbose=TRUE)
 @
 We could also apply the quasi-scoring iteration.
 <<>>=
