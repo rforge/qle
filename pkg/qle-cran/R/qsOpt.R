@@ -758,7 +758,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 			  message("No convergence and only one method supplied.")
 			return(S0)	
 	   }
-	   tracklist <- c(tracklist,S0)	
+	   tracklist <- c(tracklist,list("S0"=S0))	
     }
 	
 	if(is.null(S0) || (restart && S0$convergence < 0L)) {	  	
@@ -841,7 +841,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					msg <- .makeMessage("Minimization failed by: ",fun.name,".")
 					message(msg, if(inherits(S0,"error")) conditionMessage(S0) else "",sep=" ")
 				  	method <- method[-1]
-					tracklist <- c(tracklist,S0)	
+					tracklist <- c(tracklist,list("S0"=S0))	
 				}
 			}			
 			S0			
@@ -897,8 +897,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		  cat("\n\n")
 	  }
     }
-	if(length(tracklist>0L))
-	 attr(S0,"tracklist") <- tracklist
+	if(length(tracklist) > 0L)
+	  attr(S0,"tracklist") <- tracklist
     return(S0)   
 }
 
