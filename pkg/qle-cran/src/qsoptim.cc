@@ -381,8 +381,8 @@ qfs_result qfscoring(double *x,			 	/* start */
         		FREE_WORK
 				qfs->num_iter=niter;
         		if(check == 1)
-        		 fnQS(x,qfs,f,fntype,info);      								/* re-compute objective  */
-        		return (rellen < 1.5e-3 ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	/* rellen is length of scaled direction */
+        		 fnQS(x,qfs,f,fntype,info);    // 1.5e-3  										/* re-compute objective  */
+        		return (rellen < qfs->ltol_rel ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	/* rellen is length of scaled direction */
            	 } else {
         		fntype = (fntype > 0 ? 0 : 1);											/* type of monitor function */
         		fnQS(x,qfs,f,fntype,info);
@@ -517,7 +517,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   }
   if(rellen > 0.)
    stepmin=MAX(qfs->xtol_rel/rellen,TOLSTEP);
-  else WRR("Relative step length should not be positive.")
+  else WRR("Relative step length should be strictly positive.")
   if(pl >= 100){
 	  Rprintf("\n");
 	  Rprintf("stepmin............%3.12f\n",stepmin);

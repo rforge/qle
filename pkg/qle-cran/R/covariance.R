@@ -392,7 +392,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 				locopts[names(opts$local_opts)] <- opts$local_opts 
 			} else {
 				locopts <- list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
-								"xtol_rel" = 1.0e-6, "maxeval" = 100)
+								"xtol_rel" = 1.0e-6, "maxeval" = 1000)
 			}	
 		
 			res0 <- nloptr::nloptr(res$solution, fn, lb = model$lower, ub = model$upper, opts = locopts,
@@ -491,9 +491,9 @@ fitCov <- function(models, Xs, data, controls = list(),
 		opts[names(controls)] <- controls
 	} else {
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
-				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-6,
-						"xtol_rel" = 1.0e-6,"maxeval" = 1000),
-				"maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)	
+					"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",
+							"ftol_rel" = 1.0e-6, "xtol_rel" = 1.0e-6, "maxeval" = 1000),
+					"maxeval" = 100, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)	
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
@@ -519,10 +519,8 @@ fitCov <- function(models, Xs, data, controls = list(),
 		 message("Successfully fitted covariance parameters.","\n")		
 	  }
 	}	
-	structure(mods,
-		opts = opts,
-		error = if(length(errId) > 0L) errId else NULL,
-		class = "QLFit")
+	structure(mods, opts = opts,
+		error = if(length(errId) > 0L) errId else NULL, class = "QLFit")
 }
 
 #' @name QLmodel

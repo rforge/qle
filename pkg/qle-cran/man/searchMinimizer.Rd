@@ -18,7 +18,7 @@ searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
 
 \item{opts}{list of control arguments for quasi-scoring iteration, see \code{\link{qscoring}}}
 
-\item{control}{list of control arguments passed to the auxiliary routines}
+\item{control}{list of control arguments passed to \code{\link[nloptr]{nloptr}} routines defined in \code{method}}
 
 \item{...}{further arguments passed to \code{\link{covarTx}}}
 

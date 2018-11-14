@@ -12,4 +12,3 @@ data(normal)
 
 # local root finding
 searchMinimizer(c(2.5,1.5),qsd,W=diag(2),theta=c(2,1),method=c("qscoring","bobyqa"),verbose=TRUE) 
-

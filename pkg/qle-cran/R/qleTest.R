@@ -147,33 +147,35 @@
 		return(.qleError(message=msg,call=sys.call(),error=X))
   	}		
 	
-	try({				
+	try({		
+	   id <- 1L
 	   dm <- NULL
 	   M <- as.data.frame(do.call(rbind,X[ok]))
 	   row.names(M) <- if(!is.null(par)) row.names(par)
-	   if(nrow(M)>1) {		   
+	   if(nrow(M)>1L) {		   
 	   	   dm <- cbind(par[ok,,drop=FALSE],M)
 		   nms <- .evalBestRoot(M,opts)
 		   id <- attr(nms,"id")
-		   row.names(dm) <- nms
-		   attr(dm,"id") <- id
-	   } else {
-		   id <- 1L
-		   dm <- cbind(par[ok,,drop=FALSE],M)
-		   attr(dm,"id") <- id
+		   row.names(dm) <- nms		   
+	   } else {		   
+		   dm <- cbind(par[ok,,drop=FALSE],M)		   
 	   }
- 	},silent=TRUE)
-	if(!anyNA(id)){
-		stopifnot(length(id)==1L)
-		attr(dm,"par") <- par[id,]
-	} else { message("Cannot select best parameter as a root.") }
-
+	   attr(dm,"id") <- id
+ 	 }, silent=TRUE)
+		
 	isErr <- which(!(1:length(X) %in% ok))
-	if(length(isErr)>0L){
-		attr(dm,"X") <- X[isErr]
-		attr(dm,"error") <- isErr
-	}	
-	return( dm )  
+	if(length(isErr)>0L) {
+	 attr(dm,"X") <- X[isErr]
+	 attr(dm,"isErr") <- isErr
+ 	}
+	if(anyNA(id) || length(id) != 1L){	 
+	 msg <- .makeMessage("Cannot select any parameter as a root of quasi-score.")
+	 message(msg)
+	 attr(dm,"par") <- par[1,]
+	 attr(dm,"error") <- structure(list(message = msg, call = match.call()),id=id)
+ 	} else	attr(dm,"par") <- par[id,]
+	
+	return (dm)	  
 }
 
 

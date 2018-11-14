@@ -114,11 +114,12 @@
 }
 
 .addQscoreOptions <- function(xdim) {
-	list( "ftol_stop" = 1e-7,								# also used to select best roots
-		  "xtol_rel"  = 1e-10,
-		  "grad_tol"  = 1e-5,
+	list( "ftol_stop" = .Machine$double.eps,				# also used to select best roots
+		  "xtol_rel"  = .Machine$double.eps^0.5,
+		  "grad_tol"  = 1e-4,
 		  "ftol_rel"  = 1e-6,
-		  "ftol_abs"  = 1e-4,								# only for local minima if grad_tol reached as a more restrictive check
+		  "ftol_abs"  = 1e-6,								# only for local minima if grad_tol reached as a more restrictive check
+		  "ltol_rel"  = 1.5e-3,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots
 		  "slope_tol" = 1e-7,
 		  "maxiter"   = 100,
@@ -129,8 +130,8 @@
 
 .getDefaultGLoptions <- function(xdim) {
 	list("stopval" = .Machine$double.eps,			 		# global stopping value
-		 "lam_rel"   = 1e-3,
-		 "xtol_rel" = .Machine$double.eps^0.25,
+		 "lam_rel"   = 1e-2,
+		 "xtol_rel" = .Machine$double.eps^0.25, 			# less restrictive for global search
 		 "xscale" = rep(1,xdim),					 	    # scaling independent variables, e.i. parameter theta
 		 "maxiter" = 100,									# max number of global iterations
 		 "maxeval" = 100,									# max number of global and local iterations
@@ -149,9 +150,9 @@
 .getDefaultLOCoptions <- function(xdim) {
 	list("ftol_rel" = .Machine$double.eps^(1/3),
 		 "ftol_abs"	= .Machine$double.eps^0.5,			   # whether local minimizer is numerically zero
-		 "lam_max" = 1e-2,								   # less restrictive
+		 "lam_max" = 1e-3,								   # quite restrictive
 		 "pmin" = 0.05,									   # minimum accepted probability of coverage of sample points within search domain
-		 "weights" = c(0.005,0.1,0.2,0.4,0.6,0.8,0.995),   # only for sampling with criterion `score`
+		 "weights" = c(0.8,0.6,0.4,0.2,0.01),			   # only for sampling with criterion `score`
 		 "nsample" = 1000*(xdim+1),						   # number of local random samples
 		 "perr_tol" = rep(0.1,xdim),					   # upper bound on the relative change of empirical error and predicted error (by inverse QI) 
 		 "nobs"=100,									   # number of boottrap observations to generate (used for approximate root testing)
@@ -607,7 +608,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' @param qsd   	  object of class \code{\link{QLmodel}}
 #' @param method	  names of possible minimization routines (see details) 
 #' @param opts		  list of control arguments for quasi-scoring iteration, see \code{\link{qscoring}}
-#' @param control 	  list of control arguments passed to the auxiliary routines
+#' @param control 	  list of control arguments passed to \code{\link[nloptr]{nloptr}} routines defined in \code{method}
 #' @param ...		  further arguments passed to \code{\link{covarTx}}
 #' @param obs		  numeric vector of observed statistics, overwrites `\code{qsd$obs}`
 #' @param optInfo	  logical, \code{FALSE} (default), not yet used argument (ignored)
@@ -683,7 +684,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					 opts = list(), control = list(), ...,  
 					   obs = NULL, optInfo = FALSE, check = TRUE, 
-					     restart = TRUE, pl = 0L, verbose = FALSE)
+					    restart = TRUE, pl = 0L, verbose = FALSE)
 {
 	stopifnot(is.numeric(pl) && pl >= 0L )
 	
@@ -695,7 +696,10 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	  .checkArguments(qsd,x0,...)
   
     fun.name <- ""
-	nms <- names(x0)	
+	nms <- names(x0)
+	restarted <- FALSE
+	scoring <- isTRUE("qscoring" %in% method)
+	
 	# current sample points
 	xdim <- attr(qsd$qldata,"xdim")
 	if(xdim != length(x0))
@@ -755,39 +759,44 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	   method <- method[-1]
 	   if(is.na(method[1]) || !restart){
 			if(pl > 0L) 
-			  message("No convergence and only one method supplied.")
+			  message("No convergence or restart required and only one local method supplied.")
 			return(S0)	
 	   }
-	   tracklist <- c(tracklist,list("S0"=S0))	
+	   tracklist <- c(tracklist,list(S0))
     }
 	
 	if(is.null(S0) || (restart && S0$convergence < 0L)) {	  	
 	  S0 <- 
 		tryCatch({			
 			if(length(control) == 0L){
-			  control <- list("stopval"=.Machine$double.eps,"maxeval"=1000,
-							  "ftol_rel"=1e-7,"xtol_rel"=1e-8)		  	  	
+			  control <- list("stopval"=0.0, "maxeval"=1000,
+							  "ftol_abs"=.Machine$double.eps,
+							  "ftol_rel"=.Machine$double.eps^0.5,
+							  "xtol_rel"=.Machine$double.eps^0.5)		  	  	
 	  		}			
-			# alloc C level
+			# allocation at C level
 			if(!.qdAlloc(qsd,...))
-			 stop("Could not allocate C memory and construct QL model.")
+			 stop("Allocation error: cannot request C memory.")
 			
 			fn <-
 			 switch(qsd$criterion,
 				"qle" = { function(x) .Call(C_qDValue,x) },
 				"mahal" = { function(x) .Call(C_mahalValue,x) }
-			)			
-		 	repeat {
+			)
+			
+		 	repeat
+			{
 				if(!is.na(method[1])) {
 					if(pl > 0L)
 					  cat(paste0("Using method: ",method[1],"...\n"))
 					fun.name <- method[1]					
 				} else {
-					return(.qleError(message="No convergence and only one method supplied: ",
-							call = sys.call(),
-							   error = if(inherits(S0,"error")) conditionMessage(S0) else NULL,
-							   	S0=S0, method = method[1]))	
-				}
+					return(
+					 .qleError(message = "No convergence and only one method supplied: ",
+						call = sys.call(), error = if(inherits(S0,"error")) conditionMessage(S0) else NULL,
+					   	S0 = S0, method = method[1], tracklist = tracklist, restarted = restarted)
+					)	
+				}				
 			 	S0 <-
 					tryCatch({
 						switch(fun.name,
@@ -833,26 +842,27 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 						)		 
 					  }, error = function(e) {e})
 			    
-				if(!inherits(S0,"error") && S0$convergence >= 0L) {	
-					# check bounds for 'nloptr' routines
+				if(!inherits(S0,"error") && S0$convergence >= 0L) {					
+					restarted <- TRUE
+					# check box constraints
 					S0$bounds <- which(S0$par >= qsd$upper | S0$par <= qsd$lower)
 					break
 				} else {
 					msg <- .makeMessage("Minimization failed by: ",fun.name,".")
 					message(msg, if(inherits(S0,"error")) conditionMessage(S0) else "",sep=" ")
 				  	method <- method[-1]
-					tracklist <- c(tracklist,list("S0"=S0))	
+					tracklist <- c(tracklist,list(S0))
 				}
 			}			
-			S0			
+								
+			S0  # success: nloptr			
 		}, error = function(e) {
-			 msg <- .makeMessage("Surrogate minimization failed: ",
-					  conditionMessage(e))
+			 msg <- .makeMessage("Surrogate minimization failed: ", conditionMessage(e))
 			 message(msg)
 			 return(.qleError(message=msg,call=sys.call(),error=e,method=fun.name,tracklist=tracklist))			
 		}, finally = { 
 			 if(!.qdDealloc())
-			   stop("Could not release C memory.")
+			   stop("Allocation error in C memory management.")
 		})	
 	}
 	if(.isError(S0))
@@ -885,10 +895,45 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 				   class = "QSResult")				 	
 	 	} else { 
 			message(qd$message)
-			return(structure(S0, tracklist = tracklist, error = qd))
+			return( structure(S0, tracklist = tracklist, error = qd) )
 		}
 	  
     }	
+	
+	## use final scoring iteration starting
+	## from last found minimzer if restarted	
+	if(restarted && scoring) {
+		QS <- tryCatch({
+				 x <- S0$par
+				 qscoring(qsd,x,opts,...,check=FALSE,pl=pl,verbose=verbose)
+				}, error = function(e) { e }
+		)
+		
+		if(!.isError(QS) && QS$convergence >= 0L) {	
+			roots <- try(.evalRoots(list(QS,S0),opts=opts),silent=TRUE)					
+			if(!.isError(roots)) {
+				id <- attr(roots,"id")
+				# overwrite last results after restart
+				# qscoring has now found a more consistent root
+				if(id == 1L){				 
+					fun.name <- "qscoring"
+					tracklist <- c(tracklist,list(S0))
+					S0 <- QS					
+			 	} else {
+					tracklist <- c(tracklist,list(QS))	
+				}
+			} else {
+				msg <- .makeMessage("Cannot get best quasi-score root of local minimizers.")
+				message(msg)
+				attr(QS,"roots") <- structure(list(message=msg,call=match.call()),error=roots)
+				tracklist <- c(tracklist,list(QS))
+			}		
+		} else {
+			if(pl > 0L) 
+			 message(.makeMessage("No convergence of 'qscoring' after successful restart."))
+		 	tracklist <- c(tracklist,list(QS))
+		}			
+	}	
 	
 	if(verbose){
 	  cat(paste0("Successful minimization by: ",fun.name," (status = ",S0$convergence,")","\n\n"))
@@ -1026,7 +1071,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	
 	hasError <- which(!(1:length(RES) %in% ok))
 	# get the best roots
-	roots <- .evalRoots(RES[ok],opts=args$opts)
+	roots <- try(.evalRoots(RES[ok],opts=args$opts),silent=TRUE)
 	if(.isError(roots)) {
 		msg <- .makeMessage("Could not evaluate best results of local searches")
 		message(msg)
