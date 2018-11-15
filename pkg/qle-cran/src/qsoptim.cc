@@ -381,10 +381,10 @@ qfs_result qfscoring(double *x,			 	/* start */
         		FREE_WORK
 				qfs->num_iter=niter;
         		if(check == 1)
-        		 fnQS(x,qfs,f,fntype,info);    // 1.5e-3  										/* re-compute objective  */
-        		return (rellen < qfs->ltol_rel ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	/* rellen is length of scaled direction */
+        		 fnQS(x,qfs,f,fntype,info);    													 	/* re-compute objective  */
+        		return (rellen < qfs->ltol_rel ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	    /* rellen is length of scaled direction: 1.5e-3  works fine but to inaccurate sometimes */
            	 } else {
-        		fntype = (fntype > 0 ? 0 : 1);											/* type of monitor function */
+        		fntype = (fntype > 0 ? 0 : 1);														/* type of monitor function */
         		fnQS(x,qfs,f,fntype,info);
         		if(info) break;
         		fnGrad(qfs,g,d,fntype,info);
