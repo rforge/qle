@@ -93,8 +93,8 @@
 	return (0)
 }
 
-.qsOpts <- function(options = list(), xdim = 1L, pl = 0L) {
-	opts <- .addQscoreOptions(xdim)
+.qsOpts <- function(options = list(), xdim = 1L, roots.only = FALSE, pl = 0L) {
+	opts <- if(roots.only) .addQscoreOptionsRoot(xdim) else .addQscoreOptions(xdim)
 	opts$pl <- pl
 	if(length(options) > 0L) {
 	 .checkOptions(opts,options)
@@ -127,6 +127,22 @@
 		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
 		  "pl" = 0L)
 }
+
+.addQscoreOptionsRoot <- function(xdim) {
+	list( "ftol_stop" = 0.0,
+		  "xtol_rel" = .Machine$double.eps,
+		  "grad_tol"  = 0.0,
+		  "ftol_rel" = .Machine$double.eps,
+		  "ftol_abs"  = 0.0,
+		  "ltol_rel" = 0.0,
+		  "score_tol" = 1e-5,
+		  "slope_tol" = 0.0,
+		  "maxiter"   = 100,
+		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
+		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
+		  "pl" = 0L)
+}
+
 
 .getDefaultGLoptions <- function(xdim) {
 	list("stopval" = .Machine$double.eps,			 		# global stopping value
@@ -614,6 +630,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' @param optInfo	  logical, \code{FALSE} (default), not yet used argument (ignored)
 #' @param check		  logical, \code{TRUE} (default), whether to check input arguments
 #' @param restart 	  logical, \code{TRUE} (default), whether to restart optimization in case of non convergence
+#' @param roots.only  logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance. 					  
 #' @param pl		  numeric value (>=0), the print level 
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #'
@@ -684,7 +701,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					 opts = list(), control = list(), ...,  
 					   obs = NULL, optInfo = FALSE, check = TRUE, 
-					    restart = TRUE, pl = 0L, verbose = FALSE)
+					    restart = TRUE, roots.only = FALSE, pl = 0L, verbose = FALSE)
 {
 	stopifnot(is.numeric(pl) && pl >= 0L )
 	
@@ -735,7 +752,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		 if(m1!=1)
 		  method <- c("qscoring",method[-m1])		
 		 tryCatch({			
-		    qscoring(qsd,x0,opts,...,check=FALSE,pl=pl,verbose=verbose)
+		    qscoring(qsd,x0,opts,...,check=FALSE,roots.only=roots.only,pl=pl,verbose=verbose)			
 		   }, error = function(e) {	e }
   		 )
 		} else NULL
@@ -783,8 +800,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 				"mahal" = { function(x) .Call(C_mahalValue,x) }
 			)
 			
-		 	repeat
-			{
+		 	repeat {
 				if(!is.na(method[1])) {
 					if(pl > 0L)
 					  cat(paste0("Using method: ",method[1],"...\n"))
@@ -847,8 +863,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					S0$bounds <- which(S0$par >= qsd$upper | S0$par <= qsd$lower)
 					break
 				} else {
-					msg <- .makeMessage("'Nloptr' minimization failed by: ",fun.name,".")
-					message(msg, if(inherits(S0,"error")) conditionMessage(S0) else "",sep=" ")
+					msg <- .makeMessage("'Nloptr' failed or no convergence by: ",fun.name,".")
+					message(msg, if(inherits(S0,"error")) conditionMessage(S0) else "", sep=" ")
 				  	method <- method[-1]
 					tracklist <- c(tracklist,list(S0))
 				}
@@ -891,12 +907,16 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					  c(S0,qd[[1]][which(!(names(qd[[1]]) %in% names(S0)))],
 					     "Qnorm"=0.5*sum(qd[[1]]$score^2)),
 					 Sigma = attr(qd,"Sigma"),					
-				   class = "QSResult")				 	
+				   class = "QSResult")
+		    if(roots.only) {
+				S0$convergence <- if(max(abs(S0$score)) < opts$score_tol) 1L else -1L
+			}
+				
+				
 	 	} else { 
 			message(qd$message)
 			return( structure(S0, tracklist = tracklist, error = qd) )
-		}
-	  
+		}	  
     }	
 	
 	## use final scoring iteration starting
@@ -904,11 +924,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	if(isTRUE(attr(S0,"restarted")) && scoring) {
 		QS <- tryCatch({
 				 x <- S0$par
-				 qscoring(qsd,x,opts,...,check=FALSE,pl=pl,verbose=verbose)
+				 qscoring(qsd,x,opts,...,check=FALSE,roots.only=roots.only,pl=pl,verbose=verbose)
 				}, error = function(e) { e }
 		)
 		
-		if(!.isError(QS) && QS$convergence >= 0L) {	
+		if(!.isError(QS) && QS$convergence >= 0L) {
+			opts$roots.only <- roots.only
 			roots <- try(.evalRoots(list(QS,S0),opts=opts),silent=TRUE)					
 			if(!.isError(roots)) {
 				id <- attr(roots,"id")
@@ -1498,7 +1519,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		c("qscoring",nlopt.fun)
 	 } else nlopt.fun	
 	# quasi-score options
-	qscore.opts <- .qsOpts(qscore.opts,xdim)
+	qscore.opts <- .qsOpts(qscore.opts,xdim,roots.only)
 
 	loc <- pmatch(method,all.local)
 	if(length(loc) == 0L || anyNA(loc)) {
@@ -1531,9 +1552,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 	if(length(local.opts) > 0L) {
 		.checkOptions(locals,local.opts)		
 		locals[names(local.opts)] <- local.opts	
-	}
-	if(roots.only)
-	 locals$ftol_abs <- .Machine$double.eps^2
+	}	
 	# setting controls as data frame
 	ctls <- .setControls(globals,locals)
 	# data frame for storing relative estimation error deviation
@@ -2437,6 +2456,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @param check		logical, \code{TRUE} (default), whether to check input arguments
 #' @param cvm		list of covariance models for cross-validation (see \code{\link{prefitCV}})
 #' @param Iobs	    logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate
+#' @param roots.only logical, \code{FALSE} (default), whether to force 'convergence' only if \code{score_tol} is reached 
 #' @param pl	    numeric, print level, use \code{pl}>0 to print intermediate output  	
 #' @param verbose   \code{FALSE} (default), otherwise print intermediate output
 #'
@@ -2501,7 +2521,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @export
 qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 			    	  inverted = FALSE, check = TRUE, cvm = NULL, 
-				 	   Iobs = TRUE, pl = 0L, verbose = FALSE)
+				 	   Iobs = TRUE, roots.only  = FALSE, pl = 0L, verbose = FALSE)
 {	
 	if(check)
 	 .checkArguments(qsd,x0,Sigma)
@@ -2523,8 +2543,8 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 		Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX		
 	} 
 	
-	# set quasi-scoring options
-	opts <- .qsOpts(opts,xdim,pl)
+	# set quasi-scoring options	
+	opts <- .qsOpts(opts,xdim,roots.only,pl)	
 	qlopts <- list("varType"=qsd$var.type,					  
 				   "useCV"=!is.null(cvm),
 				   "useSigma"=FALSE,

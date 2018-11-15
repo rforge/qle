@@ -41,7 +41,7 @@
 # choose the best root, if any, according to the  
 # criteria (see vignette) and the smallest value
 # of the maximum of the quasi-score vector
-.evalBestRoot <- function(dm,opts)
+.evalBestRoot <- function(dm, opts)
 {
 	stopifnot(is.data.frame(dm))	
 	notNa <- !(apply(dm,1,anyNA))
@@ -58,10 +58,16 @@
 		  as.numeric(dm[notNa,"value"]) < opts$ftol_abs,
 		  as.numeric(dm[notNa,"|score_max|"]) < opts$score_tol)
 	
-  	ok <- which(A[,1]==TRUE & apply(A[,2:3],1,any))
+  	ok <- 
+	 if(opts$roots.only){
+		which(A[,1]==TRUE & apply(A[,2:3],1,all))        # more restrictive!
+	 } else	which(A[,1]==TRUE & apply(A[,2:3],1,any))
   	if(length(ok) == 0L){
-	    message(.makeMessage("None of the estimates seems to match `ftol_abs` or `score_tol` condition.\nSelect the one which has smallest criterion value."))
-		id <- try(which.min(dm[,"value"]),silent=TRUE)
+	    message(.makeMessage("`ftol_abs` or `score_tol` cannot be reached. Try to select best parameter anyway."))
+		id <-
+		 if(opts$roots.only) 
+			try(which.min(dm[,"|score_max|"]),silent=TRUE)				# which.min ignores NA values already!	
+		 else try(which.min(dm[,"value"]),silent=TRUE)		
 		if(!inherits(id,"try-error") && length(id)>0L)
 		  dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
 		else {
@@ -89,21 +95,20 @@
 }
 
 .evalRoots <- function(QD, par = NULL, opts = NULL)
-{			
-    opts <-
+{	   
+	if(.isError(QD))	  	
+	 return(.qleError(message="Evaluation of roots failed.",call=sys.call(),error=QD) )
+	
+	options <-list("ftol_abs"=1e-9, "score_tol"=1e-6, "roots.only"=FALSE)
+	opts <-
 	  if(is.null(opts))
-	   list("ftol_abs"=1e-6, "score_tol"=1e-3)  		
-	  else {		 
-		  options <- list("ftol_abs"=1e-6, "score_tol"=1e-3)
+	     options
+	  else {	  
 		  id <- which(!is.na(pmatch(names(opts),names(options))))
 		  if (length(id)>0L)
 			  options[names(opts[id])] <- opts[id]	
 		  options
-	}
-    if(.isError(QD)){	  	
-		return(.qleError(message=.makeMessage("Evaluation of roots failed."),
-				 call=sys.call(),error=QD))
- 	}
+	}    
 	if(is.null(par)){
 	   par <- try(do.call(rbind,lapply(QD,"[[","par")),silent=TRUE)
 	   stopifnot(is.matrix(par))
@@ -201,8 +206,8 @@
 #'  parameters in `\code{par}` by comparing each observed quasi-information matrix with the expected one.
 #'  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
 #'  and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
-#'  are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}`  for the maximum of any of
-#'  the components of the quasi-score vector.  
+#'  are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}` for the maximum of any of
+#'  the components of the quasi-score vector. If \code{roots.only=TRUE} then only roots are selected for comparisson. 
 #'  
 #' @examples 
 #'  data(qleresult)
@@ -219,13 +224,13 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
+   options <- list("ftol_abs"=1e-6, "score_tol"=1e-3, "roots.only"=FALSE)
    
    opts <-
     if(is.null(opts))
-	  list("ftol_abs"=1e-6, "score_tol"=1e-3)  		
+	 options	
     else {		 
-	  # check defaults
-	  options <- list("ftol_abs"=1e-6, "score_tol"=1e-3)
+	  # check defaults	  
 	  id <- which(!is.na(pmatch(names(opts),names(options))))
 	  if (length(id)>0L)
 		options[names(opts[id])] <- opts[id]	
