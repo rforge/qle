@@ -2291,7 +2291,8 @@ print.QSResult <- function(x, pl = 1, digits = 5,...) {
     if(!is.numeric(pl) || pl < 0L )
 	 stop("Print level must be a positive numeric value.")
  
-	cat(paste0("Local method:\n\n `",x$method,"`\n\n"))		
+	cat(paste0("Local method:\n\n `",x$method,"`",if(isTRUE(attr(x,"restarted"))) "(restarted)"))
+	cat("\n\n")
 	cat("Start: \n\n")
 	print.default(formatC(signif(x$start, digits = digits), digits = digits, format="fg", flag="#"),
 			print.gap = 4, quote = FALSE)
