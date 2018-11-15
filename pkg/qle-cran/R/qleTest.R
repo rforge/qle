@@ -193,6 +193,7 @@
 #' @param est 		object of class \code{qle}, the estimation results from function \code{\link{qle}}
 #' @param par	    list or matrix of estimated parameters as roots of the quasi-score vector
 #' @param opts		list of upper bounds for a root of the quasi-score vector, see details
+#' @param roots.only  logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance
 #' @param verbose   logical, \code{TRUE} for intermediate output
 #' 
 #' @return A data frame with columns named corresponding to each component of the investigated parameter,
@@ -218,13 +219,13 @@
 #' @author M. Baaske
 #' @rdname checkMultRoot
 #' @export
-checkMultRoot <- function(est, par = NULL, opts = NULL,	verbose = FALSE)
+checkMultRoot <- function(est, par = NULL, opts = NULL,	roots.only = FALSE, verbose = FALSE)
 {			
    if(est$qsd$criterion != "qle")
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
-   options <- list("ftol_abs"=1e-6, "score_tol"=1e-3, "roots.only"=FALSE)
+   options <- c(list("ftol_abs"=1e-9, "score_tol"=1e-6),list(roots.only=roots.only))
    
    opts <-
     if(is.null(opts))

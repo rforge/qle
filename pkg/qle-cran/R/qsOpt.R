@@ -99,8 +99,11 @@
 	if(length(options) > 0L) {
 	 .checkOptions(opts,options)
 	 namc <- match.arg(names(options), choices = names(opts), several.ok = TRUE)
-	 if (!is.null(namc))
-	 opts[namc] <- options[namc]
+	 if (!is.null(namc))		 
+		 id <- 1:length(namc)
+		 if(roots.only)
+		  id <- as.logical(lapply(opts[namc],function(x) all(x>0)))	 
+	 	opts[namc[id]] <- options[namc[id]]
 	}
 	# invert scaling constants
 	txid <- which(opts$xscale != 1)
@@ -119,7 +122,7 @@
 		  "grad_tol"  = 1e-4,
 		  "ftol_rel"  = 1e-6,
 		  "ftol_abs"  = 1e-6,								# only for local minima if grad_tol reached as a more restrictive check
-		  "ltol_rel"  = 1.5e-3,								# relative step length tolerance
+		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots
 		  "slope_tol" = 1e-7,
 		  "maxiter"   = 100,
@@ -130,13 +133,13 @@
 
 .addQscoreOptionsRoot <- function(xdim) {
 	list( "ftol_stop" = 0.0,
-		  "xtol_rel" = .Machine$double.eps,
+		  "xtol_rel"  = 0.0,
 		  "grad_tol"  = 0.0,
-		  "ftol_rel" = .Machine$double.eps,
+		  "ftol_rel"  = 0.0,
 		  "ftol_abs"  = 0.0,
-		  "ltol_rel" = 0.0,
+		  "ltol_rel"  = 0.0,
 		  "score_tol" = 1e-5,
-		  "slope_tol" = 0.0,
+		  "slope_tol" = .Machine$double.eps,				# > 0: can be set even if only score_tol is accepted as a root
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
 		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
@@ -890,7 +893,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	    	    c(S0,list("method"=fun.name,				   	  
 						  "criterion"=qsd$criterion,						 
 				 		  "start"=x0)),
-	  		   class="QSResult")
+	  		   restarted=attr(S0,"restarted"), class="QSResult")
 	
 		qd <- tryCatch({				
 				if(qsd$criterion == "qle")
@@ -906,10 +909,16 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	 		S0 <- structure(
 					  c(S0,qd[[1]][which(!(names(qd[[1]]) %in% names(S0)))],
 					     "Qnorm"=0.5*sum(qd[[1]]$score^2)),
-					 Sigma = attr(qd,"Sigma"),					
+					 Sigma = attr(qd,"Sigma"), restarted = attr(S0,"restarted"),				
 				   class = "QSResult")
 		    if(roots.only) {
-				S0$convergence <- if(max(abs(S0$score)) < opts$score_tol) 1L else -1L
+				# set quasi-scoring options	just for testing because 'nloptr' was called
+				opts <- .qsOpts(opts,xdim,roots.only,pl)
+				S0$convergence <-
+				 if(max(abs(S0$score)) < opts$score_tol){
+					 S0$message <- paste0("QFS_SCORETOL_REACHED: Optimization stopped because score_tol was reached.")
+					 1L
+				} else { -1L }
 			}
 				
 				
@@ -928,9 +937,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 				}, error = function(e) { e }
 		)
 		
-		if(!.isError(QS) && QS$convergence >= 0L) {
-			opts$roots.only <- roots.only
-			roots <- try(.evalRoots(list(QS,S0),opts=opts),silent=TRUE)					
+		if(!.isError(QS) && QS$convergence >= 0L) {			
+			roots <- try(.evalRoots(list(QS,S0),opts=c(opts,list(roots.only=roots.only))),silent=TRUE)					
 			if(!.isError(roots)) {
 				id <- attr(roots,"id")
 				# overwrite last results after restart
@@ -984,6 +992,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param multi.start logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge 
 #' @param cores		  integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}
 #' @param cl 	 	  cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
+#' @param roots.only  logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance
 #' @param pl		  print level, use \code{pl}>0 to print intermediate results
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #' 
@@ -1017,7 +1026,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @author M. Baaske 
 #' @export 
 multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
-		         		 multi.start = FALSE, cores = 1L, cl = NULL, pl = 0L, verbose = FALSE)
+		         		 multi.start = FALSE, cores = 1L, cl = NULL, 
+						  roots.only = FALSE, pl = 0L, verbose = FALSE)
 {	 	
 	if(!(nstart > 0L))
 	 stop("Number of multistart points must be greater than zero!")
@@ -1092,7 +1102,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	
 	hasError <- which(!(1:length(RES) %in% ok))
 	# get the best roots
-	roots <- try(.evalRoots(RES[ok],opts=args$opts),silent=TRUE)
+	roots <- try(.evalRoots(RES[ok],opts=c(args$opts,list(roots.only=roots.only))),silent=TRUE)
 	if(.isError(roots)) {
 		msg <- .makeMessage("Could not evaluate best results of local searches")
 		message(msg)
