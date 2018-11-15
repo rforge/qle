@@ -1113,6 +1113,9 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @param qscore.opts   list of control arguments passed to \code{\link{qscoring}}
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
 #' @param errType		type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)  
+#' @param roots.only    logical, \code{FALSE} (default), which is less restrictive accepting values of the quasi-deviance near zero for local sampling.
+#' 					    If \code{TRUE} then	\code{local.opts$ftol_abs} is set to the square of \code{.Machine$double.eps} and quasi-score roots are defined by
+#' 						maximum values of the quasi-score smaller than \code{qscore.opts$score_tol} only
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
 #'   a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at least a number of cpus 
@@ -1333,7 +1336,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"), qscore.opts = list(),
-				   control = list(), errType = "kv", pl = 0, use.cluster = FALSE,
+				   control = list(), errType = "kv", roots.only = FALSE, pl = 0, use.cluster = FALSE,
 				     cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
@@ -1499,8 +1502,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 
 	loc <- pmatch(method,all.local)
 	if(length(loc) == 0L || anyNA(loc)) {
-		stop(paste0("Invalid local method(s) for criterion `mahal`. Choose one or more of: ",
-						paste(all.local, collapse = ", ")))
+	 stop(paste0("Invalid local method(s) for criterion `mahal`. Choose one or more of: ", paste(all.local, collapse = ", ")))
 	}
 	mid <- pmatch("qscoring",method)
 	if(!is.na(mid) ) {
@@ -1530,6 +1532,8 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		.checkOptions(locals,local.opts)		
 		locals[names(local.opts)] <- local.opts	
 	}
+	if(roots.only)
+	 locals$ftol_abs <- .Machine$double.eps^2
 	# setting controls as data frame
 	ctls <- .setControls(globals,locals)
 	# data frame for storing relative estimation error deviation
@@ -1679,7 +1683,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 					varS <- S0$varS	
 					status[["minimized"]] <- TRUE
 					
-					if(max(abs(S0$score)) < qscore.opts$score_tol){						# either 'score_tol' reached (real root of quasi-score)
+					if(max(abs(S0$score)) < qscore.opts$score_tol || ft < locals$ftol_abs) {				# either 'score_tol' reached (real root of quasi-score)
 						status[["global"]] <- 0L									# start local phase
 					} else if(locals$test && ft > locals$ftol_abs) { 				# quasi-deviance can be distinguished from zero
 					     if(pl > 0L)
@@ -1714,12 +1718,10 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 										  format(xt, digits=6, justify="right")),collapse = " ")
 								  message(msg)
 								  2L															# switch to global in case of error
-							} else if(attr(Stest$test,"passed")) { 1L }						    # found approximate root  
-							  else 2L 
+							} else if(attr(Stest$test,"passed")) { 1L }							# found approximate root
+							  else { 2L } 
 				  	
-				  } else if(ft < locals$ftol_abs) {											# second approximate root criterion
-						 status[["global"]] <- 0L 
-				  } else { status[["global"]] <- 2L }										# no root at all switch to global sampling
+				  } else { status[["global"]] <- 2L }											# no root at all switch to global sampling
 				  
 				} else {																		
 					status[["global"]] <- 2L										
