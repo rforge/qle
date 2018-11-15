@@ -696,8 +696,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	  .checkArguments(qsd,x0,...)
   
     fun.name <- ""
-	nms <- names(x0)
-	restarted <- FALSE
+	nms <- names(x0)	
 	scoring <- isTRUE("qscoring" %in% method)
 	
 	# current sample points
@@ -793,8 +792,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 				} else {
 					return(
 					 .qleError(message = "No convergence and only one method supplied: ",
-						call = sys.call(), error = if(inherits(S0,"error")) conditionMessage(S0) else NULL,
-					   	S0 = S0, method = method[1], tracklist = tracklist, restarted = restarted)
+							   call = sys.call(),
+							   error = if(inherits(S0,"error")) conditionMessage(S0) else NULL,
+					   		S0 = S0, method = method[1], tracklist = tracklist)
 					)	
 				}				
 			 	S0 <-
@@ -840,26 +840,25 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 								    do.call(fun, list(x0, fn, lower=qsd$lower, upper=qsd$upper, control=control))								
 								}
 						)		 
-					  }, error = function(e) {e})
+					  }, error = function(e) { e })
 			    
 				if(!inherits(S0,"error") && S0$convergence >= 0L) {					
-					restarted <- TRUE
-					# check box constraints
+					attr(S0,"restarted") <- TRUE
 					S0$bounds <- which(S0$par >= qsd$upper | S0$par <= qsd$lower)
 					break
 				} else {
-					msg <- .makeMessage("Minimization failed by: ",fun.name,".")
+					msg <- .makeMessage("'Nloptr' minimization failed by: ",fun.name,".")
 					message(msg, if(inherits(S0,"error")) conditionMessage(S0) else "",sep=" ")
 				  	method <- method[-1]
 					tracklist <- c(tracklist,list(S0))
 				}
-			}			
-								
+			}										
 			S0  # success: nloptr			
 		}, error = function(e) {
-			 msg <- .makeMessage("Surrogate minimization failed: ", conditionMessage(e))
+			 msg <- .makeMessage("Restarted 'nloptr' minimization failed: ", conditionMessage(e))
 			 message(msg)
-			 return(.qleError(message=msg,call=sys.call(),error=e,method=fun.name,tracklist=tracklist))			
+			 return(.qleError(message = msg,call = sys.call(), error = e,
+					   method = fun.name, tracklist = tracklist))			
 		}, finally = { 
 			 if(!.qdDealloc())
 			   stop("Allocation error in C memory management.")
@@ -902,7 +901,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	
 	## use final scoring iteration starting
 	## from last found minimzer if restarted	
-	if(restarted && scoring) {
+	if(isTRUE(attr(S0,"restarted")) && scoring) {
 		QS <- tryCatch({
 				 x <- S0$par
 				 qscoring(qsd,x,opts,...,check=FALSE,pl=pl,verbose=verbose)
@@ -936,7 +935,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	}	
 	
 	if(verbose){
-	  cat(paste0("Successful minimization by: ",fun.name," (status = ",S0$convergence,")","\n\n"))
+	  cat(paste0("Successful minimization by: ",fun.name,
+			if(isTRUE(attr(S0,"restarted"))) " [restarted]", " (status = ",S0$convergence,")","\n\n"))
 	  if(pl >= 10L){
 		  print(S0)
 		  cat("\n\n")
@@ -1363,9 +1363,9 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		if(pl > 1L) {
 		    cat("Iterations......",paste0("global=",nglobal,", local=",nlocal,"\n"))
 			cat("Sampling:.......",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
-			cat("Local search:...",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed"),"\n"))			
-			
-			if(locals$nextSample=="score")
+			cat("Local search:...",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed")))			
+			if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n")	else cat("\n")				
+			if(locals$nextSample == "score")
 			 cat("weight factor:..",w,"\n")
 			cat("\n")
 			df <- as.data.frame(
