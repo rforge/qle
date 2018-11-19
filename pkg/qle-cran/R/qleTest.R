@@ -99,7 +99,7 @@
 	if(.isError(QD))	  	
 	 return(.qleError(message="Evaluation of roots failed.",call=sys.call(),error=QD) )
 	
-	options <-list("ftol_abs"=1e-9, "score_tol"=1e-6, "roots.only"=FALSE)
+	options <-list("ftol_abs"=1e-7, "score_tol"=1e-5, "roots.only"=FALSE)
 	opts <-
 	  if(is.null(opts))
 	     options
@@ -225,7 +225,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL,	roots.only = FALSE, verb
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
-   options <- c(list("ftol_abs"=1e-9, "score_tol"=1e-6),list(roots.only=roots.only))
+   options <- c(list("ftol_abs"=1e-7, "score_tol"=1e-5),list(roots.only=roots.only))
    
    opts <-
     if(is.null(opts))

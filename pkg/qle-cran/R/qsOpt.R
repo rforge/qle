@@ -117,11 +117,11 @@
 }
 
 .addQscoreOptions <- function(xdim) {
-	list( "ftol_stop" = .Machine$double.eps,				# also used to select best roots
+	list( "ftol_stop" = 0.0,				
 		  "xtol_rel"  = 1e-6,
 		  "grad_tol"  = 1e-4,
-		  "ftol_rel"  = .Machine$double.eps^0.5,
-		  "ftol_abs"  = 1e-6,								# only for local minima if grad_tol reached as a more restrictive check
+		  "ftol_rel"  = 1e-7,
+		  "ftol_abs"  = 1e-5,								# only for local minima if grad_tol reached as a more restrictive check
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots
 		  "slope_tol" = 1e-7,
@@ -138,8 +138,8 @@
 		  "ftol_rel"  = 0.0,
 		  "ftol_abs"  = 0.0,
 		  "ltol_rel"  = 0.0,
-		  "score_tol" = 1e-5,
-		  "slope_tol" = .Machine$double.eps,				# > 0: can be set even if only score_tol is accepted as a root
+		  "score_tol" = 1e-7,								# higher precision tjan above	
+		  "slope_tol" = 0.0,								# > 0: can be set even if only score_tol is accepted as a root
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
 		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
@@ -148,7 +148,7 @@
 
 
 .getDefaultGLoptions <- function(xdim) {
-	list("stopval" = .Machine$double.eps,			 		# global stopping value
+	list("stopval" = 0.0,							 		# global stopping value
 		 "lam_rel" = 1e-2,									# relative change in maximum generalized eigenvalue
 		 "xtol_rel" = 1e-4, 								# less restrictive for global search
 		 "xscale" = rep(1,xdim),					 	    # scaling independent variables, e.i. parameter theta
@@ -167,8 +167,8 @@
 }
 
 .getDefaultLOCoptions <- function(xdim) {
-	list("ftol_abs"	= .Machine$double.eps,			   # whether local minimizer is numerically zero
-		 "ftol_rel" = .Machine$double.eps^0.5,
+	list("ftol_abs"	= 1e-10,							   # whether local minimizer is numerically zero
+		 "ftol_rel" = 1e-6,
 		 "lam_max" = 1e-3,							   # quite restrictive
 		 "pmin" = 0.05,								   # minimum accepted probability of coverage of sample points within search domain
 		 "weights" = c(0.8,0.6,0.4,0.2,0.01),		   # only for sampling with criterion `score`
@@ -228,6 +228,7 @@ getDefaultOptions <- function(xdim) {
 	  stop("`xdim` mus be a numeric value.")
   
 	list("qscoring" = .addQscoreOptions(xdim),
+		 "qscoring.root.only"=.addQscoreOptionsRoot(xdim),
 		 "qle_local_opts" = .getDefaultLOCoptions(xdim),
 		 "qle_global_opts" = .getDefaultGLoptions(xdim))
 }
@@ -937,9 +938,18 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 				}, error = function(e) { e }
 		)
 		
-		if(!.isError(QS) && QS$convergence >= 0L) {			
+		if(.isError(QS) || QS$convergence < 0L) {			
+			if(pl > 0L) 
+				message(.makeMessage("No convergence of 'qscoring' after successful restart."))
+			tracklist <- c(tracklist,list(QS))
+		} else {
 			roots <- try(.evalRoots(list(QS,S0),opts=c(opts,list(roots.only=roots.only))),silent=TRUE)					
-			if(!.isError(roots)) {
+			if(.isError(roots)) {
+				msg <- .makeMessage("Cannot get best quasi-score root of local minimizers.")
+				message(msg)
+				attr(QS,"roots") <- structure(list(message=msg,call=match.call()),error=roots)
+				tracklist <- c(tracklist,list(QS))				
+			} else {
 				id <- attr(roots,"id")
 				# overwrite last results after restart
 				# qscoring has now found a more consistent root
@@ -947,19 +957,10 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					fun.name <- "qscoring"
 					tracklist <- c(tracklist,list(S0))
 					S0 <- QS					
-			 	} else {
+				} else {
 					tracklist <- c(tracklist,list(QS))	
-				}
-			} else {
-				msg <- .makeMessage("Cannot get best quasi-score root of local minimizers.")
-				message(msg)
-				attr(QS,"roots") <- structure(list(message=msg,call=match.call()),error=roots)
-				tracklist <- c(tracklist,list(QS))
+				}				
 			}		
-		} else {
-			if(pl > 0L) 
-			 message(.makeMessage("No convergence of 'qscoring' after successful restart."))
-		 	tracklist <- c(tracklist,list(QS))
 		}			
 	}	
 	
