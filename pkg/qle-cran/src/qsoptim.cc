@@ -522,7 +522,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   	if (tmp > rellen) rellen = tmp;
   }
   if(rellen > 0.)
-   stepmin=1e-4*MAX(qfs->xtol_rel/rellen,TOLSTEP);
+   stepmin=MAX(qfs->xtol_rel*rellen,TOLSTEP);
   else WRR("Relative step length should be strictly positive.")
   if(pl >= 100){
 	  Rprintf("\n");
@@ -593,7 +593,7 @@ SEXP getStatus( qfs_result status ) {
    switch ( status ) {
        // (= +0)
        case QFS_CONVERGENCE:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE: Optimization stopped because grad_rol and ftol_abs (approximate root) was reached."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE: Optimization stopped because ftol_abs (approximate root) was reached."));
            break;
        // (= +1)
        case QFS_SCORETOL_REACHED:

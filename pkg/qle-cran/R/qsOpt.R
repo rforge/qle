@@ -121,7 +121,7 @@
 		  "xtol_rel"  = 1e-6,
 		  "grad_tol"  = 1e-4,
 		  "ftol_rel"  = 1e-7,
-		  "ftol_abs"  = 1e-5,								# only for local minima if grad_tol reached as a more restrictive check
+		  "ftol_abs"  = 1e-5,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots
 		  "slope_tol" = 1e-7,
@@ -135,10 +135,10 @@
 	list( "ftol_stop" = .Machine$double.eps,
 		  "xtol_rel"  = 0.0,
 		  "grad_tol"  = 0.0,
-		  "ftol_rel"  = 0.0,
+		  "ftol_rel"  = 1e-7,
 		  "ftol_abs"  = 0.0,
 		  "ltol_rel"  = 0.0,
-		  "score_tol" = 1e-7,								# higher precision tjan above	
+		  "score_tol" = 1e-5,	
 		  "slope_tol" = 0.0,								# > 0: can be set even if only score_tol is accepted as a root
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
