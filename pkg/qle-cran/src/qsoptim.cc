@@ -14,7 +14,7 @@
 #include <R_ext/Constants.h>
 
 #define STPMAX 10
-#define TOLSTEP 1e-12
+#define TOLSTEP 1e-11
 
 qfs_result qfscoring(double *x, int n, double &f, int &fntype,
 			 qfs_options qfs, int &info);
@@ -281,7 +281,7 @@ qfs_result qfscoring(double *x,			 	/* start */
    double test=0.0, tmp=0.0, fold=0,
 		  delta=1.0, slope=0.0, den=0.0, rellen=0.0,
 		  *d=0, *xold=0, *g=0,
-		  *typx=qfs->typx, *typf=qfs->typf,
+		  *typx=qfs->typx, *typf=qfs->typf,				/* already inverted (see Dennis & Schnabel) */
 		  *qimat=qlm->qimat, *score=qlm->score;
 
    CALLOCX(g,n,double);
@@ -492,8 +492,8 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		 double &delta, double &rellen, qfs_options qfs, int pl, int &info) {
 
   int i=0;
-  double s=1., tmp=0., dirlen=0.,
-		 stepmin=0., alpha=1e-4, *typx=qfs->typx;
+  double s=1., tmp=0., dirlen=0., stepmin=0., alpha=1e-4,
+		 *typx=qfs->typx, steptol=qfs->xtol_rel;
 
   info=0;
   check=0;
@@ -519,10 +519,11 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   rellen=0.0;
   for (i=0; i<n; ++i) {
   	tmp=std::fabs(d[i])/MAX(std::fabs(xold[i]),1./typx[i]);
-  	if (tmp > rellen) rellen = tmp;
+  	if (tmp > rellen)
+  	 rellen = tmp;
   }
   if(rellen > 0.)
-   stepmin=MAX(qfs->xtol_rel*rellen,TOLSTEP);
+   stepmin=MAX(steptol/rellen,steptol);
   else WRR("Relative step length should be strictly positive.")
   if(pl >= 100){
 	  Rprintf("\n");

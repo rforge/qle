@@ -118,12 +118,12 @@
 
 .addQscoreOptions <- function(xdim) {
 	list( "ftol_stop" = .Machine$double.eps,				
-		  "xtol_rel"  = 1e-6,
+		  "xtol_rel"  = .Machine$double.eps^(2/3),			# see also steptol (Dennis & Schnabel)
 		  "grad_tol"  = 1e-4,
 		  "ftol_rel"  = 1e-7,
 		  "ftol_abs"  = 1e-5,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
-		  "score_tol" = 1e-5,								# also used to select best roots
+		  "score_tol" = 1e-5,								# also used to select best roots		 
 		  "slope_tol" = 1e-7,
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
@@ -133,12 +133,12 @@
 
 .addQscoreOptionsRoot <- function(xdim) {
 	list( "ftol_stop" = .Machine$double.eps,
-		  "xtol_rel"  = 0.0,
+		  "xtol_rel"  = .Machine$double.eps^(2/3),
 		  "grad_tol"  = 0.0,
 		  "ftol_rel"  = 1e-7,
 		  "ftol_abs"  = 0.0,
 		  "ltol_rel"  = 0.0,
-		  "score_tol" = 1e-5,	
+		  "score_tol" = 1e-5,		  
 		  "slope_tol" = 0.0,								# > 0: can be set even if only score_tol is accepted as a root
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
@@ -150,7 +150,7 @@
 .getDefaultGLoptions <- function(xdim) {
 	list("stopval" = 0.0,							 		# global stopping value
 		 "lam_rel" = 1e-2,									# relative change in maximum generalized eigenvalue
-		 "xtol_rel" = 1e-4, 								# less restrictive for global search
+		 "xtol_rel" = 1e-6, 								# less restrictive for global search
 		 "xscale" = rep(1,xdim),					 	    # scaling independent variables, e.i. parameter theta
 		 "maxiter" = 100,									# max number of global iterations
 		 "maxeval" = 100,									# max number of global and local iterations
@@ -168,7 +168,7 @@
 
 .getDefaultLOCoptions <- function(xdim) {
 	list("ftol_abs"	= 1e-9,							   # whether local minimizer is numerically zero
-		 "ftol_rel" = 1e-6,
+		 "ftol_rel" = 1e-7,
 		 "lam_max" = 1e-3,							   # quite restrictive
 		 "pmin" = 0.05,								   # minimum accepted probability of coverage of sample points within search domain
 		 "weights" = c(0.8,0.6,0.4,0.2,0.01),		   # only for sampling with criterion `score`

@@ -59,11 +59,11 @@ typedef struct qfs_options_s {
     doIobs = asInteger(getListElement( R_options, "Iobs"));
 	ftol_rel  = asReal(getListElement( R_options, "ftol_rel" ));
 	ftol_stop = asReal(getListElement( R_options, "ftol_stop"));
-	ftol_abs  = asReal(getListElement( R_options, "ftol_abs"));
+	ftol_abs  = asReal(getListElement( R_options, "ftol_abs" ));
 	ltol_rel  = asReal(getListElement( R_options, "ltol_rel" ));
 	score_tol = asReal(getListElement( R_options, "score_tol"));
 	xtol_rel  = asReal(getListElement( R_options, "xtol_rel" ));
-	slope_tol = asReal(getListElement( R_options, "slope_tol" ));
+	slope_tol = asReal(getListElement( R_options, "slope_tol"));
 	grad_tol  = asReal(getListElement( R_options, "grad_tol" ));
 	max_iter  = asInteger(getListElement( R_options, "maxiter"));
 
