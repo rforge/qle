@@ -5,7 +5,7 @@
 \title{Update covariance models}
 \usage{
 updateCovModels(qsd, nextData, fit = TRUE, cl = NULL,
-  controls = list(), verbose = FALSE)
+  control = list(), verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}} which is to be updated}
@@ -16,7 +16,7 @@ updateCovModels(qsd, nextData, fit = TRUE, cl = NULL,
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
-\item{controls}{list of control parameters passed to \code{\link[nloptr]{nloptr}}}
+\item{control}{list of control parameters passed to \code{\link[nloptr]{nloptr}}}
 
 \item{verbose}{logical, \code{FALSE} (default), whether to show intermediate output}
 }

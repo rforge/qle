@@ -6,7 +6,7 @@
 \usage{
 fitSIRFk(qldata, set.var = TRUE, var.type = "wcholMean",
   var.opts = list(var.sim = 1e-06), intrinsic = FALSE, ...,
-  controls = list(), cl = NULL, verbose = FALSE)
+  control = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{qldata}{object of class \code{QLdata}, a data frame from function \code{\link{setQLdata}}}
@@ -26,7 +26,7 @@ for kriging the variance matrix of the statistics}
 
 \item{...}{arguments passed to \code{\link{setCovModel}}}
 
-\item{controls}{list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization}
+\item{control}{list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization}
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
 
@@ -34,7 +34,7 @@ for kriging the variance matrix of the statistics}
 }
 \value{
 A list of fitted covariance models for kriging the sample means of statistics named `\code{covT}` and optionally
- the variance matrix of statistics, `\code{covL}`. The object also stores the reml optimization parameters `\code{controls}`.
+ the variance matrix of statistics, `\code{covL}`. The object also stores the reml optimization parameters `\code{control}`.
 }
 \description{
 Fit a generalized covariance model to simulation data
@@ -66,7 +66,7 @@ The function contructs and estimates the parameters of the covariance models by 
  
   The default optimization algorithm for estimating the covariance parameters is \code{\link[nloptr]{mlsl}} followed by a final local search using
   \code{NLOPT_LN_COBYLA}. Note that in this case the estimated parameters may vary when starting the REML procedure several times since starting
-  points are randomly chosen for \code{\link[nloptr]{mlsl}}. All options for optimization can be modified by the argument `\code{controls}`.
+  points are randomly chosen for \code{\link[nloptr]{mlsl}}. All options for optimization can be modified by the argument `\code{control}`.
 
   Note that the returned object can also be constructed manually and passed as an input argument to
   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. In this case, first use

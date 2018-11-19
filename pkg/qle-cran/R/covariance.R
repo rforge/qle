@@ -391,8 +391,10 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 				locopts <- nloptr::nl.opts()
 				locopts[names(opts$local_opts)] <- opts$local_opts 
 			} else {
-				locopts <- list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-7,
-								"xtol_rel" = 1.0e-6, "maxeval" = 1000)
+				locopts <- list("algorithm" = "NLOPT_LN_COBYLA",
+								"ftol_rel" = 1.0e-8,
+								"xtol_rel" = 1.0e-6,
+								"maxeval" = 1000)
 			}	
 		
 			res0 <- nloptr::nloptr(res$solution, fn, lb = model$lower, ub = model$upper, opts = locopts,
@@ -448,7 +450,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @param Xs	 	 matrix of sample points (design points)
 #' @param data		 data frame of simulated sample means of statistics
 #' 					 first column corresponds to the first model in the list `\code{models}` and so forth
-#' @param controls	 list of control parameters, see \code{\link[nloptr]{nloptr}}
+#' @param control	 list of control parameters, see \code{\link[nloptr]{nloptr}}
 #' @param cl		 cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param verbose 	 logical, \code{FALSE} (default) for intermediate output
 #' 
@@ -478,7 +480,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @author M. Baaske
 #' @rdname fitCov 
 #' @export 
-fitCov <- function(models, Xs, data, controls = list(),
+fitCov <- function(models, Xs, data, control = list(),
 			     	  cl = NULL, verbose = FALSE) {
 		
 	if(!is.data.frame(data))
@@ -486,14 +488,16 @@ fitCov <- function(models, Xs, data, controls = list(),
 	if(!is.matrix(Xs))
 		stop("Expected argument `Xs` to be  a matrix of sample locations.")
 			
-	if(length(controls)>0L) {		
+	if(length(control)>0L) {		
 		opts <- nloptr::nl.opts()
-		opts[names(controls)] <- controls
+		opts[names(control)] <- control
 	} else {
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
 					"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",
-							"ftol_rel" = 1.0e-6, "xtol_rel" = 1.0e-6, "maxeval" = 1000),
-					"maxeval" = 100, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)	
+										"ftol_abs" = .Machine$double.eps,
+										"ftol_rel" = .Machine$double.eps^0.5,
+					 					"xtol_rel" = 1.0e-6, "maxeval" = 1000),
+					 "maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)	
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
@@ -617,8 +621,10 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 	opts <- attr(mods,"opts")
 	if(is.null(opts) || length(opts) == 0L){
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
-				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-6,
-						"xtol_rel" = 1.0e-6,"maxeval" = 1000),
+				"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",
+									"ftol_abs" = .Machine$double.eps,
+									"ftol_rel" = .Machine$double.eps^0.5,
+									"xtol_rel" = 1.0e-6, "maxeval" = 1000),
 				"maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)			  
 	}
 	# minimum required sample size
@@ -686,11 +692,11 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' 						for kriging the variance matrix of the statistics
 #' @param ...			arguments passed to \code{\link{setCovModel}}
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
-#' @param controls		list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization
+#' @param control		list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization
 #' @param verbose		if \code{TRUE}, show intermediate output
 #' 
 #' @return A list of fitted covariance models for kriging the sample means of statistics named `\code{covT}` and optionally
-#'  the variance matrix of statistics, `\code{covL}`. The object also stores the reml optimization parameters `\code{controls}`. 
+#'  the variance matrix of statistics, `\code{covL}`. The object also stores the reml optimization parameters `\code{control}`. 
 #' 
 #' @details The function contructs and estimates the parameters of the covariance models by the REML estimatino method for both kriging
 #'   the sample means of the statistics and kriging the variance matrix of statistics unless `\code{var.type}`
@@ -718,7 +724,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #'  
 #'   The default optimization algorithm for estimating the covariance parameters is \code{\link[nloptr]{mlsl}} followed by a final local search using
 #'   \code{NLOPT_LN_COBYLA}. Note that in this case the estimated parameters may vary when starting the REML procedure several times since starting
-#'   points are randomly chosen for \code{\link[nloptr]{mlsl}}. All options for optimization can be modified by the argument `\code{controls}`.
+#'   points are randomly chosen for \code{\link[nloptr]{mlsl}}. All options for optimization can be modified by the argument `\code{control}`.
 #' 
 #'   Note that the returned object can also be constructed manually and passed as an input argument to
 #'   \code{\link{QLmodel}} in case the user prefers to set up each covariance model separately. In this case, first use
@@ -733,7 +739,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' @export
 fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 						var.opts = list("var.sim"=1e-6), intrinsic = FALSE, ...,
-						 controls = list(), cl = NULL, verbose = FALSE)
+						 control = list(), cl = NULL, verbose = FALSE)
 {	
 	args <- list(...)
 	stopifnot(is.data.frame(qldata))
@@ -830,13 +836,15 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 )	 
 	 }		 	 
 	 # (default) reml optimization options 
-	 if(length(controls) > 0L) {		
+	 if(length(control) > 0L) {		
 		 opts <- nloptr::nl.opts()
-		 opts[names(controls)] <- controls
+		 opts[names(control)] <- control
 	 } else {
 		 opts <- list("algorithm" = "NLOPT_GN_MLSL",
-				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA","ftol_rel" = 1.0e-6,
-						 "xtol_rel" = 1.0e-6,"maxeval" = 1000),
+				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA", 
+									  "ftol_abs" = .Machine$double.eps,
+									  "ftol_rel" = .Machine$double.eps^0.5,
+					 				  "xtol_rel" = 1.0e-6, "maxeval" = 1000),
 				  "maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)		  
 	 }
 	 	 
@@ -990,7 +998,7 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #' @param nextData		object of class \code{QLdata} which includes new simulation results
 #' @param fit 			logical, if \code{TRUE} (default), re-estimate covariance parameters
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
-#' @param controls	    list of control parameters passed to \code{\link[nloptr]{nloptr}}
+#' @param control	    list of control parameters passed to \code{\link[nloptr]{nloptr}}
 #' @param verbose 		logical, \code{FALSE} (default), whether to show intermediate output
 #' 
 #' @return Object of class \code{\link{QLmodel}} as a list of updated covariance models
@@ -1032,7 +1040,7 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #' @rdname updateCovModels
 #' @export
 updateCovModels <- function(qsd, nextData, fit = TRUE,
-						cl = NULL, controls = list(), verbose=FALSE)
+						cl = NULL, control = list(), verbose=FALSE)
 {		
 	stopifnot(class(qsd) == "QLmodel")
 	stopifnot(inherits(nextData,"QLdata"))	
@@ -1059,10 +1067,10 @@ updateCovModels <- function(qsd, nextData, fit = TRUE,
 	Xs <- as.matrix(qsd$qldata[seq(xdim)])
 	np <- nrow(Xs)
 		
-	if(length(controls)>0L) {		
-		# set default optimization controls
+	if(length(control)>0L) {		
+		# set default optimization control
 		opts <- nloptr::nl.opts()
-		opts[names(controls)] <- controls
+		opts[names(control)] <- control
 	} else {
 		# use stored optimization controls
 		opts <- attr(qsd,"opts")	

@@ -118,9 +118,9 @@
 
 .addQscoreOptions <- function(xdim) {
 	list( "ftol_stop" = .Machine$double.eps,				# also used to select best roots
-		  "xtol_rel"  = .Machine$double.eps^0.5,
+		  "xtol_rel"  = 1e-6,
 		  "grad_tol"  = 1e-4,
-		  "ftol_rel"  = 1e-6,
+		  "ftol_rel"  = .Machine$double.eps^0.5,
 		  "ftol_abs"  = 1e-6,								# only for local minima if grad_tol reached as a more restrictive check
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots
@@ -149,15 +149,15 @@
 
 .getDefaultGLoptions <- function(xdim) {
 	list("stopval" = .Machine$double.eps,			 		# global stopping value
-		 "lam_rel"   = 1e-2,
-		 "xtol_rel" = .Machine$double.eps^0.25, 			# less restrictive for global search
+		 "lam_rel" = 1e-2,									# relative change in maximum generalized eigenvalue
+		 "xtol_rel" = 1e-4, 								# less restrictive for global search
 		 "xscale" = rep(1,xdim),					 	    # scaling independent variables, e.i. parameter theta
 		 "maxiter" = 100,									# max number of global iterations
 		 "maxeval" = 100,									# max number of global and local iterations
-		 "sampleTol" = .Machine$double.eps^0.25,			# minimum (euclidean) distance between samples		 
+		 "sampleTol" = 1e-4,								# minimum (euclidean) distance between samples		 
 	 	 "weights" = c(50,25,10,5,2,1),		 
 		 "nsample" = 5000*(xdim+1),							# number of global random samples
-		 "NmaxRel" = 5,		 
+		 "NmaxRel" = 3,		 
 		 "NmaxCV" = 3,		 
 		 "NmaxSample" = 3,
 		 "NmaxLam" = 3,
@@ -167,21 +167,21 @@
 }
 
 .getDefaultLOCoptions <- function(xdim) {
-	list("ftol_rel" = .Machine$double.eps^(1/3),
-		 "ftol_abs"	= .Machine$double.eps^0.5,			   # whether local minimizer is numerically zero
-		 "lam_max" = 1e-3,								   # quite restrictive
-		 "pmin" = 0.05,									   # minimum accepted probability of coverage of sample points within search domain
-		 "weights" = c(0.8,0.6,0.4,0.2,0.01),			   # only for sampling with criterion `score`
-		 "nsample" = 1000*(xdim+1),						   # number of local random samples
-		 "perr_tol" = rep(0.1,xdim),					   # upper bound on the relative change of empirical error and predicted error (by inverse QI) 
-		 "nobs"=100,									   # number of boottrap observations to generate (used for approximate root testing)
-		 "alpha" = 0.05,							       # significance level testing a root		 
-		 "eta" = c(0.025,0.05),							   # c("decrease"=0.05,"increase"=0.075) additive step size	
-		 "nfail" = 3,									   # number of failed (not yet improved) iterations until next decrease of weights 
-		 "nsucc" = 3,									   # number of successful iterations until next increase of weights 
-		 "nextSample" = "score",						   # default selection criterion
-		 "useWeights" = TRUE,							   # do not dynamically adjust weights and cycle through the weights								   
-		 "test" = FALSE)								   # do not test approximate root		 
+	list("ftol_abs"	= .Machine$double.eps,			   # whether local minimizer is numerically zero
+		 "ftol_rel" = .Machine$double.eps^0.5,
+		 "lam_max" = 1e-3,							   # quite restrictive
+		 "pmin" = 0.05,								   # minimum accepted probability of coverage of sample points within search domain
+		 "weights" = c(0.8,0.6,0.4,0.2,0.01),		   # only for sampling with criterion `score`
+		 "nsample" = 1000*(xdim+1),					   # number of local random samples
+		 "perr_tol" = rep(0.1,xdim),				   # upper bound on the relative change of empirical error and predicted error (by inverse QI) 
+		 "nobs"=100,								   # number of boottrap observations to generate (used for approximate root testing)
+		 "alpha" = 0.05,							   # significance level testing a root		 
+		 "eta" = c(0.025,0.05),						   # c("decrease"=0.05,"increase"=0.075) additive step size	
+		 "nfail" = 2,								   # number of failed (not yet improved) iterations until next decrease of weights 
+		 "nsucc" = 3,								   # number of successful iterations until next increase of weights 
+		 "nextSample" = "score",					   # default selection criterion
+		 "useWeights" = TRUE,						   # do not dynamically adjust weights and cycle through the weights								   
+		 "test" = FALSE)							   # do not test approximate root		 
 }
 
 .setControls <- function(globals,locals) {
@@ -788,10 +788,10 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	  S0 <- 
 		tryCatch({			
 			if(length(control) == 0L){
-			  control <- list("stopval"=0.0, "maxeval"=1000,
+			  control <- list("stopval" = 0.0,
 							  "ftol_abs"=.Machine$double.eps,
 							  "ftol_rel"=.Machine$double.eps^0.5,
-							  "xtol_rel"=.Machine$double.eps^0.5)		  	  	
+							  "xtol_rel"=1e-6, "maxeval"=1000)		  	  	
 	  		}			
 			# allocation at C level
 			if(!.qdAlloc(qsd,...))
