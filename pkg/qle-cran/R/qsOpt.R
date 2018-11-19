@@ -117,7 +117,7 @@
 }
 
 .addQscoreOptions <- function(xdim) {
-	list( "ftol_stop" = 0.0,				
+	list( "ftol_stop" = 1e-9,				
 		  "xtol_rel"  = 1e-6,
 		  "grad_tol"  = 1e-4,
 		  "ftol_rel"  = 1e-7,
@@ -167,7 +167,7 @@
 }
 
 .getDefaultLOCoptions <- function(xdim) {
-	list("ftol_abs"	= 1e-10,							   # whether local minimizer is numerically zero
+	list("ftol_abs"	= 1e-9,							   # whether local minimizer is numerically zero
 		 "ftol_rel" = 1e-6,
 		 "lam_max" = 1e-3,							   # quite restrictive
 		 "pmin" = 0.05,								   # minimum accepted probability of coverage of sample points within search domain
@@ -787,9 +787,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	
 	if(is.null(S0) || (restart && S0$convergence < 0L)) {	  	
 	  S0 <- 
-		tryCatch({
-			# to be save
-			control <- nloptr::nl.opts(control)
+		tryCatch({			
 			# allocation at C level
 			if(!.qdAlloc(qsd,...))
 			 stop("Allocation error: cannot request C memory.")
