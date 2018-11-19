@@ -787,13 +787,9 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	
 	if(is.null(S0) || (restart && S0$convergence < 0L)) {	  	
 	  S0 <- 
-		tryCatch({			
-			if(length(control) > 0L) {		
-				opts <- nloptr::nl.opts()
-				opts[names(control)] <- control
-			} else {
-				opts <- attr(qsd,"opts")		
-			}	
+		tryCatch({
+			# to be save
+			control <- nloptr::nl.opts(control)
 			# allocation at C level
 			if(!.qdAlloc(qsd,...))
 			 stop("Allocation error: cannot request C memory.")
