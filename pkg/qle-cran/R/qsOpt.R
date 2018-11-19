@@ -787,12 +787,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	if(is.null(S0) || (restart && S0$convergence < 0L)) {	  	
 	  S0 <- 
 		tryCatch({			
-			if(length(control) == 0L){
-			  control <- list("stopval" = 0.0,
-							  "ftol_abs"=.Machine$double.eps,
-							  "ftol_rel"=.Machine$double.eps^0.5,
-							  "xtol_rel"=1e-6, "maxeval"=1000)		  	  	
-	  		}			
+			if(length(control) > 0L) {		
+				opts <- nloptr::nl.opts()
+				opts[names(control)] <- control
+			} else {
+				opts <- attr(qsd,"opts")		
+			}	
 			# allocation at C level
 			if(!.qdAlloc(qsd,...))
 			 stop("Allocation error: cannot request C memory.")
@@ -1521,8 +1521,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 	}
 	xdim <- attr(qsd$qldata,"xdim")
 	# available local optimization method(s) to choose
-	nlopt.fun <- c("cobyla","bobyqa","neldermead",
-			       "direct","directL","lbfgs","nloptr")		   
+	nlopt.fun <- c("cobyla","bobyqa","neldermead","direct","directL","lbfgs","nloptr")		   
 	all.local <- 
 	 if(qsd$criterion == "qle") {		
 		c("qscoring",nlopt.fun)
@@ -2116,8 +2115,8 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 					
 			if(status[["global"]] == 2L){
 				# always multistart and include last (global) sample point `Snext$par` as a starting point
-				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, control=control,
-						Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
+				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts,
+						control=control, Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 						  multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl, roots.only=roots.only,
 						  	pl=pl, verbose=pl>0L)

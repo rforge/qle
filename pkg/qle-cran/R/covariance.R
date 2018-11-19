@@ -493,11 +493,9 @@ fitCov <- function(models, Xs, data, control = list(),
 		opts[names(control)] <- control
 	} else {
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
-					"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",
-										"ftol_abs" = .Machine$double.eps,
-										"ftol_rel" = .Machine$double.eps^0.5,
+					"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",										
 					 					"xtol_rel" = 1.0e-6, "maxeval" = 1000),
-					 "maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)	
+					 "maxeval" = 200, "xtol_rel" = 1.0e-4, "ftol_rel" = 1.0e-6, "population"=0)	
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
@@ -841,11 +839,9 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 opts[names(control)] <- control
 	 } else {
 		 opts <- list("algorithm" = "NLOPT_GN_MLSL",
-				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA", 
-									  "ftol_abs" = .Machine$double.eps,
-									  "ftol_rel" = .Machine$double.eps^0.5,
+				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",									
 					 				  "xtol_rel" = 1.0e-6, "maxeval" = 1000),
-				  "maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)		  
+				  "maxeval" = 200, "xtol_rel" = 1.0e-4, "ftol_rel" = 1.0e-6, "population"=0)		  
 	 }
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)
