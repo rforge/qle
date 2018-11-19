@@ -117,7 +117,7 @@
 }
 
 .addQscoreOptions <- function(xdim) {
-	list( "ftol_stop" = 1e-9,				
+	list( "ftol_stop" = .Machine$double.eps,				
 		  "xtol_rel"  = 1e-6,
 		  "grad_tol"  = 1e-4,
 		  "ftol_rel"  = 1e-7,
@@ -132,7 +132,7 @@
 }
 
 .addQscoreOptionsRoot <- function(xdim) {
-	list( "ftol_stop" = 0.0,
+	list( "ftol_stop" = .Machine$double.eps,
 		  "xtol_rel"  = 0.0,
 		  "grad_tol"  = 0.0,
 		  "ftol_rel"  = 0.0,

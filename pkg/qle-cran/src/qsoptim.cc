@@ -363,7 +363,7 @@ qfs_result qfscoring(double *x,			 	/* start */
            Rprintf("objective......... %3.12f (fntype=%d) \n", f, fntype);
            Rprintf("at bounds......... %d \n", qfs->bounds);
            Rprintf("step max...........%3.4f \n", stepmax);
-           Rprintf("step size..........%3.12f (check=%d) \n", delta, check);
+           Rprintf("step size..........%3.12f (check=%d, stop=%d) \n", delta, check, stopflag);
            Rprintf("slope............ %3.12f \n\n", slope);
            printVector("par", x, &n);
            Rprintf("\n");
@@ -381,10 +381,16 @@ qfs_result qfscoring(double *x,			 	/* start */
         		FREE_WORK
 				qfs->num_iter=niter;
         		if(check == 1)
-        		 fnQS(x,qfs,f,fntype,info);    													 	/* re-compute objective  */
-        		return (rellen < qfs->ltol_rel ? QFS_STEPMIN_REACHED : QFS_STEPTOL_REACHED);	    /* rellen is length of scaled direction: 1.5e-3  works fine but to inaccurate sometimes */
+        		 fnQS(x,qfs,f,fntype,info);	   	 /* re-compute objective  */
+        		if(rellen < qfs->ltol_rel){
+					return QFS_STEPMIN_REACHED;   /* rellen is length of scaled direction */
+				} else if(f < qfs->ftol_abs) {
+					return QFS_CONVERGENCE;
+				} else {
+					return QFS_STEPTOL_REACHED;	  /* line search error */
+				}
            	 } else {
-        		fntype = (fntype > 0 ? 0 : 1);														/* type of monitor function */
+        		fntype = (fntype > 0 ? 0 : 1);	  /* type of monitor function */
         		fnQS(x,qfs,f,fntype,info);
         		if(info) break;
         		fnGrad(qfs,g,d,fntype,info);
