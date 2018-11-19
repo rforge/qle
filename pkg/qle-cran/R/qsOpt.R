@@ -1031,10 +1031,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 {	 	
 	if(!(nstart > 0L))
 	 stop("Number of multistart points must be greater than zero!")
- 	
-    args <- list(...)
-	# no restart here
-	args$restart <- NULL
+ 	args <- list(...)
 	
 	S0 <- if(!is.null(x0)){
 	   if(!is.list(x0))
@@ -1042,7 +1039,8 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	   # use only first provided method, usually `qscoring`
 	   # if non convergence then do a multistart search if enabled
 	   # otherwise use a restart with some nloptr minimization routine				
-	   do.call(searchMinimizer,c(list(x0=x0[[1]],qsd=qsd,restart=!multi.start),args))
+	   do.call(searchMinimizer,
+		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,roots.only=roots.only,pl=pl),args))
 	 } else NULL
 	
 	if(!is.null(S0)){
@@ -1080,7 +1078,8 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 					FUN=function(x,...){
 						searchMinimizer(x,...)						# including a restart by default
 					},
-					cl=cl,cores=cores,fun="mclapply",qsd=qsd), args))		
+					cl=cl,cores=cores,fun="mclapply",qsd=qsd,
+					 optInfo=optInfo,roots.only=roots.only,pl=pl), args))		
    	
 	} else { RES <- list(S0) }	
 	
@@ -1631,12 +1630,12 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		switch(qsd$criterion,
 			"mahal" = {				  		  
 				  function(x,...) {				  
-					mahalDist(x,qsd,Sigma,cvm=cvm,inverted=TRUE,check=FALSE,...,cl=if(use.cluster) cl else NULL)
+					mahalDist(x,qsd,Sigma,cvm=cvm,inverted=TRUE,check=FALSE,...,cl=if(isTRUE(use.cluster)) cl)
 				  }  
 			 },
 			 "qle" = {				  
 				 function(x,...)
-					quasiDeviance(x,qsd,NULL,cvm=cvm,check=FALSE,...,cl=if(use.cluster) cl else NULL)					
+					quasiDeviance(x,qsd,NULL,cvm=cvm,check=FALSE,...,cl=if(isTRUE(use.cluster)) cl)					
 			 }, { stop("Unknown criterion function!") }
 		) 
  
@@ -1681,7 +1680,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				if(useCV <- (errId > 1)) {
 					if(pl > 0L)
 					 cat("Update cross-validation covariance models...\n")
-					cvm <- try(prefitCV(qsd,type=errType,cl=if(use.cluster) cl else NULL),silent=TRUE) 
+					cvm <- try(prefitCV(qsd,type=errType,cl=if(isTRUE(use.cluster)) cl),silent=TRUE) 
 					if(.isError(cvm)) {						
 						cvm <- NULL
 						message("Prefit of CV models failed during final surrogate minimization.")			
@@ -1694,8 +1693,8 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(xs, qsd=qsd, method=method, opts=qscore.opts, control=control,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-							  multi.start=status[["global"]]>1L, pl=pl,
-							   cl=if(use.cluster) cl else NULL, verbose=pl>0L)
+							  multi.start=status[["global"]]>1L, cl=if(isTRUE(use.cluster)) cl,
+							  roots.only=roots.only, pl=pl, verbose=pl>0L)
 				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
@@ -1729,7 +1728,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X),
-										    cl=if(use.cluster) cl else NULL)	
+										    cl=if(isTRUE(use.cluster)) cl)	
 								  
 							  }, error = function(e){
 								  msg <- .makeMessage("Testing approximate root failed: ",
@@ -2090,10 +2089,10 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 					  # `x` is a local minimum
 					  updateQLmodel(qsd, rbind("d"=Snext$par,"x"=Stest$par), 
 							 structure(c(newSim,newObs),nsim=c(nsim,locals$nobs),class="simQL"),						 
-							 fit=TRUE, cl=if(use.cluster) cl else NULL, verbose=pl>0L)					 
+							 fit=TRUE, cl=if(isTRUE(use.cluster)) cl, verbose=pl>0L)					 
 				 } else {
 					  updateQLmodel(qsd, Snext$par, newSim, fit=TRUE,
-						cl=if(use.cluster) cl else NULL, verbose=pl>0L)
+						cl=if(isTRUE(use.cluster)) cl, verbose=pl>0L)
 				 }
 									
 				# check results of kriging
@@ -2120,8 +2119,8 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts, control=control,
 						Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-						  multi.start=TRUE, pl=pl, cl=if(use.cluster) cl else NULL,
-						   verbose=pl>0L)
+						  multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl, roots.only=roots.only,
+						  	pl=pl, verbose=pl>0L)
 				
 				# overwrite last sample point if local minimization was successful
 				if(!.isError(S0) && S0$convergence >= 0L){					

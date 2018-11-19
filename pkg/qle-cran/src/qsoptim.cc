@@ -642,7 +642,7 @@ SEXP getStatus( qfs_result status ) {
 		    SET_STRING_ELT(R_message, 0, mkChar("QFS_FAILURE: Generic failure code."));
 		    break;
        case QFS_MAXITER_REACHED:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_MAXTIME_REACHED: Optimization stopped because maxiter (above) was reached."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_MAXITER_REACHED: Optimization stopped because maximum number of iterations was reached."));
             break;
        default:
            SET_STRING_ELT(R_message, 0, mkChar("Unknown return status."));

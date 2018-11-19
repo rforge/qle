@@ -55,6 +55,20 @@ Changes with 0.18
 
 3) new options for parallel computing (nested parallel processing), by default only sequential computations are done
 
+Changes with 0.18.3
+-------------------
+
+4) after a restarted minimization start a local search by 'qscoring' if available
+
+5) 'multiSearch' now uses also the 'restart' option for each local search run
+
+6) 'qscoring' and routines by 'nloptr' now use the same stopping conditions
+
+7) added options for accepting only numerical roots of the quasi-score as parameter estimates
+  
+
+
+
 Current known issues
 --------------------
 	o flip of sign in quasi-score vector (qscoring)	  

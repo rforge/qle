@@ -84,7 +84,7 @@ The function tests the null hypothesis \eqn{H_0:\,\hat{\theta}=\theta_0}, that i
  of variance matrix approximation, see \code{\link{covarTx}}.
 
  In order to efficiently find the roots of the quasi-score vector we implement a multi start concept for minimizing the criterion function.
- If `\code{multi.start=0}` no single root finding is initiated from the estimated parameter (as a starting point) for each newly generated observation.
+ Option `\code{multi.start=0}` starts a single root finding from the estimated parameter (as a starting point) for each newly generated observation.
  Using `\code{multi.start=1}` starts a multi start root finding only in case the local optimization gets stuck into a local minimum or does not
  converge and setting `\code{multi.start=2}` always triggers a multi start local search for each simulated observation. Practically, the re-estimations
  of the parameters might still fail to converge. However, the user can control the convergence conditions of the local solvers
