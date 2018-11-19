@@ -523,7 +523,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   	 rellen = tmp;
   }
   if(rellen > 0.)
-   stepmin=MAX(steptol/rellen,steptol);
+   stepmin=MAX(1e-4*steptol/rellen,steptol);
   else WRR("Relative step length should be strictly positive.")
   if(pl >= 100){
 	  Rprintf("\n");
