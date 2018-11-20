@@ -420,7 +420,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 			if ( std::fabs(f-fold)/MAX(f,DBL_EPSILON) < qfs->ftol_rel) {
 			  FREE_WORK
 			  qfs->num_iter=niter;
-			  return QFS_FTOLREL_REACHED;
+			  return (f < qfs->ftol_abs ? QFS_CONVERGENCE : QFS_FTOLREL_REACHED);
 			}
 			/*! test for relative change in x */
 			test=0.;
@@ -466,6 +466,12 @@ qfs_result qfscoring(double *x,			 	/* start */
 				FREE_WORK
 				qfs->num_iter=niter;
 				return QFS_SLOPETOL_REACHED;
+			}
+			/* test for f relative change */
+			if ( std::fabs(f-fold)/MAX(f,DBL_EPSILON) < qfs->ftol_rel) {
+			  FREE_WORK
+			  qfs->num_iter=niter;
+			  return QFS_FTOLREL_REACHED;
 			}
 			/*! test for relative change in x */
 			test=0.;
@@ -552,7 +558,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 	  if(f <= fold + alpha * s * slope) 			 /* set some required decrease */
 	  	return;
 	  if(s < stepmin){
-		  f=fold;
+		  fold=0.;
 		  for(i=0; i<n; ++i)
 		    x[i] = xold[i];
 		  check=1;
