@@ -287,7 +287,7 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 	 	W <- crossprod(P, Cmat %*% P)
 		rc <- rcond(W)
 				
-	    if(rc > 1e-3){
+	    if(rc > 1e-6) {
 			Wc <- try(chol(W),silent=TRUE)
 			if(!inherits(Wc,"try-error") && all(diag(Wc)>0) ){
 				w  <- backsolve(Wc,y,transpose=TRUE)	
@@ -295,33 +295,45 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 				  return (
 				   structure(
 					as.numeric(.5*(sum(w^2)) + sum(log(diag(Wc)))),  # beware of brackets: 0.5*2*sum(log(diag(Wc)))
-				  	 "info"=list("rcond"=rc,"msg"=msg, "p"=p)) 
+				  	 "info"=list("p"=p, "rcond"=rc, "w"=w, "msg"=msg)) 
 	              )
-			  	} else { warning("Could not backsolve in `fnREML`.") }
-			} 
-		} else {		  
-			msg <- paste0(c("reciprocal condition number (", rc,") of projected covariance matrix `W` is near zero at covariance parameter \n\t ",
+			  	} else { 
+					if(verbose)
+					 message("Could not 'backsolve' in REML objective `fnREML`.") }
+				}
+				
+		} else {
+			
+			msg <- paste0(c("Reciprocal condition number (", rc,") of projected covariance matrix is near zero at covariance parameter \n\t ",
 					format(p, digits=6, justify="right"),"\n"," which might be unreliable."), collapse = " ")
-			message(msg)
-		}				
+			if(verbose)
+			 message(msg)
+		}	
+		
 		z <- try(gsiSolve(W,y,use.solve=FALSE),silent=TRUE)
 		if(inherits(z,"try-error"))
 		  stop("`gsiSolve` failed. Cannot continue REML estimation.")
 	  	detW <- try(det(W),silent=TRUE)
-		if(inherits(detW,"try-error") || detW < 0)
-		 stop(.makeMessage("Could not compute determinant: ",detW," or negative value. \n"))
-	 	if(detW < .Machine$double.eps)
-		 message("Determinant of projection matrix `W` (REML) is numerically zero.\n")
-		
+		if(inherits(detW,"try-error"))
+		 stop("Could not compute determinant: ",detW)
+	 	else if(detW < 0) {
+		 stop("Determinant of covariance matrix is negative.")
+		}
+	 	if(detW < .Machine$double.eps){
+		  msg0 <- .makeMessage("Determinant of projection matrix (",detW,") in REML covariance estimation is numerically zero.")
+	 	  if(verbose)
+			message(msg0)
+		  msg <- c(msg,msg0)
+	 	}
 		return(	
 		    structure(
 				as.numeric( .5*(t(y) %*% z + log(detW)) ),
-				 "info"=list("rcond"=rc,"msg"=msg, "p"=p) )	
+				 "info"=list("p"=p, "rcond"=rc, "detW"=detW, "msg"=msg) )	
 		)		
 	  
 	} ,error = function(e) {
-		 stop(.makeMessage("Error in function 'fnREML': ",	conditionMessage(e)))		  	
-		}
+		 stop("Error in function 'fnREML': ",	conditionMessage(e))		  	
+	   }
 	)		
 	
 }  
