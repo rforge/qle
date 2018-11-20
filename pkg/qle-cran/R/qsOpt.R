@@ -118,8 +118,8 @@
 
 .addQscoreOptions <- function(xdim) {
 	list( "ftol_stop" = .Machine$double.eps,				
-		  "xtol_rel"  = .Machine$double.eps^(1/3),			# see also steptol (Dennis & Schnabel)
-		  "step_tol"  = .Machine$double.eps^0.75,
+		  "xtol_rel"  = .Machine$double.eps^(2/3),			# see also steptol (Dennis & Schnabel)
+		  "step_tol"  = .Machine$double.eps,
 		  "grad_tol"  = 1e-4,		  
 		  "ftol_rel"  = 1e-6,
 		  "ftol_abs"  = 1e-5,								# used if stepmin or grad_tol reached 
@@ -134,8 +134,8 @@
 
 .addQscoreOptionsRoot <- function(xdim) {
 	list( "ftol_stop" = 0.0,
-		  "xtol_rel"  = .Machine$double.eps^0.75,
-		  "step_tol"  = .Machine$double.eps^0.75,
+		  "xtol_rel"  = .Machine$double.eps,
+		  "step_tol"  = .Machine$double.eps,
 		  "grad_tol"  = .Machine$double.eps^(1/3),
 		  "ftol_rel"  = 0.0,
 		  "ftol_abs"  = 1e-9,
