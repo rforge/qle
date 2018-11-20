@@ -40,23 +40,21 @@ SEXP getStatus(qfs_result status);
  * @param g 	pointer to gradient vector
  * @param info  integer, >0 if it reaches any bound constraints
  */
-void fnQS(double *x, qfs_options qfs, double &f, int type, int &info) {
+void fnQS(double *x, qfs_options qfs, double &f, int fntype, int &info) {
   ql_model qlm = qfs->qlm;
   int i=0, n=qlm->dx;
 
   projmid(x,n,qlm->lower,qlm->upper, qfs->bounds);
   if( (qlm->info = qlm->intern_qfScore(x)) != NO_ERROR) {		// compute score (always unscaled)
-  	  WRR("Could not compute monitor function.")
+  	 WRR("Could not compute monitor function.")
   	 f=R_NaN;
   	 info=qlm->info;
   	 return;
   }
-  if(type){
+  if(fntype){
     f = qlm->intern_qfValue();								// no scaling for quasi-deviance
   } else {
-	  double sum=0.,
-			 *typf=qfs->typf,
-			 *score=qlm->score;
+	  double sum=0., *typf=qfs->typf, *score=qlm->score;
 
 	  for (i=0;i<n;++i)
 	    sum += typf[i]*score[i]*typf[i]*score[i];    		// scaled norm^2 of quasi-score vector
@@ -72,13 +70,13 @@ void fnQS(double *x, qfs_options qfs, double &f, int type, int &info) {
 /*
  * Gradient of norm of quasi-score (fnQS)
  */
-void fnGrad(qfs_options qfs, double *g, double *d, int type, int &info){
+void fnGrad(qfs_options qfs, double *g, double *d, int fntype, int &info){
 	ql_model qlm = qfs->qlm;
 	int i=0, n=qlm->dx;
 	double *typf=qfs->typf,					// scale quasi-score
 		   *score=qlm->score;				// temporary
 
-	if(type){
+	if(fntype){
 	  for(i=0;i<n;++i)
 		d[i]=g[i]=score[i];						// simply use quasi-score as a gradient specification (no scaling)
 	} else {
@@ -125,8 +123,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     qfs_options_t qfs(&qlm,R_opt);
 
     /* scoring iteration */
-    double fval=R_PosInf,
-    	  qnorm=R_PosInf;
+    double fval=R_PosInf, qnorm=R_PosInf;
 
     qfs_result status = qfscoring(xsol,xdim,fval,fntype,&qfs,info);
     if(info)
@@ -157,8 +154,8 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 		}
 		qnorm = 0.5*sum;
 	} else {
-		qnorm = fval;									/* switch values: fval actually is norm^2 of quasi-score */
-		fval = qlm.qfValue(qlm.score,qlm.qimat);
+		qnorm = fval;									/* switch values: fval as norm^2 of scaled quasi-score */
+		fval = qlm.qfValue(qlm.score,qlm.qimat);		/* always quasi-deviance here */
 	}
 
     /* copy results  */
@@ -362,10 +359,10 @@ qfs_result qfscoring(double *x,			 	/* start */
            Rprintf("iteration.........%d \n", niter);
            Rprintf("objective.........%3.12f (fntype=%d) \n", f, fntype);
            Rprintf("at bounds.........%d \n", qfs->bounds);
-           Rprintf("step (min,max)....%3.4f \n", stepmin, stepmax);
+           Rprintf("step (min,max)....(%3.12f,%3.12f) \n", stepmin, stepmax);
            Rprintf("step size.........%3.12f (check=%d, stop=%d) \n", delta, check, stopflag);
            Rprintf("rellen............%3.12f \n", rellen);
-           Rprintf("slope.............%3.12f \n\n", slope);
+           Rprintf("slope............%3.12f \n\n", slope);
            printVector("par", x, &n);
            Rprintf("\n");
            printVector("score", score, &n);
