@@ -4,7 +4,7 @@
 \alias{reml}
 \title{Restricted maximum likelihood (REML)}
 \usage{
-reml(models, pars, data, Xs, verbose = FALSE)
+reml(models, pars, data, Xs, pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{models}{object of class \code{krige} (list of covariance models) or class
@@ -16,6 +16,8 @@ reml(models, pars, data, Xs, verbose = FALSE)
 single covariance model in `\code{models}`}
 
 \item{Xs}{matrix of sample points}
+
+\item{pl}{integer, print level \code{pl=0} (default)}
 
 \item{verbose}{logical, if \code{TRUE}, print intermediate output}
 }

@@ -2558,7 +2558,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 ## intern only
 ## Conduct next simulations,
 ## and update covariance models
-updateQLmodel <- function(qsd, Xnew, newSim, fit = TRUE, cl = NULL, verbose = FALSE ){	
+updateQLmodel <- function(qsd, Xnew, newSim, fit = TRUE, cl = NULL, pl = 0L, verbose = FALSE ){	
     if(verbose) cat("Setup next data...\n")
     stopifnot(nrow(Xnew)==length(newSim))
 	nextData <-
@@ -2579,5 +2579,5 @@ updateQLmodel <- function(qsd, Xnew, newSim, fit = TRUE, cl = NULL, verbose = FA
 	# combine to new data and update
 	if(verbose)
 	  cat("Update covariance models...\n")	
-    updateCovModels(qsd,nextData,fit,cl=cl,verbose=verbose)
+    updateCovModels(qsd,nextData,fit,cl=cl,pl=pl,verbose=verbose)
 }

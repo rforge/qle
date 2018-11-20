@@ -232,6 +232,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' @param data	  	 data frame of simulated statistics, each column corresponds to a 
 #' 					 single covariance model in `\code{models}`
 #' @param Xs	  	 matrix of sample points
+#' @param pl		 integer, print level \code{pl=0} (default)
 #' @param verbose	 logical, if \code{TRUE}, print intermediate output
 #' 
 #' @return List of REML function values.
@@ -252,7 +253,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 #' @author M. Baaske
 #' @rdname reml
 #' @export
-reml <- function(models, pars, data, Xs, verbose = FALSE) {	
+reml <- function(models, pars, data, Xs, pl = 0L, verbose = FALSE) {	
 	stopifnot(is.data.frame(data))
 	stopifnot(length(models) == ncol(data))
 	
@@ -262,7 +263,7 @@ reml <- function(models, pars, data, Xs, verbose = FALSE) {
 				 F <- .Call(C_Fmat,Xs,models[[i]]$trend)	
 				 P <- .Call(C_Pmat,F)	
 				 y <- crossprod(P,data[[i]]) # t(P)%*%z
-				 fnREML(pars,y,Xs,P,models[[i]],verbose=verbose)
+				 fnREML(pars,y,Xs,P,models[[i]],pl=pl,verbose=verbose)
 				}
 			  ,error = function(e) {
 				  msg <- .makeMessage("REML function evaluation failed: ",conditionMessage(e))
@@ -274,7 +275,7 @@ reml <- function(models, pars, data, Xs, verbose = FALSE) {
 }
 
 # intern, covModel has to be initialized! 
-fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
+fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), pl = 0L, verbose = FALSE)
 {	
 	 tryCatch({			
 		model$param[free] <- p		
@@ -298,7 +299,7 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 				  	 "info"=list("p"=p, "rcond"=rc, "w"=w, "msg"=msg)) 
 	              )
 			  	} else { 
-					if(verbose)
+					if(pl > 10L)
 					 message("Could not 'backsolve' in REML objective `fnREML`.") }
 				}
 				
@@ -306,7 +307,7 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 			
 			msg <- paste0(c("Reciprocal condition number (", rc,") of projected covariance matrix is near zero at covariance parameter \n\t ",
 					format(p, digits=6, justify="right"),"\n"," which might be unreliable."), collapse = " ")
-			if(verbose)
+			if(pl > 10L)
 			 message(msg)
 		}	
 		
@@ -321,7 +322,7 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 		}
 	 	if(detW < .Machine$double.eps){
 		  msg0 <- .makeMessage("Determinant of projection matrix (",detW,") in REML covariance estimation is numerically zero.")
-	 	  if(verbose)
+		  if(pl > 10L)
 			message(msg0)
 		  msg <- c(msg,msg0)
 	 	}
@@ -348,15 +349,15 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 ## H <- log(phi*D)
 ## exp(2*alpha*H)*2*H
 #' @importFrom nloptr nl.grad
-fnGradREML <- function(p, y, Xs, P, model, free = NULL, verbose = FALSE) {
-	list("objective"=fnREML(p,y,Xs,P,model,free,verbose),
+fnGradREML <- function(p, y, Xs, P, model, free = NULL, pl = 0L, verbose = FALSE) {
+	list("objective"=fnREML(p,y,Xs,P,model,free,pl,verbose),
 		 "gradient"=nloptr::nl.grad(p, fnREML, heps = .Machine$double.eps^(1/3),y,Xs,P,model,free)) 
 }  
 
 ## TODO add data as parameter
 # arguments '...' manipulate global options for nloptr 
 #' @importFrom nloptr nl.opts
-doREMLfit <- function(model, Xs, opts, verbose = FALSE )
+doREMLfit <- function(model, Xs, opts, pl = 0L, verbose = FALSE )
 {
 	# return if all parameters are fixed
 	if(!is.null(model$free) && length(model$free)==0L) {
@@ -386,7 +387,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 		
 		res <- nloptr::nloptr(p0, fn, lb = model$lower, ub = model$upper, opts = opts,
 						y = y, Xs = Xs, P = P, model = model, free = model$free,
-						 verbose = verbose)
+						 pl = pl, verbose = verbose)
 		msg <- "Normal convergence."
 		if(inherits(res,"error") || is.null(res) || anyNA(res$solution)){
 			msg <- .makeMessage("Function call to 'nloptr' failed.")				
@@ -404,7 +405,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 			}			
 			res0 <- nloptr::nloptr(res$solution, fn, lb = model$lower, ub = model$upper, opts = locopts,
 					 y = y, Xs = Xs, P = P, model = model, free = model$free,
-					  verbose = verbose)
+					  pl = pl, verbose = verbose)
 		
 			if(inherits(res0,"error") || is.null(res0) || anyNA(res0$solution)){
 			   warning(.makeMessage("Local function call to 'nloptr' failed after global optimization."))
@@ -457,6 +458,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' 					 first column corresponds to the first model in the list `\code{models}` and so forth
 #' @param control	 list of control parameters, see \code{\link[nloptr]{nloptr}}
 #' @param cl		 cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
+#' @param pl		 integer, print level \code{pl=0} (default) 
 #' @param verbose 	 logical, \code{FALSE} (default) for intermediate output
 #' 
 #' @return An object of class \code{reml} which consists of a list of named lists
@@ -486,7 +488,7 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 #' @rdname fitCov 
 #' @export 
 fitCov <- function(models, Xs, data, control = list(),
-			     	  cl = NULL, verbose = FALSE) {
+			     	  cl = NULL, pl = 0L, verbose = FALSE) {
 		
 	if(!is.data.frame(data))
 		stop("Expected argument `data` of class `data.frame`.")	
@@ -506,7 +508,7 @@ fitCov <- function(models, Xs, data, control = list(),
 	 models[[i]]$dataT <- as.numeric(data[[i]])
 		
  	mods <- doInParallel(models, doREMLfit, Xs=Xs, opts = opts,
-			  cl=cl, verbose=verbose)
+			  cl=cl, pl = pl, verbose=verbose)
 	  
 	if(inherits(mods,"error")) {
 		msg <- paste0("REML estimation failed: ",conditionMessage(mods),"\n")
@@ -694,6 +696,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' @param ...			arguments passed to \code{\link{setCovModel}}
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param control		list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization
+#' @param pl			integer, print level \code{pl=0} (default)			 
 #' @param verbose		if \code{TRUE}, show intermediate output
 #' 
 #' @return A list of fitted covariance models for kriging the sample means of statistics named `\code{covT}` and optionally
@@ -740,7 +743,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 #' @export
 fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 						var.opts = list("var.sim"=1e-6), intrinsic = FALSE, ...,
-						 control = list(), cl = NULL, verbose = FALSE)
+						 control = list(), cl = NULL, pl = 0L, verbose = FALSE)
 {	
 	args <- list(...)
 	stopifnot(is.data.frame(qldata))
@@ -848,7 +851,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)
 	 mods <- doInParallel(c(covT,covL), doREMLfit, Xs=Xs, opts=opts,
-			 	cl=cl, verbose=verbose)
+			 	cl=cl, pl = pl, verbose=verbose)
 		
 	 if(inherits(mods,"error")) {
 		msg <- paste0("REML estimation failed: ",conditionMessage(mods),"\n")		
@@ -997,6 +1000,7 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #' @param fit 			logical, if \code{TRUE} (default), re-estimate covariance parameters
 #' @param cl			cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"
 #' @param control	    list of control parameters passed to \code{\link[nloptr]{nloptr}}
+#' @param pl			integer, print level \code{pl=0} (default)
 #' @param verbose 		logical, \code{FALSE} (default), whether to show intermediate output
 #' 
 #' @return Object of class \code{\link{QLmodel}} as a list of updated covariance models
@@ -1037,8 +1041,8 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 #' @author M. Baaske
 #' @rdname updateCovModels
 #' @export
-updateCovModels <- function(qsd, nextData, fit = TRUE,
-						cl = NULL, control = list(), verbose=FALSE)
+updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
+						control = list(), pl = pl, verbose=FALSE)
 {		
 	stopifnot(class(qsd) == "QLmodel")
 	stopifnot(inherits(nextData,"QLdata"))	
@@ -1097,7 +1101,7 @@ updateCovModels <- function(qsd, nextData, fit = TRUE,
 				})	
 		if(fitit) {  				
 			res <- doInParallel(mod, doREMLfit, Xs=Xs, opts=opts,
-					 cl=cl, verbose=verbose)		
+					 cl=cl, pl = pl, verbose=verbose)		
 			if(!inherits(res,"error")) {
 				.extractCovModels(res,verbose)
 			} else {

@@ -6,7 +6,7 @@
 \usage{
 fitSIRFk(qldata, set.var = TRUE, var.type = "wcholMean",
   var.opts = list(var.sim = 1e-06), intrinsic = FALSE, ...,
-  control = list(), cl = NULL, verbose = FALSE)
+  control = list(), cl = NULL, pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{qldata}{object of class \code{QLdata}, a data frame from function \code{\link{setQLdata}}}
@@ -29,6 +29,8 @@ for kriging the variance matrix of the statistics}
 \item{control}{list of control parameters passed to \code{\link[nloptr]{nloptr}} for local minimization}
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
+
+\item{pl}{integer, print level \code{pl=0} (default)}
 
 \item{verbose}{if \code{TRUE}, show intermediate output}
 }

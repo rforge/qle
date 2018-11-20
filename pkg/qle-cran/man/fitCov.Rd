@@ -4,7 +4,7 @@
 \alias{fitCov}
 \title{Covariance parameter estimation}
 \usage{
-fitCov(models, Xs, data, control = list(), cl = NULL,
+fitCov(models, Xs, data, control = list(), cl = NULL, pl = 0L,
   verbose = FALSE)
 }
 \arguments{
@@ -19,6 +19,8 @@ first column corresponds to the first model in the list `\code{models}` and so f
 \item{control}{list of control parameters, see \code{\link[nloptr]{nloptr}}}
 
 \item{cl}{cluster object, \code{NULL} (default), of class "\code{MPIcluster}", "\code{SOCKcluster}", "\code{cluster}"}
+
+\item{pl}{integer, print level \code{pl=0} (default)}
 
 \item{verbose}{logical, \code{FALSE} (default) for intermediate output}
 }
