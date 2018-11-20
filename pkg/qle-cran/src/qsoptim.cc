@@ -475,17 +475,19 @@ qfs_result qfscoring(double *x,			 	/* start */
 			if(nxtol < 5) {
 			  ++nxtol;
 			  if(qfs->bounds) {						/* switch type of monitor function at bounds */
+				for (i=0;i<n;++i)
+				 x[i] = xold[i];
 				fntype = (fntype > 0 ? 0 : 1);
-				fnQS(x,qfs,f,fntype,info);
+				fnQS(x,qfs,f,fntype,info);			/* recompute with other monitor function */
 				if(info) break;
 				fnGrad(qfs,g,d,fntype,info);
 				if(info) break;
 				continue;
 			  }
 			} else {
-			 FREE_WORK
-			 qfs->num_iter=niter;
-			 return QFS_XTOL_REACHED;
+			   FREE_WORK
+			   qfs->num_iter=niter;
+			   return QFS_XTOL_REACHED;
 		   }
 		 }
 
