@@ -400,11 +400,8 @@ doREMLfit <- function(model, Xs, opts, verbose = FALSE )
 				locopts[names(opts$local_opts)] <- opts$local_opts 
 			} else {
 				locopts <- list("algorithm" = "NLOPT_LN_COBYLA",
-								"ftol_rel" = 1.0e-8,
-								"xtol_rel" = 1.0e-6,
-								"maxeval" = 1000)
-			}	
-		
+								"xtol_rel" = 1.0e-6, "maxeval" = 1000)
+			}			
 			res0 <- nloptr::nloptr(res$solution, fn, lb = model$lower, ub = model$upper, opts = locopts,
 					 y = y, Xs = Xs, P = P, model = model, free = model$free,
 					  verbose = verbose)
