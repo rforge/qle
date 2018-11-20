@@ -271,7 +271,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 					 int &info)
 {
    int i=0, niter=0, check=0, stopflag=0,
-       Nmax=qfs->max_iter, pl=qfs->pl;
+       nxtol=0, Nmax=qfs->max_iter, pl=qfs->pl;
 
    // temp pointers
    ql_model qlm = qfs->qlm;
@@ -379,9 +379,9 @@ qfs_result qfscoring(double *x,			 	/* start */
         		FREE_WORK
 				qfs->num_iter=niter;
         		if(check == 1)
-        		 fnQS(x,qfs,f,fntype,info);	   	 	/* re-compute objective  */
+        		 fnQS(x,qfs,f,fntype,info);	   	  /* re-compute objective  */
         		if(rellen < qfs->ltol_rel){
-				 return QFS_STEPMIN_REACHED;   		/* rellen is length of scaled direction */
+				 return QFS_STEPMIN_REACHED;   	  /* rellen is length of scaled direction */
 				} else if(f < qfs->ftol_abs) {
 				 return QFS_CONVERGENCE;
 				} else {
@@ -395,7 +395,7 @@ qfs_result qfscoring(double *x,			 	/* start */
         		if(info) break;
         		check=0;
         		stopflag=1;
-        		continue;
+        		continue;						  /* do not test stopping conditions after switch of monitor function */
         	 }
 		 }
 
@@ -472,9 +472,21 @@ qfs_result qfscoring(double *x,			 	/* start */
 		   if(tmp > test) test = tmp;
 		 }
 		 if(test < qfs->xtol_rel) {
-			FREE_WORK
-			qfs->num_iter=niter;
-			return QFS_XTOL_REACHED;
+			if(nxtol < 5) {
+			  ++nxtol;
+			  if(qfs->bounds) {						/* switch type of monitor function at bounds */
+				fntype = (fntype > 0 ? 0 : 1);
+				fnQS(x,qfs,f,fntype,info);
+				if(info) break;
+				fnGrad(qfs,g,d,fntype,info);
+				if(info) break;
+				continue;
+			  }
+			} else {
+			 FREE_WORK
+			 qfs->num_iter=niter;
+			 return QFS_XTOL_REACHED;
+		   }
 		 }
 
 		 /* update */
