@@ -1040,10 +1040,10 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 		if(.isError(S0))
 		 message("First local search has errors.")
 	    else if(S0$convergence < 0L || S0$convergence == 10) {
-			if(pl > 0L){
-				cat("First local search did not converge. See attribute `optRes`. \n\n")
-				print(S0)
-			}  
+			if(verbose)
+			 cat("First local search did not converge. See attribute `optRes`. \n\n")
+			if(pl > 0L)
+			 print(S0)			  
 		}
 	}
 

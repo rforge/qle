@@ -13,9 +13,6 @@
 #include <R_ext/Applic.h>
 #include <R_ext/Constants.h>
 
-#define STPMAX 10
-#define TOLSTEP 1e-11
-
 qfs_result qfscoring(double *x, int n, double &f, int &fntype,
 			 qfs_options qfs, int &info);
 
@@ -277,7 +274,7 @@ qfs_result qfscoring(double *x,			 	/* start */
    ql_model qlm = qfs->qlm;
    double test=0.0, tmp=0.0, fold=0,
 		  delta=1.0, slope=0.0, den=0.0, rellen=0.0,
-		  *d=0, *xold=0, *g=0,
+		  *d=0, *xold=0, *g=0, stepmin=1e-12,
 		  *typx=qfs->typx, *typf=qfs->typf,				/* already inverted (see Dennis & Schnabel) */
 		  *qimat=qlm->qimat, *score=qlm->score;
 
@@ -316,17 +313,13 @@ qfs_result qfscoring(double *x,			 	/* start */
    test=0.0;
    for (i=0;i<n;++i)
 	 test += x[i]*typx[i]*x[i]*typx[i];
-   double stepmax = STPMAX*MAX(std::sqrt(test),denorm(typx,n));
-   double stepmin = stepmax;
+   double stepmax = MAX(std::sqrt(test),denorm(typx,n));
+
    if(!R_FINITE(stepmax)){
 	   FREE_WORK
 	   info=NaN_WARNING;
 	   LOG_ERROR(info,"Cannot compute maximum step length")
 	   return QFS_ERROR;
-   }
-
-   if(pl >= 10) {
-	 Rprintf("stepmax.............%3.6f\n",stepmax);
    }
 
    fold = f;
@@ -429,6 +422,17 @@ qfs_result qfscoring(double *x,			 	/* start */
 			  qfs->num_iter=niter;
 			  return QFS_FTOLREL_REACHED;
 			}
+			/*! test for relative change in x */
+			test=0.;
+			for (i=0;i<n; ++i) {
+			   tmp = (std::fabs(x[i]-xold[i])) / MAX(std::fabs(x[i]),1./typx[i]);
+			   if(tmp > test) test = tmp;
+			}
+			if(test < qfs->xtol_rel) {
+			 FREE_WORK
+			 qfs->num_iter=niter;
+			 return (f < qfs->ftol_abs ? QFS_CONVERGENCE : QFS_XTOL_REACHED);
+			}
 
          } else {
 
@@ -463,30 +467,18 @@ qfs_result qfscoring(double *x,			 	/* start */
 				qfs->num_iter=niter;
 				return QFS_SLOPETOL_REACHED;
 			}
-         }
-
-         /*! test for relative change in x */
-		 test=0.;
-		 for (i=0;i<n; ++i) {
-		   tmp = (std::fabs(x[i]-xold[i])) / MAX(std::fabs(x[i]),1./typx[i]);
-		   if(tmp > test) test = tmp;
-		 }
-		 if(test < qfs->xtol_rel) {
-			if(qfs->bounds && !stopflag) {		/* switch type of monitor function at bounds */
-			 for (i=0;i<n;++i)
-			  x[i] = xold[i];
-			 fntype = (fntype > 0 ? 0 : 1);
-			 fnQS(x,qfs,f,fntype,info);			/* recompute with other monitor function */
-			 if(info) break;
-			 fnGrad(qfs,g,d,fntype,info);
-			 if(info) break;
-			 continue;
-			} else {
-			   FREE_WORK
-			   qfs->num_iter=niter;
-			   return QFS_XTOL_REACHED;
+			/*! test for relative change in x */
+			test=0.;
+			for (i=0;i<n; ++i) {
+			   tmp = (std::fabs(x[i]-xold[i])) / MAX(std::fabs(x[i]),1./typx[i]);
+			   if(tmp > test) test = tmp;
 			}
-		 }
+			if(test < qfs->xtol_rel) {
+			 FREE_WORK
+			 qfs->num_iter=niter;
+			 return QFS_XTOL_REACHED;
+			}
+         }
 
 		 /* update */
 		 fold=f;
@@ -522,6 +514,7 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   if (dirlen > stepmax){							/* not too big steps */
    for (i=0; i<n; ++i)
 	d[i] *= (stepmax / dirlen);						/* scaled direction */
+    //dirlen = stepmax;
   }
   slope=(fntype ? -fold : innerProduct(g,d,n));     /* slope should be < 0 */
   if(!R_FINITE(slope) || slope >= 0.0){
@@ -537,13 +530,13 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   	 rellen = tmp;
   }
   if(rellen > 0.)
-   stepmin=MAX(steptol/rellen,steptol);
+   stepmin=steptol/rellen;
   else WRR("Relative step length should be strictly positive.")
 
   /* scaled direction length already too small */
   if(rellen < stepmin) {
-	  check=2;
-      return;
+	 check=2;
+     return;
   }
 
   for(;;) {
