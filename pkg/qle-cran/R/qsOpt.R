@@ -118,14 +118,14 @@
 
 .addQscoreOptions <- function(xdim) {
 	list( "ftol_stop" = .Machine$double.eps,				
-		  "xtol_rel"  = 1e-6,								# see also steptol (Dennis & Schnabel)
-		  "step_tol"  = .Machine$double.eps^(2/3),
+		  "xtol_rel"  = .Machine$double.eps^(1/3),			# see also steptol (Dennis & Schnabel)
+		  "step_tol"  = .Machine$double.eps^0.75,
 		  "grad_tol"  = 1e-4,		  
 		  "ftol_rel"  = 1e-6,
 		  "ftol_abs"  = 1e-5,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots		 
-		  "slope_tol" = 1e-7,
+		  "slope_tol" = 1e-6,
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
 		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
@@ -134,8 +134,8 @@
 
 .addQscoreOptionsRoot <- function(xdim) {
 	list( "ftol_stop" = 0.0,
-		  "xtol_rel"  = .Machine$double.eps,
-		  "step_tol"  = .Machine$double.eps^(2/3),
+		  "xtol_rel"  = .Machine$double.eps^0.75,
+		  "step_tol"  = .Machine$double.eps^0.75,
 		  "grad_tol"  = .Machine$double.eps^(1/3),
 		  "ftol_rel"  = 0.0,
 		  "ftol_abs"  = 1e-9,
