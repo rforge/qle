@@ -271,7 +271,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 					 int &info)
 {
    int i=0, niter=0, check=0, stopflag=0,
-       nxtol=0, Nmax=qfs->max_iter, pl=qfs->pl;
+       Nmax=qfs->max_iter, pl=qfs->pl;
 
    // temp pointers
    ql_model qlm = qfs->qlm;
@@ -472,23 +472,20 @@ qfs_result qfscoring(double *x,			 	/* start */
 		   if(tmp > test) test = tmp;
 		 }
 		 if(test < qfs->xtol_rel) {
-			if(nxtol < 5) {
-			  ++nxtol;
-			  if(qfs->bounds) {						/* switch type of monitor function at bounds */
-				for (i=0;i<n;++i)
-				 x[i] = xold[i];
-				fntype = (fntype > 0 ? 0 : 1);
-				fnQS(x,qfs,f,fntype,info);			/* recompute with other monitor function */
-				if(info) break;
-				fnGrad(qfs,g,d,fntype,info);
-				if(info) break;
-				continue;
-			  }
+			if(qfs->bounds && !stopflag) {		/* switch type of monitor function at bounds */
+			 for (i=0;i<n;++i)
+			  x[i] = xold[i];
+			 fntype = (fntype > 0 ? 0 : 1);
+			 fnQS(x,qfs,f,fntype,info);			/* recompute with other monitor function */
+			 if(info) break;
+			 fnGrad(qfs,g,d,fntype,info);
+			 if(info) break;
+			 continue;
 			} else {
 			   FREE_WORK
 			   qfs->num_iter=niter;
 			   return QFS_XTOL_REACHED;
-		   }
+			}
 		 }
 
 		 /* update */
