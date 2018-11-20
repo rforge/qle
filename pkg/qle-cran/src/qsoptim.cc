@@ -20,8 +20,8 @@ qfs_result qfscoring(double *x, int n, double &f, int &fntype,
 			 qfs_options qfs, int &info);
 
 void backtr(int n, double *xold, double &fold, double *d, double *g, double *x,
-			double &f, int &check, int &fntype, double &stepmax, double &slope,
-			 double &delta, double &rellen, qfs_options qfs, int pl, int &info);
+			double &f, int &check, int &fntype, double &stepmax, double &stepmin,
+			double &slope, double &delta, double &rellen, qfs_options qfs, int pl, int &info);
 
 // projection into box constraints
 double med(double x, double y, double z, int &info);
@@ -320,6 +320,7 @@ qfs_result qfscoring(double *x,			 	/* start */
    for (i=0;i<n;++i)
 	 test += x[i]*typx[i]*x[i]*typx[i];
    double stepmax = STPMAX*MAX(std::sqrt(test),denorm(typx,n));
+   double stepmin = stepmax;
    if(!R_FINITE(stepmax)){
 	   FREE_WORK
 	   info=NaN_WARNING;
@@ -336,8 +337,7 @@ qfs_result qfscoring(double *x,			 	/* start */
    double *qlqimat = qlm->qlsolve.qimat;
 
    /*! optimization loop */
-   for(niter=0; niter < Nmax; ++niter)
-   {
+   for(niter=0; niter < Nmax; ++niter) {
 	     /* solve for direction d = I^{-1} Q */
 	     gsiSolve(qimat,n,d,1,qlqimat,info,Chol);
          if(info != 0){
@@ -349,7 +349,7 @@ qfs_result qfscoring(double *x,			 	/* start */
          }
          /* Line search:
           *  dynamically switch between both monitor functions */
-         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,slope,delta,rellen,qfs,pl,info);
+         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,stepmin,slope,delta,rellen,qfs,pl,info);
          if(info > 0){
         	 FREE_WORK
 			 qfs->num_iter=niter;
@@ -359,17 +359,18 @@ qfs_result qfscoring(double *x,			 	/* start */
 
          /*! display information */
          if(pl >= 10) {
-           Rprintf("iteration......... %d \n", niter);
-           Rprintf("objective......... %3.12f (fntype=%d) \n", f, fntype);
-           Rprintf("at bounds......... %d \n", qfs->bounds);
-           Rprintf("step max...........%3.4f \n", stepmax);
-           Rprintf("step size..........%3.12f (check=%d, stop=%d) \n", delta, check, stopflag);
-           Rprintf("slope............ %3.12f \n\n", slope);
+           Rprintf("iteration.........%d \n", niter);
+           Rprintf("objective.........%3.12f (fntype=%d) \n", f, fntype);
+           Rprintf("at bounds.........%d \n", qfs->bounds);
+           Rprintf("step (min,max)....%3.4f \n", stepmin, stepmax);
+           Rprintf("step size.........%3.12f (check=%d, stop=%d) \n", delta, check, stopflag);
+           Rprintf("rellen............%3.12f \n", rellen);
+           Rprintf("slope.............%3.12f \n\n", slope);
            printVector("par", x, &n);
            Rprintf("\n");
            printVector("score", score, &n);
            Rprintf("\n");
-           printVector("direction", d, &n);
+           printVector("direction (scaled)", d, &n);
            Rprintf("length: %3.12f\n\n", denorm(d,n));
            printVector("gradient", g, &n);
            Rprintf("\n");
@@ -381,13 +382,13 @@ qfs_result qfscoring(double *x,			 	/* start */
         		FREE_WORK
 				qfs->num_iter=niter;
         		if(check == 1)
-        		 fnQS(x,qfs,f,fntype,info);	   	 /* re-compute objective  */
+        		 fnQS(x,qfs,f,fntype,info);	   	 	/* re-compute objective  */
         		if(rellen < qfs->ltol_rel){
-					return QFS_STEPMIN_REACHED;   /* rellen is length of scaled direction */
+				 return QFS_STEPMIN_REACHED;   		/* rellen is length of scaled direction */
 				} else if(f < qfs->ftol_abs) {
-					return QFS_CONVERGENCE;
+				 return QFS_CONVERGENCE;
 				} else {
-					return QFS_STEPTOL_REACHED;	  /* line search error */
+				 return QFS_STEPTOL_REACHED;	  /* line search error, should not happen */
 				}
            	 } else {
         		fntype = (fntype > 0 ? 0 : 1);	  /* type of monitor function */
@@ -400,6 +401,7 @@ qfs_result qfscoring(double *x,			 	/* start */
         		continue;
         	 }
 		 }
+
          /* update gradient at new x
           * and copy current score in d */
          fnGrad(qfs,g,d,fntype,info);
@@ -432,6 +434,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 			}
 
          } else {
+
         	/*! test for score being zero */
 			test=0.;
 			for (i=0;i<n;++i) {
@@ -464,6 +467,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 				return QFS_SLOPETOL_REACHED;
 			}
          }
+
          /*! test for relative change in x */
 		 test=0.;
 		 for (i=0;i<n; ++i) {
@@ -475,9 +479,11 @@ qfs_result qfscoring(double *x,			 	/* start */
 			qfs->num_iter=niter;
 			return QFS_XTOL_REACHED;
 		 }
+
 		 /* update */
 		 fold=f;
 		 MEMCPY(xold,x,n);
+
    } /*! end for */
 
    FREE_WORK
@@ -488,12 +494,12 @@ qfs_result qfscoring(double *x,			 	/* start */
 #undef FREE_WORK
 
 void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
-		double &f, int &check,  int &fntype, double &stepmax, double &slope,
+		double &f, int &check,  int &fntype, double &stepmax, double &stepmin, double &slope,
 		 double &delta, double &rellen, qfs_options qfs, int pl, int &info) {
 
   int i=0;
-  double s=1., tmp=0., dirlen=0., stepmin=0., alpha=1e-4,
-		 *typx=qfs->typx, steptol=qfs->xtol_rel;
+  double s=1., tmp=0., dirlen=0., alpha=1e-4,
+		 *typx=qfs->typx, steptol=qfs->step_tol;
 
   info=0;
   check=0;
@@ -523,15 +529,9 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
   	 rellen = tmp;
   }
   if(rellen > 0.)
-   stepmin=MAX(1e-4*steptol/rellen,steptol);
+   stepmin=MAX(steptol/rellen,steptol);
   else WRR("Relative step length should be strictly positive.")
-  if(pl >= 100){
-	  Rprintf("\n");
-	  Rprintf("stepmin............%3.12f\n",stepmin);
-	  Rprintf("rellength..........%3.12f\n\n",rellen);
-	  printVector("scaled direction (d)",d,&n);
-	  Rprintf("\n");
-  }
+
   /* scaled direction length already too small */
   if(rellen < stepmin) {
 	  check=2;
@@ -543,8 +543,12 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 	  for (i=0; i<n; ++i)
 	  	x[i] = xold[i] + s * d[i];
 	  fnQS(x,qfs,f,fntype,info);
-	  if(info > 0) break;
-	  if(f <= fold + alpha * s * slope) 			  /* set some required decrease */
+	  if(info > 0) {								 /* signal failure in objective */
+		  for (i=0;i<n;++i)
+		   x[i] = xold[i];
+		  return;
+	  }
+	  if(f <= fold + alpha * s * slope) 			 /* set some required decrease */
 	  	return;
 	  if(s < stepmin){
 		  f=fold;
@@ -552,11 +556,11 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		    x[i] = xold[i];
 		  check=1;
 		  return;
-	  } else s = .5*s;								/* decrease step */
+	  } else {
+		  s = .5*s;	   								 /* decrease step */
+	  }
   }
-  /* error at this point */
-  for (i=0;i<n;++i)
-    x[i] = xold[i];
+
 }
 
 double med(double x, double y, double z, int &info) {

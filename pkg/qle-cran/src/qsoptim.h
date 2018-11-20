@@ -45,6 +45,7 @@ typedef struct qfs_options_s {
 		 ftol_rel,
 		 score_tol,
 		 slope_tol,
+		 step_tol,
 		 xtol_rel;
 
   double *typf, *typx;
@@ -64,6 +65,7 @@ typedef struct qfs_options_s {
 	score_tol = asReal(getListElement( R_options, "score_tol"));
 	xtol_rel  = asReal(getListElement( R_options, "xtol_rel" ));
 	slope_tol = asReal(getListElement( R_options, "slope_tol"));
+	step_tol  = asReal(getListElement( R_options, "step_tol"));
 	grad_tol  = asReal(getListElement( R_options, "grad_tol" ));
 	max_iter  = asInteger(getListElement( R_options, "maxiter"));
 
