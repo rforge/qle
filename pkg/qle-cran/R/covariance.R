@@ -297,16 +297,12 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 					as.numeric(.5*(sum(w^2)) + sum(log(diag(Wc)))),  # beware of brackets: 0.5*2*sum(log(diag(Wc)))
 				  	 "info"=list("rcond"=rc,"msg"=msg, "p"=p)) 
 	              )
-			  	} else {
-					if(verbose) 
-					 warning("Could not backsolve in `fnREML`.")
-				}
+			  	} else { warning("Could not backsolve in `fnREML`.") }
 			} 
 		} else {		  
 			msg <- paste0(c("reciprocal condition number (", rc,") of projected covariance matrix `W` is near zero at covariance parameter \n\t ",
 					format(p, digits=6, justify="right"),"\n"," which might be unreliable."), collapse = " ")
-			if(verbose)
-				warning(msg)
+			message(msg)
 		}				
 		z <- try(gsiSolve(W,y,use.solve=FALSE),silent=TRUE)
 		if(inherits(z,"try-error"))
@@ -314,8 +310,8 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), verbose = FALSE)
 	  	detW <- try(det(W),silent=TRUE)
 		if(inherits(detW,"try-error") || detW < 0)
 		 stop(.makeMessage("Could not compute determinant: ",detW," or negative value. \n"))
-	 	if(verbose && detW < 1e-17)
-		 warning("Determinant of projection matrix `W` (REML) is near zero.\n")
+	 	if(detW < .Machine$double.eps)
+		 message("Determinant of projection matrix `W` (REML) is numerically zero.\n")
 		
 		return(	
 		    structure(
@@ -506,21 +502,19 @@ fitCov <- function(models, Xs, data, control = list(),
 	if(inherits(mods,"error")) {
 		msg <- paste0("REML estimation failed: ",conditionMessage(mods),"\n")
 		message(msg)
-		return(.qleError(message=msg,
-				call=match.call(),error=mods))
+		return(.qleError(message=msg,call=match.call(),error=mods))
 	}	
 	errId <- which(sapply(mods,function(x) .isError(x)))
-	if(verbose) {	  
-	  if(any(errId))
-		message(paste(c("Failed fitting covariance models with index: ",as.character(errId)), collapse=" ")) 
-	  else {
-		id <- which(sapply(mods,function(x) x$convergence))
-		if(!all(id)) {
-		 message(paste(c("REML failed to converge: ",as.character(id)), collapse=" ")) 
-		} else
-		 message("Successfully fitted covariance parameters.","\n")		
-	  }
-	}	
+	if(any(errId))
+	 message(paste(c("Failed fitting covariance models with index: ",as.character(errId)), collapse=" ")) 
+	else {
+	 id <- which(sapply(mods,function(x) x$convergence))
+	 if(!all(id)) {
+	  message(paste(c("REML failed to converge: ",as.character(id)), collapse=" ")) 
+	 } else
+	 message("Successfully fitted covariance parameters.","\n")		
+	}
+		
 	structure(mods, opts = opts,
 		error = if(length(errId) > 0L) errId else NULL, class = "QLFit")
 }
@@ -812,9 +806,8 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 				  function(i)  {
 				     args$var.sim <-
 					 if(intrinsic[i] && M>0) {						 							 
-						 if(any(Lvec[[i+M]] < 0) || anyNA(Lvec[[i+M]])){	# stored bootstrap variances
-							if(verbose)
-							  message("Bootstrap variance has negative values or `Na`s. Try a default nugget variance value.")
+						 if(any(Lvec[[i+M]] < 0) || anyNA(Lvec[[i+M]])){		# stored bootstrap variances
+						    message("Detected NAs in bootstrap variance or values < 0. Try a default nugget variance value.")
 						    # set small value anyway
 							as.numeric(dfvar[[i]]) 
 						 } else {

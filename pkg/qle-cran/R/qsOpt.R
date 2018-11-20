@@ -550,8 +550,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 
 	  },error = function(e) {
 		 msg <- paste0("Prefitting covariance models failed.\n")
-		 if(verbose)
-		   message(msg)
+		 message(msg)
 		 stop(e)
 	  }
 	)	
@@ -765,24 +764,21 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	}
 	
     if(!is.null(S0) && (.isError(S0) || S0$convergence < 0L)){	   
-	   if(pl > 0L) { 
-		 msg <- .makeMessage("Minimization by `",fun.name,"` did not converge: ")
-		 if(!is.null(S0$convergence))
-		  msg <- c(msg, paste0(" (status = ",S0$convergence,")") )
-	  	 if(inherits(S0,"error"))
-			msg <- c(msg, conditionMessage(S0)) 
-		 message(msg)
-		 cat("\n\n")
-	   }
+	   msg <- .makeMessage("Minimization by `",fun.name,"` did not converge: ")
+	   if(!is.null(S0$convergence))
+ 	    msg <- c(msg, paste0(" (status = ",S0$convergence,")") )
+	   if(inherits(S0,"error"))
+		msg <- c(msg, conditionMessage(S0))
+	   message(msg)
+	   cat("\n\n")
 	   if(pl >= 10L){
 	   	   print(S0)
 		   cat("\n\n")
 	   }
 	   method <- method[-1]
 	   if(is.na(method[1]) || !restart){
-			if(pl > 0L) 
-			  message("No convergence or restart required and only one local method supplied.")
-			return(S0)	
+		message(.makeMessage("No convergence or restart required and only one local method supplied."))
+		return(S0)	
 	   }
 	   tracklist <- c(tracklist,list(S0))
     }
@@ -802,7 +798,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 			
 		 	repeat {
 				if(!is.na(method[1])) {
-					if(pl > 0L)
+					if(verbose)
 					  cat(paste0("Using method: ",method[1],"...\n"))
 					fun.name <- method[1]					
 				} else {
@@ -935,8 +931,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		)
 		
 		if(.isError(QS) || QS$convergence < 0L) {			
-			if(pl > 0L) 
-				message(.makeMessage("No convergence of 'qscoring' after successful restart."))
+		    message(.makeMessage("No convergence of 'qscoring' after successful restart."))
 			tracklist <- c(tracklist,list(QS))
 		} else {
 			roots <- try(.evalRoots(list(QS,S0),opts=c(opts,list(roots.only=roots.only))),silent=TRUE)					
@@ -962,12 +957,13 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	
 	if(verbose){
 	  cat(paste0("Successful minimization by: ",fun.name,
-			if(isTRUE(attr(S0,"restarted"))) " [restarted]", " (status = ",S0$convergence,")","\n\n"))
-	  if(pl >= 10L){
-		  print(S0)
-		  cat("\n\n")
-	  }
-    }
+		if(isTRUE(attr(S0,"restarted"))) " [restarted]", " (status = ",S0$convergence,")","\n\n"))
+	}
+	if(pl >= 10L){
+	  print(S0)
+	  cat("\n\n")
+	}
+   
 	if(length(tracklist) > 0L)
 	  attr(S0,"tracklist") <- tracklist
     return(S0)   
@@ -1037,7 +1033,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	   # if non convergence then do a multistart search if enabled
 	   # otherwise use a restart with some nloptr minimization routine				
 	   do.call(searchMinimizer,
-		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,roots.only=roots.only,pl=pl),args))
+		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,roots.only=roots.only,pl=pl,verbose=verbose),args))
 	 } else NULL
 	
 	if(!is.null(S0)){
@@ -1069,14 +1065,14 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		   cat("Multi-start local search (",nstart," points) \n")
+		   cat("Multistart local search (",nstart," points) \n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
 						searchMinimizer(x,...)						# including a restart by default
 					},
 					cl=cl,cores=cores,fun="mclapply",qsd=qsd,
-					 optInfo=optInfo,roots.only=roots.only,pl=pl), args))		
+					 optInfo=optInfo,roots.only=roots.only,pl=pl,verbose=verbose), args))		
    	
 	} else { RES <- list(S0) }	
 	
@@ -2462,8 +2458,8 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @param cvm		list of covariance models for cross-validation (see \code{\link{prefitCV}})
 #' @param Iobs	    logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate
 #' @param roots.only logical, \code{FALSE} (default), whether to force 'convergence' only if \code{score_tol} is reached 
-#' @param pl	    numeric, print level, use \code{pl}>0 to print intermediate output  	
-#' @param verbose   \code{FALSE} (default), otherwise print intermediate output
+#' @param pl	    integer, a print level, use \code{pl}>0 to print intermediate output  	
+#' @param verbose   logical, \code{FALSE} (default), otherwise print intermediate output
 #'
 #' @return List of results of quasi-scoring iteration with elements:
 #'  \item{convergence}{ integer, why scoring iterations stopped}
@@ -2563,10 +2559,8 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 ## Conduct next simulations,
 ## and update covariance models
 updateQLmodel <- function(qsd, Xnew, newSim, fit = TRUE, cl = NULL, verbose = FALSE ){	
-    if(verbose)
-	 cat("Setup next data...\n")
+    if(verbose) cat("Setup next data...\n")
     stopifnot(nrow(Xnew)==length(newSim))
-	
 	nextData <-
 		tryCatch(
 		  setQLdata(newSim,
