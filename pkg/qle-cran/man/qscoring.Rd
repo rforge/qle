@@ -29,9 +29,9 @@ qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
 
 \item{roots.only}{logical, \code{FALSE} (default), whether to force 'convergence' only if \code{score_tol} is reached}
 
-\item{pl}{numeric, print level, use \code{pl}>0 to print intermediate output}
+\item{pl}{integer, a print level, use \code{pl}>0 to print intermediate output}
 
-\item{verbose}{\code{FALSE} (default), otherwise print intermediate output}
+\item{verbose}{logical, \code{FALSE} (default), otherwise print intermediate output}
 }
 \value{
 List of results of quasi-scoring iteration with elements:
