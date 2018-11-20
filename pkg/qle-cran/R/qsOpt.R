@@ -125,7 +125,7 @@
 		  "ftol_abs"  = 1e-5,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots		 
-		  "slope_tol" = 1e-6,
+		  "slope_tol" = 1e-7,
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
 		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
@@ -141,7 +141,7 @@
 		  "ftol_abs"  = 1e-9,
 		  "ltol_rel"  = 1e-4,
 		  "score_tol" = 1e-6,		  
-		  "slope_tol" = 1e-9,								# > 0: can be set even if only score_tol is accepted as a root
+		  "slope_tol" = 1e-8,								# > 0: can be set even if only score_tol is accepted as a root
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
 		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
