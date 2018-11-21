@@ -50,20 +50,20 @@ extern char C_MSG_BUFFER[1000];
 
 #define XERR(X,NAME) { \
      errorMSG(X, NAME); \
-     Rprintf("%s  (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+     Rprintf("%s \n error at %s  (line=%u)\n", NAME, __FILE__, (unsigned)__LINE__); \
      Rf_error(_(C_MSG_BUFFER)); \
   }
 
 // X is message string
 #define WRR(MSG) { \
-  Rprintf("warning at %s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+  Rprintf("%s \n warning at %s (line=%u)\n", MSG, __FILE__, (unsigned)__LINE__); \
   Rf_warning(_(MSG)); \
 }
 
 // X is integer error code
 #define XWRR(X,NAME) { \
     warningMSG(X, NAME); \
-    Rprintf("%s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+    Rprintf("%s \n warning at %s (line=%u)\n", NAME, __FILE__, (unsigned)__LINE__); \
     Rf_warning(_(C_MSG_BUFFER)); \
 }
 

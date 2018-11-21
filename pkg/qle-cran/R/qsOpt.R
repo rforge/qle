@@ -920,41 +920,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 			return( structure(S0, tracklist = tracklist, error = qd) )
 		}	  
     }	
-	
-	## use final scoring iteration starting
-	## from last found minimzer if restarted	
-	if(isTRUE(attr(S0,"restarted")) && scoring) {
-		QS <- tryCatch({
-				 x <- S0$par
-				 qscoring(qsd,x,opts,...,check=FALSE,roots.only=roots.only,pl=pl,verbose=verbose)
-				}, error = function(e) { e }
-		)
 		
-		if(.isError(QS) || QS$convergence < 0L) {			
-		    message(.makeMessage("No convergence of 'qscoring' after successful restart."))
-			tracklist <- c(tracklist,list(QS))
-		} else {
-			roots <- try(.evalRoots(list(QS,S0),opts=c(opts,list(roots.only=roots.only))),silent=TRUE)					
-			if(.isError(roots)) {
-				msg <- .makeMessage("Cannot get best quasi-score root of local minimizers.")
-				message(msg)
-				attr(QS,"roots") <- structure(list(message=msg,call=match.call()),error=roots)
-				tracklist <- c(tracklist,list(QS))				
-			} else {
-				id <- attr(roots,"id")
-				# overwrite last results after restart
-				# qscoring has now found a more consistent root
-				if(id == 1L){				 
-					fun.name <- "qscoring"
-					tracklist <- c(tracklist,list(S0))
-					S0 <- QS					
-				} else {
-					tracklist <- c(tracklist,list(QS))	
-				}				
-			}		
-		}			
-	}	
-	
 	if(verbose){
 	  cat(paste0("Successful minimization by: ",fun.name,
 		if(isTRUE(attr(S0,"restarted"))) " [restarted]", " (status = ",S0$convergence,")","\n\n"))
