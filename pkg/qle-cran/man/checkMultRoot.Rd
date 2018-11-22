@@ -4,8 +4,7 @@
 \alias{checkMultRoot}
 \title{Assess plausibility of parameter estimates}
 \usage{
-checkMultRoot(est, par = NULL, opts = NULL, roots.only = FALSE,
-  verbose = FALSE)
+checkMultRoot(est, par = NULL, opts = NULL, verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
@@ -13,8 +12,6 @@ checkMultRoot(est, par = NULL, opts = NULL, roots.only = FALSE,
 \item{par}{list or matrix of estimated parameters as roots of the quasi-score vector}
 
 \item{opts}{list of upper bounds for a root of the quasi-score vector, see details}
-
-\item{roots.only}{logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance}
 
 \item{verbose}{logical, \code{TRUE} for intermediate output}
 }
@@ -35,7 +32,7 @@ Only for the quasi-likelihood approach the function inspects the (numerical) con
  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
  and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
  are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}` for the maximum of any of
- the components of the quasi-score vector. If \code{roots.only=TRUE} then only roots are selected for comparisson.
+ the components of the quasi-score vector.
 }
 \examples{
  data(qleresult)

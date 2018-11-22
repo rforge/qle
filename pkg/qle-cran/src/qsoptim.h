@@ -15,6 +15,7 @@
 typedef enum {
 	 QFS_ERROR = -10, 				/* generic failure code */
 	 QFS_EVAL_ERROR = -8,			/* monitor function evaluation */
+	 QFS_STEPMIN_REACHED = -7,		/* relative length of Newton direction is near zero, usually indicates convergence  */
 	 QFS_STEPTOL_REACHED = -6,		/* line search could not find sufficient decrease */
 	 QFS_LINESEARCH_ERROR = -5,
 	 QFS_MAXITER_REACHED = -4,
@@ -27,14 +28,13 @@ typedef enum {
      QFS_STOPVAL_REACHED = 3,
      QFS_SLOPETOL_REACHED = 4,
 	 QFS_LOCAL_CONVERGENCE = 5,		/* approximate stationary point found at (scaled) norm^2 of quasi-score */
-	 QFS_STEPMIN_REACHED = 6,		/* relative length of Newton direction is near zero, usually indicates convergence  */
 	 QFS_XTOL_REACHED = 10			/* might have converged, however, sometimes also indicates problems at bounds */
 } qfs_result;
 
 typedef struct qfs_options_s {
   ql_model qlm;
 
-  int num_iter, num_eval; /* used */
+  int numiter, numeval; /* used */
   int pl, info, doIobs;	  /* print level */
   int bounds;
 
@@ -44,16 +44,16 @@ typedef struct qfs_options_s {
 		 ltol_rel,
 		 ftol_rel,
 		 score_tol,
-		 slope_tol,
 		 step_tol,
+		 slope_tol,
 		 xtol_rel;
 
   double *typf, *typx;
 
-  int max_iter;    /* limits */
+  int maxiter;    /* limits */
 
   qfs_options_s(ql_model _qlm, SEXP R_options) :
-	  qlm(_qlm), num_iter(0), num_eval(0), pl(0), info(0), doIobs(FALSE),
+	  qlm(_qlm), numiter(0), numeval(0), pl(0), info(0), doIobs(FALSE),
 	  bounds(0), typf(0), typx(0)
   {
     pl = asInteger(getListElement( R_options, "pl"));
@@ -64,10 +64,10 @@ typedef struct qfs_options_s {
 	ltol_rel  = asReal(getListElement( R_options, "ltol_rel" ));
 	score_tol = asReal(getListElement( R_options, "score_tol"));
 	xtol_rel  = asReal(getListElement( R_options, "xtol_rel" ));
-	slope_tol = asReal(getListElement( R_options, "slope_tol"));
 	step_tol  = asReal(getListElement( R_options, "step_tol"));
+	slope_tol = asReal(getListElement( R_options, "slope_tol"));
 	grad_tol  = asReal(getListElement( R_options, "grad_tol" ));
-	max_iter  = asInteger(getListElement( R_options, "maxiter"));
+	maxiter   = asInteger(getListElement( R_options, "maxiter"));
 
 	// scaling vectors
 	typf = REAL(getListElement( R_options, "fscale" ));

@@ -5,8 +5,8 @@
 \title{A multistart version of local searches for parameter estimation}
 \usage{
 multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
-  multi.start = FALSE, cores = 1L, cl = NULL, roots.only = FALSE,
-  pl = 0L, verbose = FALSE)
+  multi.start = FALSE, cores = 1L, cl = NULL, pl = 0L,
+  verbose = FALSE)
 }
 \arguments{
 \item{x0}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
@@ -24,8 +24,6 @@ multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 \item{cores}{integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}}
 
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
-
-\item{roots.only}{logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 

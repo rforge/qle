@@ -26,7 +26,7 @@ extern int  PL;
 extern char C_MSG_BUFFER[1000];
 
 #define PRINT_MSG(M) { \
-  Rprintf(" %s \n %s (line=%u)\n", M,  __FILE__, (unsigned)__LINE__); \
+  Rprintf("message at %s (line=%u)\n (%s) \n\n",  __FILE__, (unsigned)__LINE__,M); \
 }
 
 #define LOG_ERROR(X, NAME) { \
@@ -44,26 +44,26 @@ extern char C_MSG_BUFFER[1000];
 
 /* trigger error and warnings */
 #define ERR(MSG) { \
-  Rprintf("error at %s (line=%u)\n", __FILE__, (unsigned)__LINE__); \
+  Rprintf("error at %s (line=%u)\n (%s) \n\n" , __FILE__, (unsigned)__LINE__,MSG); \
   Rf_error(_(MSG)); \
 }
 
 #define XERR(X,NAME) { \
      errorMSG(X, NAME); \
-     Rprintf("%s \n error at %s  (line=%u)\n", NAME, __FILE__, (unsigned)__LINE__); \
+     Rprintf("error at %s (line=%u)\n (%s) \n\n", __FILE__, (unsigned)__LINE__,NAME); \
      Rf_error(_(C_MSG_BUFFER)); \
   }
 
 // X is message string
 #define WRR(MSG) { \
-  Rprintf("%s \n warning at %s (line=%u)\n", MSG, __FILE__, (unsigned)__LINE__); \
+  Rprintf("warning at %s (line=%u)\n (%s) \n\n", __FILE__, (unsigned)__LINE__,MSG); \
   Rf_warning(_(MSG)); \
 }
 
 // X is integer error code
 #define XWRR(X,NAME) { \
     warningMSG(X, NAME); \
-    Rprintf("%s \n warning at %s (line=%u)\n", NAME, __FILE__, (unsigned)__LINE__); \
+    Rprintf("%s (line=%u)\n (%s) \n\n", __FILE__, (unsigned)__LINE__,NAME); \
     Rf_warning(_(C_MSG_BUFFER)); \
 }
 

@@ -58,16 +58,10 @@
 		  as.numeric(dm[notNa,"value"]) < opts$ftol_abs,
 		  as.numeric(dm[notNa,"|score_max|"]) < opts$score_tol)
 	
-  	ok <- 
-	 if(opts$roots.only){
-		which(A[,1]==TRUE & apply(A[,2:3],1,all))        # more restrictive!
-	 } else	which(A[,1]==TRUE & apply(A[,2:3],1,any))
+  	ok <-which(A[,1]==TRUE & apply(A[,2:3],1,any))
   	if(length(ok) == 0L){
 	    message(.makeMessage("`ftol_abs` or `score_tol` cannot be reached. Try to select best parameter anyway."))
-		id <-
-		 if(opts$roots.only) 
-			try(which.min(dm[,"|score_max|"]),silent=TRUE)				# which.min ignores NA values already!	
-		 else try(which.min(dm[,"value"]),silent=TRUE)		
+		id <- try(which.min(dm[,"value"]),silent=TRUE)		
 		if(!inherits(id,"try-error") && length(id)>0L)
 		  dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
 		else {
@@ -99,7 +93,7 @@
 	if(.isError(QD))	  	
 	 return(.qleError(message="Evaluation of roots failed.",call=sys.call(),error=QD) )
 	
-	options <-list("ftol_abs"=1e-7, "score_tol"=1e-5, "roots.only"=FALSE)
+	options <-list("ftol_abs"=1e-7, "score_tol"=1e-5)
 	opts <-
 	  if(is.null(opts))
 	     options
@@ -193,7 +187,6 @@
 #' @param est 		object of class \code{qle}, the estimation results from function \code{\link{qle}}
 #' @param par	    list or matrix of estimated parameters as roots of the quasi-score vector
 #' @param opts		list of upper bounds for a root of the quasi-score vector, see details
-#' @param roots.only  logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance
 #' @param verbose   logical, \code{TRUE} for intermediate output
 #' 
 #' @return A data frame with columns named corresponding to each component of the investigated parameter,
@@ -208,7 +201,7 @@
 #'  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
 #'  and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
 #'  are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}` for the maximum of any of
-#'  the components of the quasi-score vector. If \code{roots.only=TRUE} then only roots are selected for comparisson. 
+#'  the components of the quasi-score vector. 
 #'  
 #' @examples 
 #'  data(qleresult)
@@ -219,13 +212,13 @@
 #' @author M. Baaske
 #' @rdname checkMultRoot
 #' @export
-checkMultRoot <- function(est, par = NULL, opts = NULL,	roots.only = FALSE, verbose = FALSE)
+checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 {			
    if(est$qsd$criterion != "qle")
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
-   options <- c(list("ftol_abs"=1e-7, "score_tol"=1e-5),list(roots.only=roots.only))
+   options <- list("ftol_abs"=1e-7, "score_tol"=1e-5)
    
    opts <-
     if(is.null(opts))

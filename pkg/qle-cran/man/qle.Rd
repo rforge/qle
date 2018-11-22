@@ -7,8 +7,8 @@
 qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
   global.opts = list(), local.opts = list(), method = c("qscoring",
   "bobyqa", "direct"), qscore.opts = list(), control = list(),
-  errType = "kv", roots.only = FALSE, pl = 0, use.cluster = FALSE,
-  cl = NULL, iseed = NULL, plot = FALSE)
+  errType = "kv", pl = 0, use.cluster = FALSE, cl = NULL,
+  iseed = NULL, plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -36,10 +36,6 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \item{control}{list of control arguments passed to any of the routines defined in `\code{method}`}
 
 \item{errType}{type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)}
-
-\item{roots.only}{logical, \code{FALSE} (default), which is less restrictive accepting values of the quasi-deviance near zero for local sampling.
-If \code{TRUE} then    \code{local.opts$ftol_abs} is set to the square of \code{.Machine$double.eps} and quasi-score roots are defined by
-maximum values of the quasi-score smaller than \code{qscore.opts$score_tol} only}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 

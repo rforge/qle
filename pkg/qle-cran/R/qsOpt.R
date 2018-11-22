@@ -93,17 +93,14 @@
 	return (0)
 }
 
-.qsOpts <- function(options = list(), xdim = 1L, roots.only = FALSE, pl = 0L) {
-	opts <- if(roots.only) .addQscoreOptionsRoot(xdim) else .addQscoreOptions(xdim)
+.qsOpts <- function(options = list(), xdim = 1L, pl = 0L) {
+	opts <- .addQscoreOptions(xdim)
 	opts$pl <- pl
 	if(length(options) > 0L) {
 	 .checkOptions(opts,options)
 	 namc <- match.arg(names(options), choices = names(opts), several.ok = TRUE)
 	 if (!is.null(namc))		 
-		 id <- 1:length(namc)
-		 if(roots.only)
-		  id <- as.logical(lapply(opts[namc],function(x) all(x>0)))	 
-	 	opts[namc[id]] <- options[namc[id]]
+		opts[namc] <- options[namc]
 	}
 	# invert scaling constants
 	txid <- which(opts$xscale != 1)
@@ -119,35 +116,18 @@
 .addQscoreOptions <- function(xdim) {
 	list( "ftol_stop" = .Machine$double.eps,				
 		  "xtol_rel"  = .Machine$double.eps^(2/3),			# see also steptol (Dennis & Schnabel)
-		  "step_tol"  = .Machine$double.eps,
+		  "step_tol"  = .Machine$double.eps^(2/3),
 		  "grad_tol"  = 1e-4,		  
 		  "ftol_rel"  = 1e-6,
 		  "ftol_abs"  = 1e-5,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots		 
-		  "slope_tol" = 1e-7,
+		  "slope_tol" = 1e-9,
 		  "maxiter"   = 100,
 		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
 		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
 		  "pl" = 0L)
 }
-
-.addQscoreOptionsRoot <- function(xdim) {
-	list( "ftol_stop" = 0.0,
-		  "xtol_rel"  = .Machine$double.eps,
-		  "step_tol"  = .Machine$double.eps,
-		  "grad_tol"  = .Machine$double.eps^(1/3),
-		  "ftol_rel"  = 0.0,
-		  "ftol_abs"  = 1e-9,
-		  "ltol_rel"  = 1e-4,
-		  "score_tol" = 1e-6,		  
-		  "slope_tol" = 1e-8,								# > 0: can be set even if only score_tol is accepted as a root
-		  "maxiter"   = 100,
-		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
-		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
-		  "pl" = 0L)
-}
-
 
 .getDefaultGLoptions <- function(xdim) {
 	list("stopval" = 0.0,							 		# global stopping value
@@ -635,7 +615,6 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 #' @param optInfo	  logical, \code{FALSE} (default), not yet used argument (ignored)
 #' @param check		  logical, \code{TRUE} (default), whether to check input arguments
 #' @param restart 	  logical, \code{TRUE} (default), whether to restart optimization in case of non convergence
-#' @param roots.only  logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance. 					  
 #' @param pl		  numeric value (>=0), the print level 
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #'
@@ -706,7 +685,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					 opts = list(), control = list(), ...,  
 					   obs = NULL, optInfo = FALSE, check = TRUE, 
-					    restart = TRUE, roots.only = FALSE, pl = 0L, verbose = FALSE)
+					    restart = TRUE, pl = 0L, verbose = FALSE)
 {
 	stopifnot(is.numeric(pl) && pl >= 0L )
 	
@@ -757,7 +736,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		 if(m1!=1)
 		  method <- c("qscoring",method[-m1])		
 		 tryCatch({			
-		    qscoring(qsd,x0,opts,...,check=FALSE,roots.only=roots.only,pl=pl,verbose=verbose)			
+		    qscoring(qsd,x0,opts,...,check=FALSE,pl=pl,verbose=verbose)			
 		   }, error = function(e) {	e }
   		 )
 		} else NULL
@@ -903,17 +882,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					  c(S0,qd[[1]][which(!(names(qd[[1]]) %in% names(S0)))],
 					     "Qnorm"=0.5*sum(qd[[1]]$score^2)),
 					 Sigma = attr(qd,"Sigma"), restarted = attr(S0,"restarted"),				
-				   class = "QSResult")
-		    if(roots.only) {
-				# set quasi-scoring options	just for testing because 'nloptr' was called
-				opts <- .qsOpts(opts,xdim,roots.only,pl)
-				S0$convergence <-
-				 if(max(abs(S0$score)) < opts$score_tol){
-					 S0$message <- paste0("QFS_SCORETOL_REACHED: Optimization stopped because score_tol was reached.")
-					 1L
-				} else { -1L }
-			}
-				
+				   class = "QSResult")			
 				
 	 	} else { 
 			message(qd$message)
@@ -951,7 +920,6 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @param multi.start logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge 
 #' @param cores		  integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}
 #' @param cl 	 	  cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
-#' @param roots.only  logical, \code{FALSE} (default), less restrictive accepting minimizers of the quasi-deviance
 #' @param pl		  print level, use \code{pl}>0 to print intermediate results
 #' @param verbose	  if \code{TRUE} (default), print intermediate output
 #' 
@@ -986,7 +954,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 #' @export 
 multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 		         		 multi.start = FALSE, cores = 1L, cl = NULL, 
-						  roots.only = FALSE, pl = 0L, verbose = FALSE)
+						  pl = 0L, verbose = FALSE)
 {	 	
 	if(!(nstart > 0L))
 	 stop("Number of multistart points must be greater than zero!")
@@ -999,7 +967,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	   # if non convergence then do a multistart search if enabled
 	   # otherwise use a restart with some nloptr minimization routine				
 	   do.call(searchMinimizer,
-		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,roots.only=roots.only,pl=pl,verbose=verbose),args))
+		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,pl=pl,verbose=verbose),args))
 	 } else NULL
 	
 	if(!is.null(S0)){
@@ -1038,7 +1006,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 						searchMinimizer(x,...)						# including a restart by default
 					},
 					cl=cl,cores=cores,fun="mclapply",qsd=qsd,
-					 optInfo=optInfo,roots.only=roots.only,pl=pl,verbose=verbose), args))		
+					 optInfo=optInfo,pl=pl,verbose=verbose), args))		
    	
 	} else { RES <- list(S0) }	
 	
@@ -1060,7 +1028,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	
 	hasError <- which(!(1:length(RES) %in% ok))
 	# get the best roots
-	roots <- try(.evalRoots(RES[ok],opts=c(args$opts,list(roots.only=roots.only))),silent=TRUE)
+	roots <- try(.evalRoots(RES[ok],opts=args$opts),silent=TRUE)
 	if(.isError(roots)) {
 		msg <- .makeMessage("Could not evaluate best results of local searches")
 		message(msg)
@@ -1102,9 +1070,6 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @param qscore.opts   list of control arguments passed to \code{\link{qscoring}}
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
 #' @param errType		type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)  
-#' @param roots.only    logical, \code{FALSE} (default), which is less restrictive accepting values of the quasi-deviance near zero for local sampling.
-#' 					    If \code{TRUE} then	\code{local.opts$ftol_abs} is set to the square of \code{.Machine$double.eps} and quasi-score roots are defined by
-#' 						maximum values of the quasi-score smaller than \code{qscore.opts$score_tol} only
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
 #' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
 #'   a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at least a number of cpus 
@@ -1325,7 +1290,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"), qscore.opts = list(),
-				   control = list(), errType = "kv", roots.only = FALSE, pl = 0, use.cluster = FALSE,
+				   control = list(), errType = "kv", pl = 0, use.cluster = FALSE,
 				     cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
@@ -1486,7 +1451,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		c("qscoring",nlopt.fun)
 	 } else nlopt.fun	
 	# quasi-score options
-	qscore.opts <- .qsOpts(qscore.opts,xdim,roots.only)
+	qscore.opts <- .qsOpts(qscore.opts,xdim)
 
 	loc <- pmatch(method,all.local)
 	if(length(loc) == 0L || anyNA(loc)) {
@@ -1652,7 +1617,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 							  multi.start=status[["global"]]>1L, cl=if(isTRUE(use.cluster)) cl,
-							  roots.only=roots.only, pl=pl, verbose=pl>0L)
+							   pl=pl, verbose=pl>0L)
 				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
@@ -2077,8 +2042,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts,
 						control=control, Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-						  multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl, roots.only=roots.only,
-						  	pl=pl, verbose=pl>0L)
+						  multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl,pl=pl, verbose=pl>0L)
 				
 				# overwrite last sample point if local minimization was successful
 				if(!.isError(S0) && S0$convergence >= 0L){					
@@ -2295,7 +2259,7 @@ print.QSResult <- function(x, pl = 1, digits = 5,...) {
 	
 	msg <- unlist(strsplit(paste(x$message, "\n" ),':'))
 	cat("Iterations....",x$iter,"\n")
-	cat("Status........",x$convergence,"(",msg[1],")\n\n")
+	cat("Status........",x$convergence,msg[1],"\n\n")
 	if(!is.null(x$score)){
 		cat(msg[2],"\n")
 		if(x$criterion == "qle") {
@@ -2423,7 +2387,6 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @param check		logical, \code{TRUE} (default), whether to check input arguments
 #' @param cvm		list of covariance models for cross-validation (see \code{\link{prefitCV}})
 #' @param Iobs	    logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate
-#' @param roots.only logical, \code{FALSE} (default), whether to force 'convergence' only if \code{score_tol} is reached 
 #' @param pl	    integer, a print level, use \code{pl}>0 to print intermediate output  	
 #' @param verbose   logical, \code{FALSE} (default), otherwise print intermediate output
 #'
@@ -2488,7 +2451,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @export
 qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 			    	  inverted = FALSE, check = TRUE, cvm = NULL, 
-				 	   Iobs = TRUE, roots.only  = FALSE, pl = 0L, verbose = FALSE)
+				 	   Iobs = TRUE, pl = 0L, verbose = FALSE)
 {	
 	if(check)
 	 .checkArguments(qsd,x0,Sigma)
@@ -2511,7 +2474,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 	} 
 	
 	# set quasi-scoring options	
-	opts <- .qsOpts(opts,xdim,roots.only,pl)	
+	opts <- .qsOpts(opts,xdim,pl)	
 	qlopts <- list("varType"=qsd$var.type,					  
 				   "useCV"=!is.null(cvm),
 				   "useSigma"=FALSE,
