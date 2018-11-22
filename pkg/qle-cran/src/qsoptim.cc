@@ -15,11 +15,6 @@
 
 qfs_result qfscoring(double *x, int n, double &f, int &fntype, qfs_options qfs);
 
-void backtr(int n, double *xold, double &fold, double *d, double *g, double *x,
-			double &f, int &check, int &fntype, double &stepmax, double &stepmin,
-			double &slope, double &delta, double &rellen, qfs_options qfs, int pl, int &info);
-
-
 void lnsearch(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		double &f, int &check,  int &fntype, double &stepmax, double &stepmin, double &slope,
 		 double &delta, double &rellen, qfs_options qfs, int pl, int &info);
@@ -392,7 +387,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 				 if(test < qfs->grad_tol) {
 					 FREE_WORK
 					 qfs->numiter=niter;
-					 return (f < qfs->ftol_abs ? QFS_CONVERGENCE : QFS_LOCAL_CONVERGENCE);
+					 return (f < qfs->ftol_abs ? QFS_GRADTOL_REACHED : QFS_LOCAL_CONVERGENCE);
 				 }
 			 }
 			 /* both types of monitor */
@@ -417,7 +412,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 			 if(test < qfs->xtol_rel) {
 			  FREE_WORK
 			  qfs->numiter=niter;
-			  return (f < qfs->ftol_abs ? QFS_CONVERGENCE : QFS_XTOL_REACHED);
+			  return (f < qfs->ftol_abs ? QFS_CONVERGENCE_XTOL : QFS_XTOL_REACHED);
 			 }
 
 		 }
@@ -749,7 +744,7 @@ void lnsearch(int n, double *xold, double &fold,  double *d, double *g, double *
 		  return;
 		}
 
-		if (delta < stepmin) {		/* convergence in x needs to be verified by main function */
+		if (delta < stepmin) {
 		 check=1;
 		 for (i=0;i<n;i++)
 		  x[i]=xold[i];
@@ -785,79 +780,6 @@ void lnsearch(int n, double *xold, double &fold,  double *d, double *g, double *
 }
 
 
-void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
-		double &f, int &check,  int &fntype, double &stepmax, double &stepmin, double &slope,
-		 double &delta, double &rellen, qfs_options qfs, int pl, int &info) {
-
-  int i=0;
-  double s=1., tmp=0., dirlen=0., alpha=1e-4,
-		 *typx=qfs->typx, steptol=qfs->step_tol;
-
-  info=0;
-  check=0;
-  for (i=0; i<n; ++i)
-    tmp += typx[i] * d[i] * typx[i] * d[i];
-  dirlen=std::sqrt(tmp);							/* newton length */
-  if(!R_FINITE(dirlen)){
-  	 LOG_ERROR(NaN_WARNING,"Cannot compute length of direction.")
-  	 info=QFS_LINESEARCH_ERROR;
-  	 return;
-  }
-  if (dirlen > stepmax){							/* not too big steps */
-   for (i=0; i<n; ++i)
-	d[i] *= (stepmax / dirlen);						/* scaled direction */
-    //dirlen = stepmax;
-  }
-
-  // TODO: !!! slope gibt es nicht bei quasi-deviance Minimierung
-  slope=(fntype ? -fold : innerProduct(g,d,n));     /* slope should be < 0 */
-  if(!R_FINITE(slope) || slope >= 0.0){
-	  check=1;
-	  info=QFS_LINESEARCH_ZEROSLOPE;
-	  WRR("Roundoff error in line search.")
-  	  return;
-  }
-  rellen=0.0;
-  for (i=0; i<n; ++i) {
-  	tmp=std::fabs(d[i])/MAX(std::fabs(xold[i]),1./typx[i]);
-  	if (tmp > rellen)
-  	 rellen = tmp;
-  }
-  if(rellen > 0.)
-   stepmin=steptol/rellen;
-  else WRR("Relative step length should be strictly positive.")
-
-  /* scaled direction length already too small */
-  if(rellen < stepmin) {
-	 check=2;
-     return;
-  }
-
-  for(;;) {
-	  delta=s;
-	  for (i=0; i<n; ++i)
-	  	x[i] = xold[i] + s * d[i];
-	  fnQS(x,qfs,f,fntype,info);
-	  if(info > 0) {								 /* signal failure in objective */
-		  for (i=0;i<n;++i)
-		   x[i] = xold[i];
-		  return;
-	  }
-	  // TODO: !!! einfaches Kriterium für QD Abstieg
-	  if(f <= fold + alpha * s * slope) 			 /* set some required decrease */
-	  	return;
-	  if(s < stepmin){
-		  fold=0.;
-		  for(i=0; i<n; ++i)
-		    x[i] = xold[i];
-		  check=1;
-		  return;
-	  } else {
-		  s = .5*s;	   								 /* decrease step */
-	  }
-  }
-
-}
 
 double med(double x, double y, double z, int &info) {
    if ( (x - y) * (z - x) >= 0 ) {
@@ -894,7 +816,7 @@ SEXP getStatus( qfs_result status ) {
    switch ( status ) {
        // (= +0)
        case QFS_CONVERGENCE:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE: Optimization stopped because ftol_abs (approximate root) was reached."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE: Generic convergence."));
            break;
        // (= +1)
        case QFS_SCORETOL_REACHED:
@@ -908,11 +830,18 @@ SEXP getStatus( qfs_result status ) {
        case QFS_STOPVAL_REACHED:
            SET_STRING_ELT(R_message, 0, mkChar("QFS_STOPVAL_REACHED: Optimization stopped because ftol_stop  was reached."));
            break;
+       case QFS_GRADTOL_REACHED:
+		  SET_STRING_ELT(R_message, 0, mkChar("QFS_GRADTOL_REACHED: Optimization stopped because grad_tol and ftol_abs were reached."));
+		  break;
+
        // (= +4)
        case QFS_XTOL_REACHED:
            SET_STRING_ELT(R_message, 0, mkChar("QFS_XTOL_REACHED: Optimization stopped because xtol_rel was reached."));
            break;
-   	   // (= +5)
+       case QFS_CONVERGENCE_XTOL:
+		   SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE_XTOL: Optimization stopped because xtol_rel and ftol_abs were reached."));
+		   break;
+           // (= +5)
 	   case QFS_SLOPETOL_REACHED:
 			SET_STRING_ELT(R_message, 0, mkChar("QFS_SLOPETOL_REACHED: Optimization stopped because slope_tol was reached."));
 			break;
@@ -928,6 +857,7 @@ SEXP getStatus( qfs_result status ) {
        case QFS_LOCAL_CONVERGENCE:
             SET_STRING_ELT(R_message, 0, mkChar("QFS_LOCAL_CONVERGENCE: Optimization stopped because of local convergence."));
             break;
+
 
        /* Error codes (negative return values): */
 
