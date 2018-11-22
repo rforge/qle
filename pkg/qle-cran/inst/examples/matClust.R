@@ -110,7 +110,8 @@ qsd <- getQLmodel(sim,lb,ub,obs0,
 cvm <- prefitCV(qsd, reduce=FALSE, cl=cl,verbose=TRUE)
 
 # starting point for local search
-x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
+#x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
+x0 <- c("kappa"=22,"R"=0.06,"mu"=2.8)
 
 # use the maximum of kriging and CV-based variances
 attr(cvm,"type") <- "max"
