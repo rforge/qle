@@ -110,8 +110,7 @@ qsd <- getQLmodel(sim,lb,ub,obs0,
 cvm <- prefitCV(qsd, reduce=FALSE, cl=cl,verbose=TRUE)
 
 # starting point for local search
-#x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
-x0 <- c("kappa"=22,"R"=0.06,"mu"=2.8)
+x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
 
 # use the maximum of kriging and CV-based variances
 attr(cvm,"type") <- "max"
@@ -122,9 +121,7 @@ attr(cvm,"type") <- "max"
 #S <- t(sapply(D,"[[","score"))
 #colMeans(S)
 
-opts <- list("pl"=100,"xscale"=c(10,0.1,1),
-		  "slope_tol"=1e-7,"ftol_stop"=1e-10, "xtol_rel"=1e-10,
-  		  "ftol_abs"=1e-6,"score_tol"=1e-3)
+opts <- list("pl"=100,"xscale"=c(10,0.1,1),"score_tol"=1e-3)
  
 (QS0 <- qscoring(qsd,x0,opts=opts,cvm=cvm,pl=10,verbose=TRUE))
 
