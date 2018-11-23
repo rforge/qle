@@ -66,7 +66,13 @@ Changes with 0.18.3
 
 7) added options for accepting only numerical roots of the quasi-score as parameter estimates
   
+Changes with 0.18.5
+-------------------
 
+8) more restrictive quasi-scoring in order to find 'true' roots otherwise rely on (global) minimization of quasi-deviance and
+   and intensive global sampling new candidate points for simulation  
+
+9) removed 4),6),7)
 
 
 Current known issues

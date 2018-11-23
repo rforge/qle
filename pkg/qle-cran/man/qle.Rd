@@ -7,7 +7,7 @@
 qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
   global.opts = list(), local.opts = list(), method = c("qscoring",
   "bobyqa", "direct"), qscore.opts = list(), control = list(),
-  errType = "kv", pl = 0, use.cluster = FALSE, cl = NULL,
+  errType = "kv", pl = 0L, use.cluster = FALSE, cl = NULL,
   iseed = NULL, plot = FALSE)
 }
 \arguments{
@@ -188,7 +188,6 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 
  The following controls `\code{local.opts}` for the local search phase are available:
   \itemize{
-  \item{\code{ftol_rel}:}{ upper bound on relative change in criterion function values}
   \item{\code{lam_max}:}{ upper bound on the maximum eigenvalue of the generalized eigenvalue decomposition of
 		the quasi-information matrix and estimated interpolation error (variance) of quasi-score.
  	This stops the main iteration sampling new locations following the idea that in this case
@@ -239,8 +238,6 @@ The function sequentially estimates the unknown model parameter. Basically, the 
       at some estimated parameter drops below the upper bound `\code{local.opts$lam_max}` }
   \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
      and predicted error of an approximate root drops below `\code{perr_tol}`}
-  \item{\code{Nmaxftol}:}{ maximum number of consecutive iterations until stopping for which the relative change in the values
-   of the criterion function drops below `\code{local.opts$ftol_rel}`}
   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
 	}
 }

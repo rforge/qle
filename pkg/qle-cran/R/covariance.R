@@ -756,6 +756,10 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 	
 	xdim <- attr(qldata,"xdim") 									# dimension of parameter to estimate!
 	nsim <- attr(qldata,"nsim")										# number of simulation replications
+	if(length(nsim)>1L &&
+	   length(nsim)!=nrow(qldata)) {
+	 warning("Number of simulations for each sample point does not match number of sample points.")
+	}	
 	Xs <- data.matrix(qldata[seq(xdim)])	
 	dataT <- qldata[grep("^mean[.]",names(qldata))]					# simulated statistic data
 		
@@ -1048,8 +1052,7 @@ updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
 	stopifnot(inherits(nextData,"QLdata"))	
 	
 	nnew <- NROW(nextData)	
-	xdim <- attr(qsd$qldata,"xdim")
-	nsim <- attr(qsd$qldata,"nsim")
+	xdim <- attr(qsd$qldata,"xdim")	
 	nsim.new <- attr(nextData,"nsim")
 	
 	nstat <- length(qsd$covT)	
@@ -1066,6 +1069,9 @@ updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
 	
 	# merge to new data, one (sample point) added
 	qsd$qldata <- rbind(qsd$qldata,nextData)	
+	# append number of new simulations (affects nugget evaluation in fitSirfk)
+	attr(qsd$qldata,"nsim") <- c(attr(qsd$qldata,"nsim"),nsim.new)
+	# old sample points
 	Xs <- as.matrix(qsd$qldata[seq(xdim)])
 	np <- nrow(Xs)
 		
@@ -1113,10 +1119,8 @@ updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
 	}
 	
 	tryCatch({
-	  qsd$covT <- .update(qsd$covT,
-			              qsd$qldata[stid],
-						  nextData[vid]/nsim.new)
-				  
+	  # update kriging models of statistics
+	  qsd$covT <- .update(qsd$covT,qsd$qldata[stid],nextData[vid]/nsim.new)				  
 	  # update kriging VARIANCE models
  	  # Cholesky terms are the data
 	  if(qsd$var.type == "kriging"){
@@ -1133,6 +1137,7 @@ updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
 			 .update(qsd$covL,qsd$qldata[grep("^L[^b]",names(qsd$qldata))],NULL) 
 		 }	 
   	  }
+	  
  	}, error = function(e) {
 	     msg <- .makeMessage("Failed to update covariance models: ",
 				 conditionMessage(e))		

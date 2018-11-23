@@ -13,24 +13,23 @@
 #include "kriging.h"
 
 typedef enum {
-	 QFS_ERROR = -10, 				/* generic failure code */
-	 QFS_EVAL_ERROR = -8,			/* monitor function evaluation */
-	 QFS_STEPMIN_REACHED = -7,		/* relative length of Newton direction is near zero, usually indicates convergence  */
-	 QFS_STEPTOL_REACHED = -6,		/* line search could not find sufficient decrease */
-	 QFS_LINESEARCH_ERROR = -5,
-	 QFS_MAXITER_REACHED = -4,
+	 QFS_ERROR 			   = -10, 				/* generic failure code */
+	 QFS_EVAL_ERROR 	   = -8,			/* monitor function evaluation */
+	 QFS_STEPMIN_REACHED   = -7,		/* relative length of Newton direction is near zero, usually indicates convergence  */
+	 QFS_STEPTOL_REACHED   = -6,		/* line search could not find sufficient decrease */
+	 QFS_LINESEARCH_ERROR  = -5,
+	 QFS_MAXITER_REACHED   = -4,
      QFS_LINESEARCH_ZEROSLOPE = -3,
      QFS_BAD_DIRECTION = -2,    	/* Calculating Newton direction failed*/
 	 QFS_NO_CONVERGENCE = -1,   	/* no convergence */
      QFS_CONVERGENCE = 0,       	/* convergence */
-     QFS_SCORETOL_REACHED = 1,
-     QFS_FTOLREL_REACHED = 2,
-     QFS_STOPVAL_REACHED = 3,
-     QFS_SLOPETOL_REACHED = 4,
-	 QFS_LOCAL_CONVERGENCE = 5,
-	 QFS_GRADTOL_REACHED = 6, 		/* approximate stationary point found at (scaled) norm^2 of quasi-score */
-	 QFS_CONVERGENCE_XTOL = 7,
-	 QFS_XTOL_REACHED = 10			/* might have converged, however, sometimes also indicates problems at bounds */
+	 QFS_LOCAL_CONVERGENCE = 1,
+	 QFS_SCORETOL_REACHED  = 2,
+     QFS_STOPVAL_REACHED   = 3,
+     QFS_SLOPETOL_REACHED  = 4,
+	 QFS_GRADTOL_REACHED   = 5, 		/* approximate stationary point found at (scaled) norm^2 of quasi-score */
+	 QFS_CONVERGENCE_XTOL  = 6,
+	 QFS_XTOL_REACHED 	   = 10			/* might have converged, however, sometimes also indicates problems at bounds */
 } qfs_result;
 
 typedef struct qfs_options_s {
@@ -44,7 +43,6 @@ typedef struct qfs_options_s {
   	     ftol_stop,
 		 ftol_abs,
 		 ltol_rel,
-		 ftol_rel,
 		 score_tol,
 		 step_tol,
 		 slope_tol,
@@ -60,7 +58,6 @@ typedef struct qfs_options_s {
   {
     pl = asInteger(getListElement( R_options, "pl"));
     doIobs = asInteger(getListElement( R_options, "Iobs"));
-	ftol_rel  = asReal(getListElement( R_options, "ftol_rel" ));
 	ftol_stop = asReal(getListElement( R_options, "ftol_stop"));
 	ftol_abs  = asReal(getListElement( R_options, "ftol_abs" ));
 	ltol_rel  = asReal(getListElement( R_options, "ltol_rel" ));

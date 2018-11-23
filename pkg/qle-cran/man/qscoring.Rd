@@ -5,8 +5,7 @@
 \title{Quasi-scoring iteration}
 \usage{
 qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
-  check = TRUE, cvm = NULL, Iobs = TRUE, pl = 0L,
-  verbose = FALSE)
+  check = TRUE, cvm = NULL, Iobs = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -26,8 +25,6 @@ qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
 \item{cvm}{list of covariance models for cross-validation (see \code{\link{prefitCV}})}
 
 \item{Iobs}{logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate}
-
-\item{pl}{integer, a print level, use \code{pl}>0 to print intermediate output}
 
 \item{verbose}{logical, \code{FALSE} (default), otherwise print intermediate output}
 }
@@ -74,7 +71,7 @@ The function implements a step-length controlled quasi-scoring iteration with si
  \itemize{
   	\item{\code{ftol_stop}:}{ minimum value of the quasi-deviance for stopping the scoring iteration}
 		\item{\code{ftol_abs}:}{ minimum value of the quasi-deviance which is used as a reference value for a local minimizer or if the minimum steplength is reached}
-		\item{\code{xtol_rel}, \code{ftol_rel}:}{ see \code{\link{qle}} }
+		\item{\code{xtol_rel}:}{ minimum relative stepsize between consecutive estimates }
 		\item{\code{step_tol}:}{ tolerance of two scaled consecutive steps }
 		\item{\code{grad_tol}:}{ upper bound on the quasi-score vector components,
 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
@@ -82,8 +79,7 @@ The function implements a step-length controlled quasi-scoring iteration with si
      \item{\code{maxiter}:}{ maximum allowed number of iterations}
 		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. the order of upper bounds of the parameter space}
      \item{\code{fscale}:}{ numeric, default is vector of 1, typical magnitudes of quasi-score components}
-	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual iterates and further values}
- }
+}
 }
 \examples{
 data(normal)

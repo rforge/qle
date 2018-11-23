@@ -93,9 +93,8 @@
 	return (0)
 }
 
-.qsOpts <- function(options = list(), xdim = 1L, pl = 0L) {
-	opts <- .addQscoreOptions(xdim)
-	opts$pl <- pl
+.qsOpts <- function(options = list(), xdim = 1L) {
+	opts <- .addQscoreOptions(xdim)	
 	if(length(options) > 0L) {
 	 .checkOptions(opts,options)
 	 namc <- match.arg(names(options), choices = names(opts), several.ok = TRUE)
@@ -117,9 +116,8 @@
 	list( "ftol_stop" = .Machine$double.eps,				
 		  "xtol_rel"  = .Machine$double.eps^(2/3),			# see also steptol (Dennis & Schnabel)
 		  "step_tol"  = .Machine$double.eps^(2/3),
-		  "grad_tol"  = 1e-4,		  
-		  "ftol_rel"  = 1e-6,
-		  "ftol_abs"  = 1e-5,								# used if stepmin or grad_tol reached 
+		  "grad_tol"  = 1e-4,  
+		  "ftol_abs"  = 1e-6,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots		 
 		  "slope_tol" = 1e-9,
@@ -137,23 +135,21 @@
 		 "maxiter" = 100,									# max number of global iterations
 		 "maxeval" = 100,									# max number of global and local iterations
 		 "sampleTol" = 1e-4,								# minimum (euclidean) distance between samples		 
-	 	 "weights" = c(50,25,10,5,2,1),		 
+	 	 "weights" = c(50,25,10,5,1),		 
 		 "nsample" = 5000*(xdim+1),							# number of global random samples
 		 "NmaxRel" = 3,		 
 		 "NmaxCV" = 3,		 
 		 "NmaxSample" = 3,
 		 "NmaxLam" = 3,
-		 "NmaxQI" = 5,		 		 
-		 "Nmaxftol"= 3,
+		 "NmaxQI" = 5,	 
 		 "nstart" = 10*(xdim+1L))					    	# number of starting points for multistart version at global phase
 }
 
 .getDefaultLOCoptions <- function(xdim) {
-	list("ftol_abs"	= 1e-9,							   # whether local minimizer is numerically zero
-		 "ftol_rel" = 1e-7,
+	list("ftol_abs"	= 1e-6,							   # whether local minimizer is numerically zero		 
 		 "lam_max" = 1e-3,							   # quite restrictive
 		 "pmin" = 0.05,								   # minimum accepted probability of coverage of sample points within search domain
-		 "weights" = c(0.8,0.6,0.4,0.2,0.01),		   # only for sampling with criterion `score`
+		 "weights" = c(1.0,0.8,0.6,0.4,0.2),		   # only for sampling with criterion `score`
 		 "nsample" = 1000*(xdim+1),					   # number of local random samples
 		 "perr_tol" = rep(0.1,xdim),				   # upper bound on the relative change of empirical error and predicted error (by inverse QI) 
 		 "nobs"=100,								   # number of boottrap observations to generate (used for approximate root testing)
@@ -163,19 +159,19 @@
 		 "nsucc" = 3,								   # number of successful iterations until next increase of weights 
 		 "nextSample" = "score",					   # default selection criterion
 		 "useWeights" = TRUE,						   # do not dynamically adjust weights and cycle through the weights								   
+		 "multfac" = 1.0,
 		 "test" = FALSE)							   # do not test approximate root		 
 }
 
 .setControls <- function(globals,locals) {
 	defaults <- c("lam_rel","lam_max","xtol_rel","stopval","sampleTol",
-				  "nfail","nsucc","ftol_rel","maxiter","maxeval")
+				  "nfail","nsucc","maxiter","maxeval")
 	optlist <- c(globals,locals)
 	namc <- match.arg(names(optlist), choices = defaults, several.ok = TRUE)
 	ctls <- data.frame(cbind("cond" = unlist(optlist[namc]),
 						     "val" = 0, "tmp"=0, "stop" = 0,
 							 "count" = c(1,globals$NmaxCV,globals$NmaxRel,1,1,
-									 	 globals$NmaxSample,globals$Nmaxftol,
-										 globals$NmaxLam,1,1)),
+									 	 globals$NmaxSample,globals$NmaxLam,1,1)),
 			row.names = namc, check.names = FALSE)
 	
 	# init some controls	
@@ -209,8 +205,7 @@ getDefaultOptions <- function(xdim) {
 	if(!is.numeric(xdim))
 	  stop("`xdim` mus be a numeric value.")
   
-	list("qscoring" = .addQscoreOptions(xdim),
-		 "qscoring.root.only"=.addQscoreOptionsRoot(xdim),
+	list("qscoring" = .addQscoreOptions(xdim),		 
 		 "qle_local_opts" = .getDefaultLOCoptions(xdim),
 		 "qle_global_opts" = .getDefaultGLoptions(xdim))
 }
@@ -687,14 +682,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					   obs = NULL, optInfo = FALSE, check = TRUE, 
 					    restart = TRUE, pl = 0L, verbose = FALSE)
 {
-	stopifnot(is.numeric(pl) && pl >= 0L )
-	
 	x0 <- 
 	 if(is.matrix(x0))
 		structure(as.numeric(x0),names=colnames(x0))	
 	 else unlist(x0)
-	if(check)
-	  .checkArguments(qsd,x0,...)
+	if(check) .checkArguments(qsd,x0,...)
+	stopifnot(is.numeric(pl) && pl >= 0L )
   
     fun.name <- ""
 	nms <- names(x0)	
@@ -736,7 +729,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		 if(m1!=1)
 		  method <- c("qscoring",method[-m1])		
 		 tryCatch({			
-		    qscoring(qsd,x0,opts,...,check=FALSE,pl=pl,verbose=verbose)			
+		    qscoring(qsd,x0,opts,...,check=FALSE,verbose=verbose)			
 		   }, error = function(e) {	e }
   		 )
 		} else NULL
@@ -1213,7 +1206,6 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' 
 #'  The following controls `\code{local.opts}` for the local search phase are available:
 #'   \itemize{
-#'   \item{\code{ftol_rel}:}{ upper bound on relative change in criterion function values}
 #'   \item{\code{lam_max}:}{ upper bound on the maximum eigenvalue of the generalized eigenvalue decomposition of
 #' 		the quasi-information matrix and estimated interpolation error (variance) of quasi-score.
 #'  	This stops the main iteration sampling new locations following the idea that in this case
@@ -1264,8 +1256,6 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #'       at some estimated parameter drops below the upper bound `\code{local.opts$lam_max}` }
 #'   \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
 #'      and predicted error of an approximate root drops below `\code{perr_tol}`}
-#'   \item{\code{Nmaxftol}:}{ maximum number of consecutive iterations until stopping for which the relative change in the values
-#'    of the criterion function drops below `\code{local.opts$ftol_rel}`}
 #'   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
 #' 	}
 #'  
@@ -1290,7 +1280,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"), qscore.opts = list(),
-				   control = list(), errType = "kv", pl = 0, use.cluster = FALSE,
+				   control = list(), errType = "kv", pl = 0L, use.cluster = FALSE,
 				     cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
@@ -1364,7 +1354,6 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 			 c(cond,
 			   "lam_max"=unlist(ctls["lam_max","val"]),
 			   "lam_rel"=unlist(ctls["lam_rel","val"]),
-			   "ftol_rel"=unlist(ctls["ftol_rel","val"]),
 			   "xtol_rel"=unlist(ctls["xtol_rel","val"]),
 			   "sampleTol"=unlist(ctls["sampleTol","val"]))	
 			
@@ -1634,9 +1623,9 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 					varS <- S0$varS	
 					status[["minimized"]] <- TRUE
 					
-					if(max(abs(S0$score)) < qscore.opts$score_tol || ft < locals$ftol_abs) {				# either 'score_tol' reached (real root of quasi-score)
-						status[["global"]] <- 0L									# start local phase
-					} else if(locals$test && ft > locals$ftol_abs) { 				# quasi-deviance can be distinguished from zero
+					if(max(abs(S0$score)) < qscore.opts$score_tol || ft < locals$ftol_abs) {		# either 'score_tol' reached (real root of quasi-score)
+						status[["global"]] <- 0L													# start local phase
+					} else if(locals$test && ft > locals$ftol_abs) { 								# quasi-deviance can be distinguished from zero
 					     if(pl > 0L)
 						   cat("Testing local minimizer...\n")
 					     Stest <-
@@ -1744,7 +1733,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 														  locals$weights[mWeights] )
 											   } else {
 												 
-												if(ft < 0.9*fold || ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
+												if(ft < 0.95*fold || ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
 												 {
 													 ctls["nfail","val"] <- 0L
 													 ctls["nsucc","val"] <- ctls["nsucc","val"] + 1L												
@@ -1803,7 +1792,9 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 								} # candidate selection								
 							
 							} # generate sample 						
-						
+							
+							nsim <- min(nsim*locals$multfac,10000);
+							
 						} # end local sampling
 						
 						# start or continue with global sampling
@@ -1915,13 +1906,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				if( ctls["xtol_rel","val"] < ctls["xtol_rel","cond"]) {
 					ctls["xtol_rel","stop"] <- ctls["xtol_rel","stop"] + 1L					
 				} else { ctls["xtol_rel","stop"] <- 0L }
-				
-				# ftol_rel (global and local) (low priority)
-				ctls["ftol_rel","val"] <- abs(ft-fold)/max(abs(ft),EPS)
-				if( ctls["ftol_rel","val"] < ctls["ftol_rel","cond"]) {
-					ctls["ftol_rel","stop"] <- ctls["ftol_rel","stop"] + 1L					
-				} else { ctls["ftol_rel","stop"] <- 0L }				
-				
+							
 				# generalized EVD (either based on CV or Kriging variances)
 				ctls["lam_max","tmp"] <- ctls["lam_max","val"]
 				ctls["lam_max","val"] <- max(geneigen(varS,I,only.values=TRUE), na.rm=TRUE)
@@ -1988,8 +1973,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 					}					
 				}
 				
-				# simulate at new locations
-				# new simulations, qsd$nsim is default
+				# simulate at new locations, qsd$nsim (default)
 				newSim <-
 					tryCatch(
 						simQLdata(simFun, nsim=nsim, X=Snext$par, cl=cl, verbose=pl>0L),
@@ -2063,7 +2047,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				# show results (update) 
 				.printInfo()
 				.showConditions()	
-			}		
+			}
 			
 		}, error = function(e) {
 			msg <- .makeMessage("Current iteration stopped unexpectedly: ",
@@ -2386,8 +2370,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @param inverted  currently ignored
 #' @param check		logical, \code{TRUE} (default), whether to check input arguments
 #' @param cvm		list of covariance models for cross-validation (see \code{\link{prefitCV}})
-#' @param Iobs	    logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate
-#' @param pl	    integer, a print level, use \code{pl}>0 to print intermediate output  	
+#' @param Iobs	    logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate  	
 #' @param verbose   logical, \code{FALSE} (default), otherwise print intermediate output
 #'
 #' @return List of results of quasi-scoring iteration with elements:
@@ -2428,7 +2411,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #'  \itemize{
 #'   	\item{\code{ftol_stop}:}{ minimum value of the quasi-deviance for stopping the scoring iteration}
 #' 		\item{\code{ftol_abs}:}{ minimum value of the quasi-deviance which is used as a reference value for a local minimizer or if the minimum steplength is reached}
-#' 		\item{\code{xtol_rel}, \code{ftol_rel}:}{ see \code{\link{qle}} }
+#' 		\item{\code{xtol_rel}:}{ minimum relative stepsize between consecutive estimates }
 #' 		\item{\code{step_tol}:}{ tolerance of two scaled consecutive steps }
 #' 		\item{\code{grad_tol}:}{ upper bound on the quasi-score vector components,
 #' 				 testing for a local minimum of the quasi-deviance in case of a line search failure}
@@ -2436,8 +2419,7 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #'      \item{\code{maxiter}:}{ maximum allowed number of iterations}
 #' 		\item{\code{xscale}:}{ numeric, default is vector of 1, typical magnitudes of vector components of `\code{x0}`, e.g. the order of upper bounds of the parameter space}
 #'      \item{\code{fscale}:}{ numeric, default is vector of 1, typical magnitudes of quasi-score components}
-#' 	    \item{\code{pl}:}{ print level (>=0), use \code{pl}=10 to print individual iterates and further values}
-#'  } 
+#' } 
 #'
 #' @examples 
 #' data(normal)
@@ -2451,12 +2433,10 @@ nextLOCsample <- function(S, x, n, lb, ub, pmin = 0.05, invert = FALSE) {
 #' @export
 qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 			    	  inverted = FALSE, check = TRUE, cvm = NULL, 
-				 	   Iobs = TRUE, pl = 0L, verbose = FALSE)
+				 	   Iobs = TRUE, verbose = FALSE)
 {	
 	if(check)
 	 .checkArguments(qsd,x0,Sigma)
- 	stopifnot(is.numeric(pl) && pl >= 0L )
- 
   	if(qsd$criterion != "qle")
 	  stop("Quasi-scoring is only valid for criterion `qle`.")
   
@@ -2474,11 +2454,9 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 	} 
 	
 	# set quasi-scoring options	
-	opts <- .qsOpts(opts,xdim,pl)	
-	qlopts <- list("varType"=qsd$var.type,					  
-				   "useCV"=!is.null(cvm),
-				   "useSigma"=FALSE,
-		   		   "Iobs"=Iobs)
+	opts <- .qsOpts(opts,xdim)	
+	qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm),
+					"useSigma"=FALSE,"Iobs"=Iobs)
 		   
 	try(.Call(C_QSopt, x0, qsd, qlopts, X, Sigma, cvm, opts), silent=TRUE)	
 }

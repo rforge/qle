@@ -60,7 +60,7 @@
 	
   	ok <-which(A[,1]==TRUE & apply(A[,2:3],1,any))
   	if(length(ok) == 0L){
-	    message(.makeMessage("`ftol_abs` or `score_tol` cannot be reached. Try to select best parameter anyway."))
+	    message(.makeMessage("`Stopping conditions ('ftol_abs' or 'score_tol') cannot be reached."))
 		id <- try(which.min(dm[,"value"]),silent=TRUE)		
 		if(!inherits(id,"try-error") && length(id)>0L)
 		  dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
@@ -93,7 +93,7 @@
 	if(.isError(QD))	  	
 	 return(.qleError(message="Evaluation of roots failed.",call=sys.call(),error=QD) )
 	
-	options <-list("ftol_abs"=1e-7, "score_tol"=1e-5)
+	options <-list("ftol_abs"=1e-6, "score_tol"=1e-4)
 	opts <-
 	  if(is.null(opts))
 	     options
@@ -218,7 +218,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	  stop("Consistency check of multiple roots only for criterion `qle`.")
    if(.isError(est))
 	  stop("The estimation result from function `qle` has errors. Please check the argument `est`.")
-   options <- list("ftol_abs"=1e-7, "score_tol"=1e-5)
+   options <- list("ftol_abs"=1e-6, "score_tol"=1e-4)
    
    opts <-
     if(is.null(opts))

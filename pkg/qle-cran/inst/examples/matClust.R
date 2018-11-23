@@ -110,7 +110,7 @@ qsd <- getQLmodel(sim,lb,ub,obs0,
 cvm <- prefitCV(qsd, reduce=FALSE, cl=cl,verbose=TRUE)
 
 # starting point for local search
-x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
+x0 <- c("kappa"=21,"R"=0.08,"mu"=2.5)
 
 # use the maximum of kriging and CV-based variances
 attr(cvm,"type") <- "max"
@@ -121,9 +121,9 @@ attr(cvm,"type") <- "max"
 #S <- t(sapply(D,"[[","score"))
 #colMeans(S)
 
-opts <- list("pl"=100,"xscale"=c(10,0.1,1),"score_tol"=1e-3)
+opts <- list("pl"=10,"xscale"=c(10,0.1,1),"score_tol"=1e-3)
  
-(QS0 <- qscoring(qsd,x0,opts=opts,cvm=cvm,pl=10,verbose=TRUE))
+(QS0 <- qscoring(qsd,x0,opts=opts,cvm=cvm,verbose=TRUE))
 
 quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]$value
 
@@ -157,10 +157,9 @@ RES <- attr(S0,"optRes")[[id]]
 x <- RES$start
 QD <- quasiDeviance(x0,qsd,cvm=cvm,verbose=TRUE)
 
-(QSF <- qscoring(qsd,x0,opts=opts,														,
-		 cvm=cvm,pl=100,verbose=TRUE))
+(QSF <- qscoring(qsd,x0,opts=opts,cvm=cvm,verbose=TRUE))
 
-(S2 <- searchMinimizer(x,qsd,method="neldermead",
+(S2 <- searchMinimizer(x0,qsd,method="neldermead",
 		 cvm=cvm,verbose=TRUE))
 
 rbind(QSF$par,S2$par)
@@ -196,12 +195,7 @@ crossValTx(qsd, cvm, type = "sigK")
 # in order to accouont for the prediction uncertainty
 # of sample means of the statistics
 
-qs.opts <- list("xscale"=c(10,0.1,1),
-		        "xtol_rel"=1e-10,
-		        "ftol_stop"=1e-8,
-				"ftol_rel"=1e-6,
-				"ftol_abs"=1e-4,
-				"score_tol"=1e-4)
+qs.opts <- list("xscale"=c(10,0.1,1),"ftol_abs"=1e-4,"score_tol"=1e-4)
 
 # use multicores (mclapply) for computations other
 # than simulating the model, i.e. 'use.cluster=FALSE'
@@ -210,7 +204,7 @@ qs.opts <- list("xscale"=c(10,0.1,1),
 # start estimation
 OPT <- qle(qsd, simClust, cond=cond,  
 		qscore.opts = qs.opts,
-		global.opts = list("maxiter"=10,"maxeval" = 4,
+		global.opts = list("maxiter"=10,"maxeval" = 20,
 				"weights"=c(50,10,5,1,0.1),
 				"NmaxQI"=5,"nstart"=100,
 				"xscale"=c(10,0.1,1)),
@@ -220,9 +214,10 @@ OPT <- qle(qsd, simClust, cond=cond,
 				          "ftol_abs"=1e-2,			# lower bound on criterion value, triggers testing local minimizer if above
 						  "weights"=c(0.55),		# constant weight factor
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
-						  "test"=TRUE),				# testing is enabled
+						  "test"=TRUE,				# testing is enabled
+						  "multfac"=2),				# factor to increase 'nsim' each local step
 		method = c("qscoring","bobyqa","direct"),		
-		errType="max", iseed=297, cl=cl, pl=10,
+		errType="max", iseed=297, cl=cl, pl=2,
 		use.cluster = FALSE)						# cluster is only used for model simulation			
 
 print(OPT,pl=10)
@@ -272,7 +267,7 @@ S0 <- searchMinimizer(OPT$par, OPT$qsd,
 			verbose=TRUE)
 
 # quas-scoring again more precise results
-QS <- qscoring(OPT$qsd,OPT$par,opts=opts,cvm=OPT$cvm,pl=100)
+QS <- qscoring(OPT$qsd,OPT$par,opts=opts,cvm=OPT$cvm,verbose=TRUE)
 
 # compare the different estimates
 #checkMultRoot(OPT)
@@ -315,5 +310,5 @@ stopCluster(cl)
 
 ## plot and store envelopes
 #pdf("Kfunc.pdf",width = 8, height = 10)
-#plotGraphs(OPT$par,nsim=1000)
+plotGraphs(OPT$par,nsim=1000)
 #dev.off()

@@ -17,9 +17,7 @@ upper <- qsd$upper
 qsd$var.type <- "logMean"
 
 # direct minimization of Mahalanobis distance
-ctls <- list("stopval"=1e-10,
-			 "ftol_rel"=1e-6,
-			 "maxeval"=1000)
+ctls <- list("stopval"=1e-10,"maxeval"=1000)
 
 ## Using `nloptr`directly,
 ## though quite slow but possible	 
