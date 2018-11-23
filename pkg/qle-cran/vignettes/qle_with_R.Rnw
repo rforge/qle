@@ -1810,12 +1810,17 @@ attr(cvm,"type") <- "max"
 A first run of a global search leads to the following result.
 \code{x0}:
 <<>>=
-x0 <- c("kappa"=24,"R"=0.08,"mu"=2.5)
+x0 <- c("kappa"=21,"R"=0.08,"mu"=2.5)
 searchMinimizer(x0,qsd,method="direct",cvm=cvm,verbose=TRUE)
 @
-We could also apply the quasi-scoring iteration.
+We could also apply the quasi-scoring iteration setting the following stopping
+conditions.
+<<eval=FALSE>>=
+qs.opts <-
+ list("xscale"=c(10,0.1,1),"ftol_abs"=1e-4,"score_tol"=1e-4)
+@
 <<>>=
-qscoring(qsd,x0,opts=list("slope_tol"=1e-4),cvm=cvm)
+qscoring(qsd,x0,opts=qs.opts,cvm=cvm)
 @
 Here both methods find a solution to the QS vector where the latter ends up in a
 local minimizer according to the convergence code. In general, the quasi-scoring
@@ -1830,16 +1835,7 @@ primary local minimization routine or root finding method respectively. In
 addition to new evaluation points, we also perform a goodness-of-fit test,
 setting \code{test}=\code{TRUE}, of every local minimizer and use
 the corresponding simulation results for improving the current kriging
-approximations. The following sets some options for the quasi-scoring iteration.
-<<eval=FALSE>>=
-qs.opts <-
- list("xscale"=c(10,0.1,1),
-  "xtol_rel"=1e-10,
-  "ftol_stop"=1e-8,  
-  "ftol_abs"=1e-4,
-  "score_tol"=1e-4)
-@
-The estimation is started by:
+approximations. The estimation is started by:
 <<eval=FALSE>>=
 OPT <- qle(qsd, simClust, cond=cond,  
  qscore.opts = qs.opts,
@@ -1853,7 +1849,8 @@ OPT <- qle(qsd, simClust, cond=cond,
                 "ftol_abs"=1e-2, # lower bound on criterion value, triggers testing
                 "weights"=c(0.55), # constant weight factor
                 "eta"=c(0.025,0.075), # ignored, automatic adjustment of weights
-                "test"=TRUE), # testing approximate root is enabled
+				"multfac"=2, # factor to multiply 'nsim' for during each local step
+				"test"=TRUE), # testing approximate root is enabled
 		method = c("qscoring","bobyqa","direct"), # restart methods		
 		errType="max", # use max of kriging and CV error
         iseed=297, cl=cl) # store seed and use given cluster object
