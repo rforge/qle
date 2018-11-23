@@ -310,5 +310,5 @@ stopCluster(cl)
 
 ## plot and store envelopes
 #pdf("Kfunc.pdf",width = 8, height = 10)
-plotGraphs(OPT$par,nsim=1000)
+#plotGraphs(OPT$par,nsim=1000)
 #dev.off()
