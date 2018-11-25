@@ -121,7 +121,7 @@ attr(cvm,"type") <- "max"
 #S <- t(sapply(D,"[[","score"))
 #colMeans(S)
 
-opts <- list("pl"=10,"xscale"=c(10,0.1,1),"score_tol"=1e-3)
+opts <- list("pl"=10,"xscale"=c(10,0.1,1),"ftol_abs"=1e-6,"score_tol"=1e-6,"restart"=TRUE)
  
 (QS0 <- qscoring(qsd,x0,opts=opts,cvm=cvm,verbose=TRUE))
 
@@ -204,7 +204,7 @@ qs.opts <- list("xscale"=c(10,0.1,1),"ftol_abs"=1e-4,"score_tol"=1e-4)
 # start estimation
 OPT <- qle(qsd, simClust, cond=cond,  
 		qscore.opts = qs.opts,
-		global.opts = list("maxiter"=10,"maxeval" = 20,
+		global.opts = list("maxiter"=10,"maxeval" = 2,
 				"weights"=c(50,10,5,1,0.1),
 				"NmaxQI"=5,"nstart"=100,
 				"xscale"=c(10,0.1,1)),
@@ -217,7 +217,7 @@ OPT <- qle(qsd, simClust, cond=cond,
 						  "test"=TRUE,				# testing is enabled
 						  "multfac"=2),				# factor to increase 'nsim' each local step
 		method = c("qscoring","bobyqa","direct"),		
-		errType="max", iseed=297, cl=cl, pl=2,
+		errType="max", iseed=297, cl=cl, pl=10,
 		use.cluster = FALSE)						# cluster is only used for model simulation			
 
 print(OPT,pl=10)

@@ -50,7 +50,7 @@ typedef struct qfs_options_s {
 
   double *typf, *typx;
 
-  int maxiter;    /* limits */
+  int maxiter, restart;
 
   qfs_options_s(ql_model _qlm, SEXP R_options) :
 	  qlm(_qlm), numiter(0), numeval(0), pl(0), info(0), doIobs(FALSE),
@@ -71,6 +71,8 @@ typedef struct qfs_options_s {
 	// scaling vectors
 	typf = REAL(getListElement( R_options, "fscale" ));
 	typx = REAL(getListElement( R_options, "xscale" ));
+	restart = asLogical(getListElement( R_options, "restart"));
+
   }
 
 } qfs_options_t, *qfs_options;

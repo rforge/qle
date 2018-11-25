@@ -9,24 +9,26 @@
  */
 
 #include "qsoptim.h"
-# include <limits>
+
 #include <R_ext/Applic.h>
 #include <R_ext/Constants.h>
 
+/* (Fisher) quasi-scoring iteration with two different objectives and automatic restart */
 qfs_result qfscoring(double *x, int n, double &f, int &fntype, qfs_options qfs);
 
+/* backtracking linesearch with quadratic interpolation of objective */
 void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		double &f, int &check,  int &fntype, double &stepmax, double &stepmin, double &slope,
-		 double &delta, double &rellen, qfs_options qfs, int pl, int &info);
+		 double &delta, double &rellen, qfs_options qfs, int &info);
 
-// projection into box constraints
+/* projection into feasible domain (simple bound constraints) */
 double med(double x, double y, double z, int &info);
 void projmid(double *x, int nx, double *lb, double *ub, int &info);
 
-// final status of QS iteration
+/* final status of QS iteration */
 SEXP getStatus(qfs_result status);
 
-/** Compute (projected) norm of (scaled) quasi-score */
+/** Compute (projected) norm of (scaled) quasi-score, quasi-information matrix */
 void fnQS(double *x, qfs_options qfs, double &f, int fntype, int &info) {
   ql_model qlm = qfs->qlm;
   int i=0, n=qlm->dx;
@@ -40,9 +42,16 @@ void fnQS(double *x, qfs_options qfs, double &f, int fntype, int &info) {
   	 return;
   }
   if(fntype){
-    f = qlm->intern_qfValue();								// no scaling for quasi-deviance
+    f=qlm->intern_qfValue();								// no scaling for quasi-deviance
+    info=qlm->info;
+    if(info != NO_ERROR){
+     LOG_WARNING(info,"fnQS")
+     WRR("`NaN` detected in monitor function.")
+    }
   } else {
-	  double sum=0., *typf=qfs->typf, *score=qlm->score;
+	  double sum=0.,
+			 *typf=qfs->typf,
+			 *score=qlm->score;
 
 	  for (i=0;i<n;++i)
 	    sum += typf[i]*score[i]*typf[i]*score[i];    		// scaled norm^2 of quasi-score vector
@@ -74,7 +83,7 @@ void fnGrad(qfs_options qfs, double *g, double *d, int fntype, int &info){
 	  matmult(qlm->qimat,n,n,q,n,1,g,info);
 	  if(info > 0){
 	    LOG_WARNING(info,"matmult")
- 	    WRR("Could not compute gradient of monitor function.")
+ 	    WRR("`NaN` detected in gradient function 'fnGrad'.")
       }
 	}
 }
@@ -110,11 +119,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 
     /* scoring iteration */
     double fval=R_PosInf, qnorm=R_PosInf;
-
     qfs_result status = qfscoring(xsol,xdim,fval,fntype,&qfs);
-    if(status < 0 ) {
-     PRINT_MSG("Quasi-scoring iteration failed.")
-    }
 
     /* return objects */
     SEXP R_S, R_jac, R_I, R_Iobs=R_NilValue;
@@ -234,6 +239,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
    FREE(g)     	    \
    FREE(d)			\
    FREE(xold)  	    \
+   FREE(xstart)     \
 }
 
 /** \brief  Quasi-Fisher scoring iteration
@@ -258,32 +264,34 @@ qfs_result qfscoring(double *x,			 	/* start */
 
 {
    int i=0, niter=0, check=0, info=0,
-	 stopflag=0, Nmax=qfs->maxiter, pl=qfs->pl;
+	   stopnext=0, restart=(qfs->restart > 0 ? 0 : 1),
+	   Nmax=qfs->maxiter, pl=qfs->pl;
 
    // temp pointers
    ql_model qlm = qfs->qlm;
    double test=0.0, tmp=0.0, fold=0,
 		  delta=1.0, slope=0.0, den=0.0, rellen=0.0,
-		  *d=0, *xold=0, *g=0, stepmin=1e-12,
+		  *d=0, *xstart=0, *xold=0, *g=0, stepmin=1e-12,
 		  *typx=qfs->typx, *typf=qfs->typf,				/* already inverted (see Dennis & Schnabel) */
 		  *qimat=qlm->qimat, *score=qlm->score;
 
    CALLOCX(g,n,double);
    CALLOCX(d,n,double);
    CALLOCX(xold,n,double);
+   CALLOCX(xstart,n,double);
 
    /* first compute monitor */
    fnQS(x,qfs,f,fntype,info);
    if(info){
    	 FREE_WORK
-   	 LOG_ERROR(NaN_ERROR,"`fnQS`: cannot evaluate monitor function.")
+   	 LOG_ERROR(NaN_ERROR,"`fnQS`")
    	 return QFS_EVAL_ERROR;
    }
    /* and gradient (quasi-score vector if fntype > 0 */
    fnGrad(qfs,g,d,fntype,info);
    if(info){
 	 FREE_WORK
-	 LOG_ERROR(NaN_ERROR,"`fnGrad`: cannot evaluate gradient function.")
+	 LOG_ERROR(NaN_ERROR,"`fnGrad`")
 	 return QFS_EVAL_ERROR;
    }
    for (i=0;i<n; ++i) {
@@ -307,13 +315,14 @@ qfs_result qfscoring(double *x,			 	/* start */
    if(!R_FINITE(stepmax)){
 	   FREE_WORK
 	   info=NaN_WARNING;
-	   LOG_ERROR(info,"Cannot compute maximum step length")
+	   LOG_ERROR(info,"`qfscoring`: cannot compute maximum step length")
 	   return QFS_ERROR;
    }
 
-   fold = f;
-   MEMCPY(xold,x,n);
+   fold=f;
+   for (i=0;i<n;i++) xstart[i]=xold[i]=x[i];
    double *qlqimat = qlm->qlsolve.qimat;
+   qfs_result status = QFS_CONVERGENCE;
 
    /*! optimization loop */
    for(niter=0; niter < Nmax; ++niter) {
@@ -327,7 +336,7 @@ qfs_result qfscoring(double *x,			 	/* start */
           	 return QFS_BAD_DIRECTION;
          }
          /* Line search */
-         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,stepmin,slope,delta,rellen,qfs,pl,info);
+         backtr(n,xold,fold,d,g,x,f,check,fntype,stepmax,stepmin,slope,delta,rellen,qfs,info);
          if(check < 0) {
 			 FREE_WORK
 			 qfs->numiter=niter;
@@ -341,16 +350,18 @@ qfs_result qfscoring(double *x,			 	/* start */
            Rprintf("objective..............%3.12f (fntype=%d) \n", f, fntype);
            Rprintf("at bounds..............%d \n", qfs->bounds);
            Rprintf("step min/max...........min=%3.12f, max=%3.12f) \n", stepmin, stepmax);
-           Rprintf("step size..............%3.12f (check=%d, stop=%d) \n", delta, check, stopflag);
+           Rprintf("step size..............%3.12f (check=%d, stop=%d) \n", delta, check, stopnext);
            Rprintf("rellen.................%3.12f \n", rellen);
            Rprintf("slope.................%3.12f \n\n", slope);
            printVector("par", x, &n);
            Rprintf("\n");
            printVector("score", score, &n);
+           Rprintf("length: %3.12f\n\n", denorm(score,n));
            Rprintf("\n");
            printVector("direction (scaled)", d, &n);
            Rprintf("length: %3.12f\n\n", denorm(d,n));
            printVector("gradient", g, &n);
+           Rprintf("length: %3.12f\n\n", denorm(g,n));
            Rprintf("\n");
            Rprintf("--------------------------------------------------------------\n\n");
          }
@@ -365,15 +376,13 @@ qfs_result qfscoring(double *x,			 	/* start */
 		  qfs->numiter = niter;
 		  return QFS_SCORETOL_REACHED;
 		 }
-
+		 /* stopval reached */
+		 if(f < qfs->ftol_stop){
+			FREE_WORK
+			qfs->numiter = niter;
+			return QFS_STOPVAL_REACHED;
+		 }
 		 if(check > 0) {
-			 /* stopval reached */
-			 if(f < qfs->ftol_stop){
-				FREE_WORK
-				qfs->numiter = niter;
-				return QFS_STOPVAL_REACHED;
-			 }
-
 			 if(!fntype) {
 				 /* gradient is zero */
 				 test=0.0;
@@ -391,54 +400,75 @@ qfs_result qfscoring(double *x,			 	/* start */
 				 }
 			 }
 			 /* both types of monitor */
-			 if(rellen < qfs->ltol_rel) {
-			    FREE_WORK
-			    qfs->numiter=niter;
-			    return QFS_CONVERGENCE;
-			 } else if(stopflag){
-			    FREE_WORK
+			 if(rellen < qfs->ltol_rel && f < qfs->ftol_abs) {
+				FREE_WORK
 				qfs->numiter=niter;
-			    return (f < qfs->ftol_abs ? QFS_CONVERGENCE : (qfs_result)info);
+				return QFS_CONVERGENCE;
 			 }
 
-		 } else {
+			 status = (qfs_result) info;
 
+			 if(stopnext) {
+				 if(!restart) {							/* with quasi-deviance as monitor */
+					 check=0;
+					 restart=1;
+					 for (i=0;i<n;i++)
+					   x[i]=xstart[i];					/* and start from scratch */
+					 fnQS(x,qfs,f,fntype,info);
+					 if(info) {
+						FREE_WORK
+						qfs->numiter=niter;
+						LOG_ERROR(NaN_ERROR,"`fnQS`")
+						return QFS_EVAL_ERROR;
+					 }
+				  } else {
+					 for (i=0;i<n;i++)
+					   x[i]=xold[i];					/* reset and terminate finally */
+					 fnQS(x,qfs,f,fntype,info);
+					 FREE_WORK
+					 qfs->numiter=niter;
+					 if(info) {
+					   LOG_ERROR(NaN_ERROR,"`fnQS`")
+					   return QFS_EVAL_ERROR;
+					 }
+					 return status;
+				  }
+			 } else {
+				 check=0;
+				 stopnext=1;
+				 fntype=(fntype > 0 ? 0 : 1);
+				 for (i=0;i<n;i++)
+					x[i]=xold[i];						/* reset for alternative monitor */
+				 fnQS(x,qfs,f,fntype,info);
+				 if(info) {
+				   FREE_WORK
+				   qfs->numiter=niter;
+				   LOG_ERROR(NaN_ERROR,"`fnQS`")
+				   return QFS_EVAL_ERROR;
+				 }
+			}
+
+		 } else {
 			 /*! test for relative change in x */
 			 test=0.0;
 			 for (i=0;i<n; ++i) {
 			  tmp = (std::fabs(x[i]-xold[i])) / MAX(std::fabs(x[i]),1./typx[i]);
 			  if(tmp > test) test = tmp;
 			 }
-			 if(test < qfs->xtol_rel) {
-			  FREE_WORK
-			  qfs->numiter=niter;
-			  return (f < qfs->ftol_abs ? QFS_CONVERGENCE_XTOL : QFS_XTOL_REACHED);
-			 }
-
-		 }
-
-		 /* switch type of monitor function */
-		 if(check>0 && !stopflag){
-			 check=0;
-			 stopflag=1;
-			 fntype=(fntype > 0 ? 0 : 1);
-			 fnQS(x,qfs,f,fntype,info);
-			 if(info) {
+			 if(test < qfs->xtol_rel && !qfs->bounds) {
 				 FREE_WORK
-				 LOG_ERROR(NaN_ERROR,"`fnQS`: cannot evaluate gradient function.")
 				 qfs->numiter=niter;
-				 return QFS_EVAL_ERROR;
+				 return (f < qfs->ftol_abs ? QFS_CONVERGENCE_XTOL : QFS_XTOL_REACHED);
 			 }
 		 }
 
-		 fnGrad(qfs,g,d,fntype,info);			 /* update gradient at new x and copy current score in d */
+		 fnGrad(qfs,g,d,fntype,info);			 /* update gradient at new x and copy (scaled) score in d */
 		 if(info) {
-			 FREE_WORK
-			 LOG_ERROR(NaN_ERROR,"`fnGrad`: cannot evaluate gradient function.")
-			 qfs->numiter=niter;
-			 return QFS_EVAL_ERROR;
+		   FREE_WORK
+		   LOG_ERROR(NaN_ERROR,"`fnGrad`")
+		   qfs->numiter=niter;
+		   return QFS_EVAL_ERROR;
 		 }
-		 /* update */
 		 fold=f;
 		 MEMCPY(xold,x,n);
 
@@ -450,7 +480,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 }
 void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		double &f, int &check,  int &fntype, double &stepmax, double &stepmin, double &slope,
-		 double &delta, double &rellen, qfs_options qfs, int pl, int &info)
+		 double &delta, double &rellen, qfs_options qfs, int &info)
 {
 
 	const double ALF=1.0e-4;
@@ -469,7 +499,8 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		for (i=0;i<n;i++)
 		 d[i] *= stepmax/sum;
 
-	slope=(fntype ? -fold : innerProduct(g,d,n));
+	//slope=(fntype ? -fold : innerProduct(g,d,n));
+	slope=(fntype ? -denorm(g,n) : innerProduct(g,d,n));
 	if (!R_FINITE(slope) || slope >= 0.0) {
 		check=1;
 		info=QFS_LINESEARCH_ZEROSLOPE;
@@ -515,8 +546,6 @@ void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 
 		if (delta < stepmin) {
 		 check=1;
-		 for (i=0;i<n;i++)
-		  x[i]=xold[i];
 		 info=QFS_STEPTOL_REACHED;
 		 return;
 		}
@@ -585,42 +614,42 @@ SEXP getStatus( qfs_result status ) {
    switch ( status ) {
        // (= +0)
        case QFS_CONVERGENCE:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE: Generic convergence."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE:Generic convergence."));
            break;
        // (= +1)
        case QFS_SCORETOL_REACHED:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_SCORETOL_REACHED: Optimization stopped because score_tol was reached."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_SCORETOL_REACHED:Optimization stopped because score_tol was reached."));
            break;
        // (= +3)
        case QFS_STOPVAL_REACHED:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_STOPVAL_REACHED: Optimization stopped because ftol_stop  was reached."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_STOPVAL_REACHED:Optimization stopped because ftol_stop  was reached."));
            break;
        case QFS_GRADTOL_REACHED:
-		  SET_STRING_ELT(R_message, 0, mkChar("QFS_GRADTOL_REACHED: Optimization stopped because grad_tol and ftol_abs were reached."));
+		  SET_STRING_ELT(R_message, 0, mkChar("QFS_GRADTOL_REACHED:Optimization stopped because grad_tol and ftol_abs were reached."));
 		  break;
 
        // (= +4)
        case QFS_XTOL_REACHED:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_XTOL_REACHED: Optimization stopped because xtol_rel was reached."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_XTOL_REACHED:Optimization stopped because xtol_rel was reached."));
            break;
        case QFS_CONVERGENCE_XTOL:
-		   SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE_XTOL: Optimization stopped because xtol_rel and ftol_abs were reached."));
+		   SET_STRING_ELT(R_message, 0, mkChar("QFS_CONVERGENCE_XTOL:Optimization stopped because xtol_rel and ftol_abs were reached."));
 		   break;
            // (= +5)
 	   case QFS_SLOPETOL_REACHED:
-			SET_STRING_ELT(R_message, 0, mkChar("QFS_SLOPETOL_REACHED: Optimization stopped because slope_tol was reached."));
+			SET_STRING_ELT(R_message, 0, mkChar("QFS_SLOPETOL_REACHED:Optimization stopped because slope_tol was reached."));
 			break;
 	   // (= +7)
 	   case QFS_STEPMIN_REACHED:
-	   	   	SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPMIN_REACHED: Optimization stopped because minimum relative direction length was reached."));
+	   	   	SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPMIN_REACHED:Optimization stopped because minimum relative direction length was reached."));
 	   	   	break;
 	   // (= +8)
 	   case QFS_STEPTOL_REACHED:
-	        SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPTOL_REACHED: Optimization stopped because minimum step length was reached."));
+	        SET_STRING_ELT(R_message, 0, mkChar("QFS_STEPTOL_REACHED:Optimization stopped because minimum step length was reached."));
 	        break;
        // (= +10)
        case QFS_LOCAL_CONVERGENCE:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_LOCAL_CONVERGENCE: Optimization stopped because of local convergence."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_LOCAL_CONVERGENCE:Optimization stopped because of local convergence."));
             break;
 
 
@@ -628,26 +657,26 @@ SEXP getStatus( qfs_result status ) {
 
        // (= -1)
        case QFS_NO_CONVERGENCE:
-		   SET_STRING_ELT(R_message, 0, mkChar("QFS_NO_CONVERGENCE: Optimization stopped because no convergence could be detected."));
+		   SET_STRING_ELT(R_message, 0, mkChar("QFS_NO_CONVERGENCE:Optimization stopped because no convergence could be detected."));
 		   break;
        // (= -2)
        case QFS_BAD_DIRECTION:
-           SET_STRING_ELT(R_message, 0, mkChar("QFS_FAILURE: Could not calculate search direction."));
+           SET_STRING_ELT(R_message, 0, mkChar("QFS_FAILURE:Could not calculate search direction."));
            break;
        case QFS_LINESEARCH_ERROR:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ERROR: Optimization stopped because sufficient decrease could not be found."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ERROR:Optimization stopped because sufficient decrease could not be found."));
             break;
        case QFS_LINESEARCH_ZEROSLOPE:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ZEROSLOPE: Optimization stopped because of nearly zero slope."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_LINESEARCH_ZEROSLOPE:Optimization stopped because of nearly zero slope."));
             break;
        case QFS_ERROR:
-		    SET_STRING_ELT(R_message, 0, mkChar("QFS_FAILURE: Generic failure code."));
+		    SET_STRING_ELT(R_message, 0, mkChar("QFS_FAILURE:Generic failure code."));
 		    break;
        case QFS_MAXITER_REACHED:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_MAXITER_REACHED: Optimization stopped because maximum number of iterations was reached."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_MAXITER_REACHED:Optimization stopped because maximum number of iterations was reached."));
             break;
        case QFS_EVAL_ERROR:
-            SET_STRING_ELT(R_message, 0, mkChar("QFS_EVAL_ERROR: Cannot evaluate monitor function."));
+            SET_STRING_ELT(R_message, 0, mkChar("QFS_EVAL_ERROR:Cannot evaluate monitor function."));
             break;
        default:
            SET_STRING_ELT(R_message, 0, mkChar("Unknown return status."));

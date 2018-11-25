@@ -113,17 +113,18 @@
 }
 
 .addQscoreOptions <- function(xdim) {
-	list( "ftol_stop" = .Machine$double.eps,				
+	list( "ftol_stop" = .Machine$double.eps,	  
+		  "step_tol"  = .Machine$double.eps,
 		  "xtol_rel"  = .Machine$double.eps^(2/3),			# see also steptol (Dennis & Schnabel)
-		  "step_tol"  = .Machine$double.eps^(2/3),
 		  "grad_tol"  = 1e-4,  
 		  "ftol_abs"  = 1e-6,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
 		  "score_tol" = 1e-5,								# also used to select best roots		 
 		  "slope_tol" = 1e-9,
 		  "maxiter"   = 100,
-		  "xscale" = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
-		  "fscale" = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
+		  "xscale" 	  = rep(1,xdim),							# scaling independent variables, e.i. parameter theta
+		  "fscale" 	  = rep(1,xdim),							# scaling quasi-score components for 0.5*norm^2 of quasi-score only 
+		  "restart"	  = TRUE,
 		  "pl" = 0L)
 }
 
@@ -2145,14 +2146,15 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 #' @param x      object of class \code{qle} from \code{\link{qle}}
 #' @param pl 	 numeric (positive) value, the print level (higher values give more information)
 #' @param digits number of digits to display
+#' @param format format character(s), see \code{\link{formatC}}
 #' @param ... 	 ignored, additional arguments
 #' 
 #' @rdname print.qle
 #' @method print qle
 #' @export 
-print.qle <- function(x, pl = 2, digits = 5,...){	
+print.qle <- function(x, pl = 2, digits = 4, format="e",...){	
 	if(.isError(x)) 
-	  stop(.makeMessage("Estimation result has errors.","\n"))	
+	  stop("Estimation result has errors.")	
 	if(!inherits(x,"qle"))
 	  stop("Method is only for objects of class `qle`.")
     if(!is.numeric(pl) || pl < 0L )
@@ -2165,7 +2167,7 @@ print.qle <- function(x, pl = 2, digits = 5,...){
 		 cat("Quasi-deviance: \n\n",x$value,"\n\n")
 	  	
 		cat("Estimate:\n\n")
-		print.default(formatC(signif(x$par, digits = digits), digits = digits, format="fg", flag="#"),
+		print.default(formatC(signif(x$par, digits = digits), digits = digits, format=format, flag="#"),
 				print.gap = 4, quote = FALSE)
 		
 		cat("\n")
@@ -2214,53 +2216,57 @@ print.qle <- function(x, pl = 2, digits = 5,...){
 #' @param x  		object of type \code{QSResult} from \code{\link{qscoring}}
 #' @param pl		numeric positive value, the print level (higher values give more information) 
 #' @param digits 	number of digits to display
+#' @param format 	format character(s), see \code{\link{formatC}}
 #' @param ... 	    ignored, additional arguments
 #' 
 #' @rdname print.QSResult
 #' @method print QSResult
 #' @export 
-print.QSResult <- function(x, pl = 1, digits = 5,...) {	
+print.QSResult <- function(x, pl = 1, digits = 4, format="e", ...) {	
 	if(.isError(x)) 
-	  stop(.makeMessage("Quasi-scoring iteration had errors.","\n"))
+	  stop("Quasi-scoring iteration had errors.")
 	if(!inherits(x,"QSResult"))
-	  stop("Method is only for objects of class `QSResult`.")	
+	  stop("Method is only for objects of class 'QSResult'")	
     if(!is.numeric(pl) || pl < 0L )
 	 stop("Print level must be a positive numeric value.")
- 
-	cat(paste0("Local method:\n\n `",x$method,"`",if(isTRUE(attr(x,"restarted"))) "(restarted)"))
-	cat("\n\n")
-	cat("Start: \n\n")
-	print.default(formatC(signif(x$start, digits = digits), digits = digits, format="fg", flag="#"),
-			print.gap = 4, quote = FALSE)
-	cat("\n")
-	cat("Solution: \n\n")
-	print.default(formatC(signif(x$par, digits = digits), digits = digits, format="fg", flag="#"),
-			print.gap = 4, quote = FALSE)
-	cat("\n")
+ 	cat("\n")
+	msg <- unlist(strsplit(paste(x$message, "\n" ),':'))	
+	cat(paste0("Local method:\n\n `",x$method,"`",if(isTRUE(attr(x,"restarted"))) "(restarted)"),"\n")
+	cat("\n")	
 	if(x$criterion == "qle"){
-	  cat("Quasi-deviance:\n\n",x$value,"\n\n")
-    } else cat("Mahalanobis-distance:\n\n",x$value,"\n\n")
-	
-	msg <- unlist(strsplit(paste(x$message, "\n" ),':'))
-	cat("Iterations....",x$iter,"\n")
-	cat("Status........",x$convergence,msg[1],"\n\n")
-	if(!is.null(x$score)){
-		cat(msg[2],"\n")
-		if(x$criterion == "qle") {
-			cat("Quasi-score:\n\n")			
-		} else cat("Gradient:\n\n")
-		print.default(formatC(signif(x$score, digits=8), digits=8, format="fg", flag="#"),
-				print.gap = 4, quote = FALSE)				
+		cat("Quasi-deviance:\n\n")
+	} else cat("Mahalanobis-distance:\n\n")
+	cat(formatC(signif(x$value,digits=digits), digits=digits, format=format, big.mark=","),"\n")
+	df <- as.data.frame(
+		   cbind(
+			formatC(signif(as.numeric(x$start),digits=digits),digits=digits,format=format, flag="#"),
+			formatC(signif(as.numeric(x$par),digits=digits),digits=digits,format=format, flag="#")			
+		   ))
+    dimnames(df) <- list(names(x$par),c("Start","Estimate"))
+		
+	if(!is.null(x$score)){		
+	  df.score <- cbind(df,as.data.frame(cbind("Quasi-score"=
+		  formatC(signif(as.numeric(x$score),digits=digits),digits=digits,format=format, flag="#"))))	  
 	}
+	cat("\n")
+	print(format(df.score, digits=digits), print.gap = 2, right=TRUE, quote = FALSE)
+	cat("\n")
+	cat("Iterations............",x$iter,"\n")
+	cat("Status................",x$convergence,"(",msg[1],")\n\n")	
+	cat(msg[2],"\n")	
 	cat("\n")	
 	if(pl > 1L) {
 		Sigma <- attr(x,"Sigma")		
 		if(!is.null(Sigma)) {	
 			cat("\nApproximation of variance matrix: \n\n Sigma = \n\n")
-			print(Sigma)
+			print(formatC(signif(Sigma,digits=digits),digits=digits,format=format, flag="#"),quote = FALSE)
 			cat("\n\n")
-		} 		
-	}
+		}
+		if(!is.null(attr(x,"call"))){
+			cat("\nCall:\n\n")
+			cat(paste(deparse(attr(x,"call")), sep="\n", collapse = "\n"), "\n\n", sep="")
+		}
+	}	
 	invisible(x)
 }
 
@@ -2458,7 +2464,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 	qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm),
 					"useSigma"=FALSE,"Iobs"=Iobs)
 		   
-	try(.Call(C_QSopt, x0, qsd, qlopts, X, Sigma, cvm, opts), silent=TRUE)	
+	structure(try(.Call(C_QSopt, x0, qsd, qlopts, X, Sigma, cvm, opts), silent=TRUE),call=sys.call())	
 }
 
 

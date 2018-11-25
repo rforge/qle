@@ -4,7 +4,7 @@
 \alias{print.QSResult}
 \title{print results of class \code{QSResult}}
 \usage{
-\method{print}{QSResult}(x, pl = 1, digits = 5, ...)
+\method{print}{QSResult}(x, pl = 1, digits = 4, format = "e", ...)
 }
 \arguments{
 \item{x}{object of type \code{QSResult} from \code{\link{qscoring}}}
@@ -12,6 +12,8 @@
 \item{pl}{numeric positive value, the print level (higher values give more information)}
 
 \item{digits}{number of digits to display}
+
+\item{format}{format character(s), see \code{\link{formatC}}}
 
 \item{...}{ignored, additional arguments}
 }

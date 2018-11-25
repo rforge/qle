@@ -4,7 +4,7 @@
 \alias{print.qle}
 \title{print results of class \code{qle}}
 \usage{
-\method{print}{qle}(x, pl = 2, digits = 5, ...)
+\method{print}{qle}(x, pl = 2, digits = 4, format = "e", ...)
 }
 \arguments{
 \item{x}{object of class \code{qle} from \code{\link{qle}}}
@@ -12,6 +12,8 @@
 \item{pl}{numeric (positive) value, the print level (higher values give more information)}
 
 \item{digits}{number of digits to display}
+
+\item{format}{format character(s), see \code{\link{formatC}}}
 
 \item{...}{ignored, additional arguments}
 }
