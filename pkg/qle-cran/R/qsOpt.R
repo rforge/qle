@@ -1292,10 +1292,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 			if(nmax >= maxEval || nglobal >= maxIter)
 			  cat("Final results: \n\n")
    		    cat("Total evaluations...",nmax,"\n")						
-			cat("Criterion value.....",formatC(ft, digits=4, format="e", big.mark=","),"\n\n")
-			cat("Current iterate: \n\n")
-			print.default(formatC(signif(as.numeric(xt), digits=8), digits=8, format="fg", flag="#"),
-					print.gap = 4, quote = FALSE)
+			cat("Criterion value.....",formatC(ft, digits=6, format="e", big.mark=","),"\n\n")
 			cat("\n")						
 			if(!is.null(Stest) && !.isError(Stest)){
 			 qt <- attr(Stest$test,"qt")
@@ -1309,12 +1306,12 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 
 	.showConditions = function() {
 		if(pl > 1L) {
-		    cat("Iterations......",paste0("global=",nglobal,", local=",nlocal,"\n"))
-			cat("Sampling:.......",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
-			cat("Local search:...",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed")))			
+		    cat("Iterations...........",paste0("global=",nglobal,", local=",nlocal,"\n"))
+			cat("Sampling.............",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
+			cat("Local method.........",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed")))			
 			if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n")	else cat("\n")				
 			if(locals$nextSample == "score")
-			 cat("weight factor:..",w,"\n")
+			 cat("weight factor.......",w,"\n")
 			cat("\n")
 			df <- as.data.frame(
 					cbind(
@@ -1325,23 +1322,20 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 			dimnames(df) <- list(names(x0),c("Start","Estimate", "Sample"))
 			dfv <- as.data.frame(
 					cbind(
-						formatC(signif(fs,digits=3),digits=3,format="e"),
-						formatC(signif(ft,digits=3),digits=3,format="e"),
-						formatC(signif(Snext$value,digits=3),digits=3,format="e")))
+						formatC(signif(fs,digits=3),digits=4,format="e"),
+						formatC(signif(ft,digits=3),digits=4,format="e"),
+						formatC(signif(Snext$value,digits=4),digits=3,format="e")))
 			dimnames(dfv) <- list("value",c("","",""))
 		
 			if(!.isError(S0)){
 				df <- cbind(df,formatC(signif(as.numeric(S0$par),digits=6),digits=6,format="fg", flag="#"))
 				dimnames(df)[[2]] <- c("Start","Estimate", "Sample", "Local")
-				dfv <- cbind(dfv,formatC(signif(as.numeric(S0$value),digits=3),digits=3,format="e"))
+				dfv <- cbind(dfv,formatC(signif(as.numeric(S0$value),digits=4),digits=4,format="e"))
 				dimnames(dfv)[[2]] <- c("","", "", "")
 			}		
 			
-			print(format(df, digits=6),
-				print.gap = 2, right=FALSE, quote = FALSE)	
-		    			
-			print(format(dfv, digits=6),
-					print.gap = 2, right=FALSE, quote = FALSE)
+			print(format(df, digits=6),	print.gap = 2, right=TRUE, quote = FALSE)		    			
+			print(format(dfv,digits=6) ,print.gap = 2, right=TRUE, quote = FALSE)
 			cat("\n\n")		
 			# other conditions
 			# max of quasi-score depends on whether criterion was minimized (local) or not
@@ -1358,8 +1352,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 			   "xtol_rel"=unlist(ctls["xtol_rel","val"]),
 			   "sampleTol"=unlist(ctls["sampleTol","val"]))	
 			
-		 	print.default(format(cond, digits = 4, justify="left"),
-							print.gap = 2, quote = FALSE)
+		 	print.default(format(cond, digits = 4, justify="left"),	print.gap = 2, quote = FALSE)
 						
 			if(pl > 2L) {
 				if(!.isError(S0)){
