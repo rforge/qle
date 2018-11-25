@@ -1813,14 +1813,11 @@ A first run of a global search leads to the following result.
 x0 <- c("kappa"=21,"R"=0.08,"mu"=2.5)
 searchMinimizer(x0,qsd,method="direct",cvm=cvm,verbose=TRUE)
 @
-We could also apply the quasi-scoring iteration setting the following stopping
+We could also apply the quasi-scoring iteration using the following stopping
 conditions.
-<<eval=FALSE>>=
-qs.opts <-
- list("xscale"=c(10,0.1,1),"ftol_abs"=1e-4,"score_tol"=1e-4)
-@
 <<>>=
-qscoring(qsd,x0,opts=qs.opts,cvm=cvm)
+opts <- list("xscale"=c(10,0.1,1),"ftol_abs"=1e-4,"score_tol"=1e-4)
+qscoring(qsd,x0,opts=opts,cvm=cvm)
 @
 Here both methods find a solution to the QS vector where the latter ends up in a
 local minimizer according to the convergence code. In general, the quasi-scoring
@@ -1838,7 +1835,7 @@ the corresponding simulation results for improving the current kriging
 approximations. The estimation is started by:
 <<eval=FALSE>>=
 OPT <- qle(qsd, simClust, cond=cond,  
- qscore.opts = qs.opts,
+ qscore.opts = opts,
  global.opts = list("maxiter"=10,"maxeval" = 20,
                 "weights"=c(50,10,5,1,0.1),
                 "NmaxQI"=5,"nstart"=100,
@@ -1906,7 +1903,7 @@ Stest <- qleTest(OPT, # estimation results
           obs0=obs0, # alternative observed statistics
           sim=simClust,cond=cond,nsim=100,
           method=c("qscoring","bobyqa","direct"), # restart methods
-          opts=qs.opts,control=list("ftol_abs"=1e-8), # minimization options 
+          opts=opts,control=list("ftol_abs"=1e-8), # minimization options 
           multi.start=1L,cl=cl,verbose=TRUE) # multi-start and parallel options
 @
 <<>>=
