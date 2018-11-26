@@ -2232,11 +2232,9 @@ print.QSResult <- function(x, pl = 1, digits = 4, format="e", ...) {
 	cat(formatC(signif(x$value,digits=digits), digits=digits, format=format, big.mark=","),"\n")
 	df <- as.data.frame(
 		   cbind(
-			formatC(signif(as.numeric(x$start),digits=digits),digits=digits,format=format, flag="#"),
-			formatC(signif(as.numeric(x$par),digits=digits),digits=digits,format=format, flag="#")			
-		   ))
-    dimnames(df) <- list(names(x$par),c("Start","Estimate"))
-		
+			"Start"=formatC(signif(as.numeric(x$start),digits=digits),digits=digits,format=format, flag="#"),
+			"Estimate"=formatC(signif(as.numeric(x$par),digits=digits),digits=digits,format=format, flag="#")			
+		   ))	
 	if(!is.null(x$score)){		
 	  df.score <- cbind(df,as.data.frame(cbind("Quasi-score"=
 		  formatC(signif(as.numeric(x$score),digits=digits),digits=digits,format=format, flag="#"))))	  
