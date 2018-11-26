@@ -455,14 +455,20 @@ qfs_result qfscoring(double *x,			 	/* start */
 			  tmp = (std::fabs(x[i]-xold[i])) / MAX(std::fabs(x[i]),1./typx[i]);
 			  if(tmp > test) test = tmp;
 			 }
-			 if(test < qfs->xtol_rel && !qfs->bounds) {
-				 FREE_WORK
-				 qfs->numiter=niter;
-				 return (f < qfs->ftol_abs ? QFS_CONVERGENCE_XTOL : QFS_XTOL_REACHED);
+			 if(test < qfs->xtol_rel){
+				 if(f < qfs->ftol_abs) {				/* upper bound on criterion value reached */
+					 FREE_WORK
+					 qfs->numiter=niter;
+					 return QFS_CONVERGENCE_XTOL;
+				 } else if(stopnext && restart) {  		/* only after restart with quasi-deviance accepted */
+					FREE_WORK
+					qfs->numiter=niter;
+					return QFS_XTOL_REACHED;
+				 }
 			 }
 		 }
 
-		 fnGrad(qfs,g,d,fntype,info);			 /* update gradient at new x and copy (scaled) score in d */
+		 fnGrad(qfs,g,d,fntype,info);					/* update gradient at new x and copy (scaled) score in d */
 		 if(info) {
 		   FREE_WORK
 		   LOG_ERROR(NaN_ERROR,"`fnGrad`")
@@ -478,6 +484,99 @@ qfs_result qfscoring(double *x,			 	/* start */
    qfs->numiter=niter;
    return QFS_MAXITER_REACHED;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void backtr(int n, double *xold, double &fold,  double *d, double *g, double *x,
 		double &f, int &check,  int &fntype, double &stepmax, double &stepmin, double &slope,
 		 double &delta, double &rellen, qfs_options qfs, int &info)

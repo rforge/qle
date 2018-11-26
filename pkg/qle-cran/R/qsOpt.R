@@ -112,8 +112,8 @@
 
 .addQscoreOptions <- function(xdim) {
 	list( "ftol_stop" = .Machine$double.eps,	  
-		  "step_tol"  = .Machine$double.eps,
-		  "xtol_rel"  = .Machine$double.eps^(2/3),			# see also steptol (Dennis & Schnabel)
+		  "step_tol"  = 1e-13,
+		  "xtol_rel"  = 1e-11,								# see also steptol (Dennis & Schnabel)
 		  "grad_tol"  = 1e-4,  
 		  "ftol_abs"  = 1e-6,								# used if stepmin or grad_tol reached 
 		  "ltol_rel"  = 1e-4,								# relative step length tolerance
@@ -1050,7 +1050,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @param sim		    user-defined simulation function, see details
 #' @param ...			further arguments passed to `\code{sim}` 
 #' @param nsim			optional, either a scalar value or a function returning the number of simulation replications
-#' 						 at each new sample point, set by `\code{qsd$nsim}` (default)
+#' 						at each new sample point during the local phase, default set by the initial value `\code{qsd$nsim}`
 #' @param x0 			optional, numeric vector of starting parameters
 #' @param obs			optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}` if given
 #' @param Sigma			optional, constant variance matrix estimate of statistics (see details) 
@@ -1372,21 +1372,12 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 	if(!is.numeric(pl) || pl < 0L)
 	  stop("Print level `pl` must be some positive numeric value.")		
   	
-  	# check simulation increase function `nsim` 
+  	# simulation increase function `nsim` 
     if(missing(nsim))
 	  nsim <- attr(qsd$qldata,"nsim")  	  
-	fnsim <- 
+	Fnsim <- 
      if(is.function(nsim)){
-		  id <- which(is.na(pmatch(names(args),names(formals(nsim)))))
-		  fnsim.args <- if(length(id)>0L) args[-id] else NULL		
-		  args <- args[id]
-		  .checkfun(nsim,fnsim.args,remove=TRUE)
-		  funret <- try(do.call(nsim,fnsim.args))		
-		  if(inherits(funret,"try-error"))
-			  stop(paste("Error in user defined function `",as.character(substitute(nsim)),"`.",sep=""))
-		  else if(!is.numeric(funret))
-			  stop("Number of simulations must be given.")
- 		  structure(function(x) try(do.call(nsim,fnsim.args)), class="function")
+		 match.fun(nsim)	  	  
 	 } else { as.function(list("nsim"=nsim)) }	
       
 	# may overwrite (observed) statistics	
@@ -1803,7 +1794,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 							
 							# next number of simulations
 							# knowing the code we could easily define rule to increase `nsim` 
-							nsim <- fnsim();
+							nsim <- try(Fnsim(),silent=TRUE)
 							stopifnot(is.numeric(nsim))
 							
 						} # end local sampling
