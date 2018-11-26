@@ -1292,15 +1292,15 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 			if(nmax >= maxEval || nglobal >= maxIter)
 			  cat("Final results: \n\n")
    		    cat("Total evaluations...",nmax,"\n")						
-			cat("Criterion value.....",formatC(ft, digits=6, format="e", big.mark=","),"\n\n")
+			cat("Criterion value.....",formatC(ft, digits=6, format="e", big.mark=","),"\n")
 			cat("\n")						
 			if(!is.null(Stest) && !.isError(Stest)){
 			 qt <- attr(Stest$test,"qt")
 			 sb <- as.numeric(Stest$test[1])
 			 cat(paste0("Criterion value < ",names(qt)," quantile: ",formatC(sb, digits=4, format="e", big.mark=",")))
 			 cat(paste0(" < ",formatC(qt, digits=4, format="e", big.mark=",")),"\n")			 
-			}			 
-			cat("\n")
+			 cat("\n")	
+		    }			
 		}		
 	}
 
