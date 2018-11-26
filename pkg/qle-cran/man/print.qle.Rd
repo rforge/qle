@@ -4,7 +4,7 @@
 \alias{print.qle}
 \title{print results of class \code{qle}}
 \usage{
-\method{print}{qle}(x, pl = 2, digits = 4, format = "e", ...)
+\method{print}{qle}(x, pl = 1L, digits = 4, format = "e", ...)
 }
 \arguments{
 \item{x}{object of class \code{qle} from \code{\link{qle}}}

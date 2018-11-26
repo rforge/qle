@@ -4,7 +4,7 @@
 \alias{print.qleTest}
 \title{print \code{qleTest} results}
 \usage{
-\method{print}{qleTest}(x, pl = 1, digits = 5, ...)
+\method{print}{qleTest}(x, pl = 1, digits = 5, format = "e", ...)
 }
 \arguments{
 \item{x}{object of class \code{qleTest} from \code{\link{qleTest}}}
@@ -12,6 +12,8 @@
 \item{pl}{ignored}
 
 \item{digits}{number of (significant) digits}
+
+\item{format}{format character(s), see \code{\link{formatC}}}
 
 \item{...}{ignored}
 }

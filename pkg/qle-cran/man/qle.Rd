@@ -7,8 +7,8 @@
 qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
   global.opts = list(), local.opts = list(), method = c("qscoring",
   "bobyqa", "direct"), qscore.opts = list(), control = list(),
-  errType = "kv", pl = 0L, use.cluster = FALSE, cl = NULL,
-  iseed = NULL, plot = FALSE)
+  errType = "kv", pl = 0L, verbose = TRUE, use.cluster = FALSE,
+  cl = NULL, iseed = NULL, plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -17,7 +17,8 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 
 \item{...}{further arguments passed to `\code{sim}`}
 
-\item{nsim}{optional, number of simulation replications at each new sample point, set by `\code{qsd$nsim}` (default)}
+\item{nsim}{optional, either a scalar value or a function returning the number of simulation replications
+at each new sample point during the local phase, default set by the initial value `\code{qsd$nsim}`}
 
 \item{x0}{optional, numeric vector of starting parameters}
 
@@ -38,6 +39,8 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 \item{errType}{type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
+
+\item{verbose}{logical, \code{TRUE} show additional status information}
 
 \item{use.cluster}{logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
 a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at least a number of cpus 

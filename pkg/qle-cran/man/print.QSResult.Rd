@@ -4,7 +4,7 @@
 \alias{print.QSResult}
 \title{print results of class \code{QSResult}}
 \usage{
-\method{print}{QSResult}(x, pl = 1, digits = 4, format = "e", ...)
+\method{print}{QSResult}(x, pl = 1L, digits = 4, format = "e", ...)
 }
 \arguments{
 \item{x}{object of type \code{QSResult} from \code{\link{qscoring}}}
