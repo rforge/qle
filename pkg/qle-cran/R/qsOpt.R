@@ -31,9 +31,7 @@
 	)
 }
 
-# internal function to check 
-# the arguments `args` with
-# function `fun` 
+# internal function to check the arguments `args` with of function `fun` 
 .checkfun <- function(fun, args, hide.args = NULL, remove = NULL, check.default=TRUE) {	
 	funname <- deparse(substitute(fun)) 
 	if( !is.function(fun) )
@@ -159,8 +157,7 @@
 		 "nfail" = 2,								   # number of failed (not yet improved) iterations until next decrease of weights 
 		 "nsucc" = 3,								   # number of successful iterations until next increase of weights 
 		 "nextSample" = "score",					   # default selection criterion
-		 "useWeights" = TRUE,						   # do not dynamically adjust weights and cycle through the weights								   
-		 "multfac" = 1.0,
+		 "useWeights" = TRUE,						   # do not dynamically adjust weights and cycle through the weights							   
 		 "test" = FALSE)							   # do not test approximate root		 
 }
 
@@ -683,8 +680,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 					   obs = NULL, optInfo = FALSE, check = TRUE, 
 					    restart = TRUE, pl = 0L, verbose = FALSE)
 {
-	x0 <- 
-	 if(is.matrix(x0))
+	x0 <- if(is.matrix(x0))
 		structure(as.numeric(x0),names=colnames(x0))	
 	 else unlist(x0)
 	if(check) .checkArguments(qsd,x0,...)
@@ -744,8 +740,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		msg <- c(msg, conditionMessage(S0))
 	   message(msg)
 	   cat("\n\n")
-	   if(pl >= 10L){
-	   	   print(S0)
+	   if(pl > 0L){
+	   	   print(S0,pl=pl)
 		   cat("\n\n")
 	   }
 	   method <- method[-1]
@@ -886,11 +882,12 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 		
 	if(verbose){
 	  cat(paste0("Successful minimization by: ",fun.name,
-		if(isTRUE(attr(S0,"restarted"))) " [restarted]", " (status = ",S0$convergence,")","\n\n"))
+		if(isTRUE(attr(S0,"restarted"))) " [restarted]", " (status = ",S0$convergence,")","\n"))
 	}
-	if(pl >= 10L){
-	  print(S0)
-	  cat("\n\n")
+	if(pl >= 5L){
+	  cat("\n")
+	  print(S0,pl=pl)
+	  cat("\n")
 	}
    
 	if(length(tracklist) > 0L)
@@ -968,10 +965,8 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 		if(.isError(S0))
 		 message("First local search has errors.")
 	    else if(S0$convergence < 0L || S0$convergence == 10) {
-			if(verbose)
-			 cat("First local search did not converge. See attribute `optRes`. \n\n")
-			if(pl > 0L)
-			 print(S0)			  
+		 if(verbose)
+		  cat("First local search did not converge. See attribute `optRes`. \n\n")						  
 		}
 	}
 
@@ -993,7 +988,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		   cat("Multistart local search (",nstart," points) \n")
+		   cat("Multistart local search from ",nstart," starting points.\n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
@@ -1054,7 +1049,8 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @param qsd			object of class \code{\link{QLmodel}}
 #' @param sim		    user-defined simulation function, see details
 #' @param ...			further arguments passed to `\code{sim}` 
-#' @param nsim			optional, number of simulation replications at each new sample point, set by `\code{qsd$nsim}` (default)
+#' @param nsim			optional, either a scalar value or a function returning the number of simulation replications
+#' 						 at each new sample point, set by `\code{qsd$nsim}` (default)
 #' @param x0 			optional, numeric vector of starting parameters
 #' @param obs			optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}` if given
 #' @param Sigma			optional, constant variance matrix estimate of statistics (see details) 
@@ -1065,6 +1061,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @param control		list of control arguments passed to any of the routines defined in `\code{method}` 
 #' @param errType		type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)  
 #' @param pl			print level, use \code{pl}>0 to print intermediate results
+#' @param verbose  		logical, \code{TRUE} show additional status information
 #' @param use.cluster   logical, \code{FALSE} (default), whether to use the cluster environment `\code{cl}` for computations other than model simulations or
 #'   a multicore forking which requires to set \code{options(qle.multicore="mclapply")} using at least a number of cpus 
 #' 	 cores \code{>1}, e.g. \code{options(mc.cores=2L)}.
@@ -1281,8 +1278,8 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"), qscore.opts = list(),
-				   control = list(), errType = "kv", pl = 0L, use.cluster = FALSE,
-				     cl = NULL, iseed = NULL, plot=FALSE)
+				   control = list(), errType = "kv", pl = 0L, verbose = TRUE, 
+				    use.cluster = FALSE, cl = NULL, iseed = NULL, plot=FALSE)
 {		
 	# print information 	
 	.printInfo = function(){		
@@ -1305,7 +1302,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 	}
 
 	.showConditions = function() {
-		if(pl > 1L) {		   
+		if(pl > 0L) {		   
 		   cat("Iterations..........",paste0("global=",nglobal,", local=",nlocal,"\n"))
 		   cat("Sampling............",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
 		   cat("Local method........",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed")))			
@@ -1337,6 +1334,8 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 			print(format(df, digits=6),	print.gap = 2, right=TRUE, quote = FALSE)		    			
 			print(format(dfv,digits=6) ,print.gap = 2, right=TRUE, quote = FALSE)
 			cat("\n\n")		
+		}
+		if(pl > 1L) {
 			# other conditions
 			# max of quasi-score depends on whether criterion was minimized (local) or not
 			cat("Current stopping conditions: \n\n")			
@@ -1353,44 +1352,58 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 			   "sampleTol"=unlist(ctls["sampleTol","val"]))	
 			
 		 	print.default(format(cond, digits = 4, justify="left"),	print.gap = 2, quote = FALSE)
-						
-			if(pl > 2L) {
-				if(!.isError(S0)){
-				 cat("\n\n")
-				 print(S0)				 
-			    }			 	
-				if(!is.null(Stest) && !.isError(Stest)){
-				   cat("\n\n")
-				   cat("Testing local minimizer: \n\n")
-				   print(Stest)
-				}
-				cat("\n")
+		}				
+		if(pl >= 2L) {
+			if(!.isError(S0)){
+			 cat("\n\n")
+			 print(S0,pl=pl)				 
+		    }			 	
+			if(!is.null(Stest) && !.isError(Stest)){
+			   cat("\n\n")
+			   cat("Testing local minimizer: \n\n")
+			   print(Stest,pl=pl)
 			}
-			cat("----\n\n")
-		}	
+			cat("\n")
+		}
+		cat("-------------------------------------------\n\n")	  	
 	}	
 	
+	args <- list(...)
 	if(!is.numeric(pl) || pl < 0L)
-	  stop("Print level `pl` must be some positive numeric value.")	
-	if(missing(nsim))
-	  nsim <- attr(qsd$qldata,"nsim")  	
-	if(is.null(nsim) || !is.numeric(nsim))
-	  stop("Number of simulations must be given.")
-    
-	 # may overwrite (observed) statistics	
-	 if(!is.null(obs)) {
+	  stop("Print level `pl` must be some positive numeric value.")		
+  	
+  	# check simulation increase function `nsim` 
+    if(missing(nsim))
+	  nsim <- attr(qsd$qldata,"nsim")  	  
+	fnsim <- 
+     if(is.function(nsim)){
+		  id <- which(is.na(pmatch(names(args),names(formals(nsim)))))
+		  fnsim.args <- if(length(id)>0L) args[-id] else NULL		
+		  args <- args[id]
+		  .checkfun(nsim,fnsim.args,remove=TRUE)
+		  funret <- try(do.call(nsim,fnsim.args))		
+		  if(inherits(funret,"try-error"))
+			  stop(paste("Error in user defined function `",as.character(substitute(nsim)),"`.",sep=""))
+		  else if(!is.numeric(funret))
+			  stop("Number of simulations must be given.")
+ 		  structure(function(x) try(do.call(nsim,fnsim.args)), class="function")
+	 } else { as.function(list("nsim"=nsim)) }	
+      
+	# may overwrite (observed) statistics	
+	if(!is.null(obs)) {
 		  obs <- unlist(obs)
 		  if(anyNA(obs) | any(!is.finite(obs)))
 			  warning("`NA`, `NaN` or `Inf` values detected in argument `obs`.")
 		  if(!is.numeric(obs) || length(obs)!=length(qsd$covT))
 			  stop("Object `obs` must be a (named) numeric vector or list of length equal to the number of given statistics in `qsd`.")
 		  qsd$obs <- obs
-	} 
-  
+	}
+	# verbose if any print level is set
+	verbose <- pl>0L  
     # wrapping simulator function
-    sim <- match.fun(sim)	
-	# silently remove not required
-	args <- list(...)
+    stopifnot(is.function(sim))
+	sim <- match.fun(sim)	
+	# silently remove not required	
 	.checkfun(sim,args,remove=TRUE)
 	simFun <-
 	  structure(
@@ -1584,7 +1597,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 		repeat{		
 				# refit
 				if(useCV <- (errId > 1)) {
-					if(pl > 0L)
+					if(verbose)
 					 cat("Update cross-validation covariance models...\n")
 					cvm <- try(prefitCV(qsd,type=errType,cl=if(isTRUE(use.cluster)) cl),silent=TRUE) 
 					if(.isError(cvm)) {						
@@ -1600,7 +1613,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 							Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 							 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 							  multi.start=status[["global"]]>1L, cl=if(isTRUE(use.cluster)) cl,
-							   pl=pl, verbose=pl>0L)
+							   pl=pl, verbose=verbose)
 				
 				# store local minimization results
 				tmplist <- list("S0"=S0)				
@@ -1620,11 +1633,11 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 					if(max(abs(S0$score)) < qscore.opts$score_tol || ft < locals$ftol_abs) {		# either 'score_tol' reached (real root of quasi-score)
 						status[["global"]] <- 0L													# start local phase
 					} else if(locals$test && ft > locals$ftol_abs) { 								# quasi-deviance can be distinguished from zero
-					     if(pl > 0L)
+					     if(verbose)
 						   cat("Testing local minimizer...\n")
 					     Stest <-
 							  tryCatch({					    
-								  newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=pl>0)
+								  newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=verbose)
 								  if(.isError(newObs))
 									  stop(paste(c("Cannot generate data at approximate root: \n\t ",
 											 format(xt, digits=6, justify="right")),collapse = " "))				  
@@ -1634,7 +1647,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X),
-										    cl=if(isTRUE(use.cluster)) cl)	
+										    cl=if(isTRUE(use.cluster)) cl, pl=pl, verbose=verbose)	
 								  
 							  }, error = function(e){
 								  msg <- .makeMessage("Testing approximate root failed: ",
@@ -1727,7 +1740,8 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 														  locals$weights[mWeights] )
 											   } else {
 												 
-												if(ft < 0.95*fold || ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
+												if(ft < 0.95*fold ||
+												   ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
 												 {
 													 ctls["nfail","val"] <- 0L
 													 ctls["nsucc","val"] <- ctls["nsucc","val"] + 1L												
@@ -1770,7 +1784,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 												 stop("Criterion function evaluation failed (maximize trace criterion).")
 											  }
 											  dw <- if(abs(dmax-dmin) < EPS) 1		
-													   else (dists-dmin)/(dmax-dmin)
+													 else (dists-dmin)/(dmax-dmin)
 											  which.max( fval*dw )
 										  }
 										) # end switch
@@ -1787,7 +1801,10 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 							
 							} # generate sample 						
 							
-							nsim <- min(nsim*locals$multfac,10000);
+							# next number of simulations
+							# knowing the code we could easily define rule to increase `nsim` 
+							nsim <- fnsim();
+							stopifnot(is.numeric(nsim))
 							
 						} # end local sampling
 						
@@ -1970,7 +1987,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				# simulate at new locations, qsd$nsim (default)
 				newSim <-
 					tryCatch(
-						simQLdata(simFun, nsim=nsim, X=Snext$par, cl=cl, verbose=pl>0L),
+						simQLdata(simFun, nsim=nsim, X=Snext$par, cl=cl, verbose=verbose),
 						error = function(e) {
 							msg <- .makeMessage("Simulating the model failed: ",conditionMessage(e))
 					 		.qleError(message=msg,call=match.call(),error=e)
@@ -1990,10 +2007,10 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 					  # `x` is a local minimum
 					  updateQLmodel(qsd, rbind("d"=Snext$par,"x"=Stest$par), 
 							 structure(c(newSim,newObs),nsim=c(nsim,locals$nobs),class="simQL"),						 
-							 fit=TRUE, cl=if(isTRUE(use.cluster)) cl, verbose=pl>0L)					 
+							 fit=TRUE, cl=if(isTRUE(use.cluster)) cl, verbose=verbose)					 
 				 } else {
 					  updateQLmodel(qsd, Snext$par, newSim, fit=TRUE,
-						cl=if(isTRUE(use.cluster)) cl, verbose=pl>0L)
+						cl=if(isTRUE(use.cluster)) cl, verbose=verbose)
 				 }
 									
 				# check results of kriging
@@ -2020,7 +2037,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts,
 						control=control, Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-						  multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl,pl=pl, verbose=pl>0L)
+						  multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl, pl=pl, verbose=verbose)
 				
 				# overwrite last sample point if local minimization was successful
 				if(!.isError(S0) && S0$convergence >= 0L){					
@@ -2145,7 +2162,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 #' @rdname print.qle
 #' @method print qle
 #' @export 
-print.qle <- function(x, pl = 2, digits = 4, format="e",...){	
+print.qle <- function(x, pl = 1L, digits = 4, format="e",...){	
 	if(.isError(x)) 
 	  stop("Estimation result has errors.")	
 	if(!inherits(x,"qle"))
@@ -2153,7 +2170,7 @@ print.qle <- function(x, pl = 2, digits = 4, format="e",...){
     if(!is.numeric(pl) || pl < 0L )
 	  stop("Print level must be a positive numeric value.")
   
-	if(pl > 0L) {
+	if(pl >= 0L) {
 	  	if(x$qsd$criterion == "mahal")
 		 cat("Mahalanobis distance: \n\n",x$value,"\n\n")
 		else			
@@ -2164,7 +2181,7 @@ print.qle <- function(x, pl = 2, digits = 4, format="e",...){
 				print.gap = 4, quote = FALSE)
 		
 		cat("\n")
-		if(pl > 1L) {			
+		if(pl >= 2L) {			
 			if(x$convergence >= 0L) {
 				by <- x$ctls[x$why,"val"]
 				names(by) <- x$why
@@ -2177,13 +2194,13 @@ print.qle <- function(x, pl = 2, digits = 4, format="e",...){
 			} else cat("(None of convergence criteria matched.)\n\n")
 		} 
 	}
-  	if(pl > 1L) {
+  	if(pl >= 2L) {
 		cat("\n")	
 		nsim <- unlist(x$ctls["maxeval","val"])*attr(x,"optInfo")$nsim	
 		cat("Evaluations: ",unlist(x$ctls["maxeval","val"])," (simulations: ",nsim,")\n\n")
 		cat("Variance approximation type: ",x$qsd$var.type,"\n")	
 	}
-	if(pl > 2L) {
+	if(pl >= 10L) {
 		if(!.isError(x$final)) {
 			cat("\n\n ***  Final results *** \n\n\n")			
 			print(x$final)
@@ -2215,7 +2232,7 @@ print.qle <- function(x, pl = 2, digits = 4, format="e",...){
 #' @rdname print.QSResult
 #' @method print QSResult
 #' @export 
-print.QSResult <- function(x, pl = 1, digits = 4, format="e", ...) {	
+print.QSResult <- function(x, pl = 1L, digits = 4, format="e", ...) {	
 	if(.isError(x)) 
 	  stop("Quasi-scoring iteration had errors.")
 	if(!inherits(x,"QSResult"))
@@ -2227,7 +2244,7 @@ print.QSResult <- function(x, pl = 1, digits = 4, format="e", ...) {
 	cat(paste0("Local method:\n\n `",x$method,"`",if(isTRUE(attr(x,"restarted"))) "(restarted)"),"\n")
 	cat("\n")	
 	if(x$criterion == "qle"){
-		cat("Quasi-deviance:\n\n")
+	  cat("Quasi-deviance:\n\n")
 	} else cat("Mahalanobis-distance:\n\n")
 	cat(formatC(signif(x$value,digits=digits), digits=digits, format=format, big.mark=","),"\n")
 	df <- as.data.frame(
@@ -2246,7 +2263,7 @@ print.QSResult <- function(x, pl = 1, digits = 4, format="e", ...) {
 	cat("Status................",x$convergence,"(",msg[1],")\n\n")	
 	cat(msg[2],"\n")	
 	cat("\n")	
-	if(pl > 1L) {
+	if(pl >= 10L) {
 		Sigma <- attr(x,"Sigma")		
 		if(!is.null(Sigma)) {	
 			cat("\nApproximation of variance matrix: \n\n Sigma = \n\n")

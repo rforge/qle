@@ -258,7 +258,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 # intern use only!
 .rootTest <- function(par, value, I, obs, alpha, test, ...,
 		       			multi.start = 0L, Npoints = 10, cl = NULL,
-			   				na.rm = TRUE, verbose = FALSE){	
+			   			  na.rm = TRUE, pl = 0L, verbose = FALSE){	
 	aiqm <- NULL
 	mScore <- NULL	
 	xdim <- length(par)
@@ -738,12 +738,13 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 #' @param x      object of class \code{qleTest} from \code{\link{qleTest}}
 #' @param pl	 ignored
 #' @param digits number of (significant) digits
+#' @param format format character(s), see \code{\link{formatC}}
 #' @param ... 	 ignored
 #' 
 #' @rdname print.qleTest
 #' @method print qleTest
 #' @export 
-print.qleTest <- function(x, pl = 1, digits = 5,...) {
+print.qleTest <- function(x, pl = 1, digits = 5, format="e", ...) {
 	if(.isError(x)){
 	 	print(x)
 		invisible(return(NULL))
@@ -757,35 +758,41 @@ print.qleTest <- function(x, pl = 1, digits = 5,...) {
 	chk <- attr(x,"solInfo")
 	if(!is.null(chk)){
 		cat("Consistency check - the smaller the better: \n\n")
-		print(format(signif(chk,digits=digits)),print.gap=2,right=FALSE,quote=FALSE)
+		print(format(signif(chk,digits=digits)),print.gap=2,right=TRUE,quote=FALSE)
 		cat("\n\n")		
 	}	
 	cat("Coefficients:\n\n")	
-	print(format(x$param, digits=digits),
-			print.gap = 2, right=FALSE, quote = FALSE)	
+	print(format(x$param, digits=digits), print.gap = 2, right=TRUE, quote = FALSE)	
 	cat("\n\n")
 	cat(x$Stest,"\n\n")
 	vals <- c(format(x$test[1], digits=digits),
-			   formatC(signif(x$test[2], digits=digits), digits=digits,format="fg", flag="#"))
+			  formatC(signif(x$test[2], digits=digits), digits=digits, format=format, flag="#"))
 	names(vals) <- colnames(x$test)
-	print(vals, print.gap = 2, right=FALSE, quote = FALSE)
+	print(vals, print.gap = 2, right=TRUE, quote = FALSE)
 	
 	cat("\n\n")
 	if(!is.null(attr(x,"mean.score"))) {
 	  if(attr(x,"criterion") == "mahal")
 		cat("Average gradient: \n\n")
 	  else cat("Average quasi-score: \n\n")
-	  print(format(attr(x,"mean.score"), digits=digits),
-			  print.gap = 2, right=FALSE,quote = FALSE)
+	  print(format(attr(x,"mean.score"), digits=digits), print.gap = 2, right=TRUE, quote = FALSE)
 	  cat("\n\n")
 	  qi <- attr(x,"qi")
 	  aiqm <- attr(x,"aiqm")
-	  if(!is.null(aiqm) && !.isError(aiqm) && !is.null(qi) && !.isError(qi) && !is.null(attr(x,"relEF")))
-		  pse <- as.data.frame( cbind(sqrt(diag(aiqm)), sqrt(diag(qi)), attr(x,"relEF") ) )
+	  if(!is.null(aiqm) && !.isError(aiqm) &&
+		 !is.null(qi) && !.isError(qi) &&
+		 !is.null(attr(x,"relEF"))) {
+	 
+		  pse <- as.data.frame(cbind(
+			      formatC(signif(sqrt(diag(aiqm)),digits=digits), digits=digits, format=format, flag="#"),
+				  formatC(signif(sqrt(diag(qi)),  digits=digits), digits=digits, format=format, flag="#"),
+				  formatC(signif(attr(x,"relEF"), digits=digits), digits=digits, format=format, flag="#")))
 	  	  dimnames(pse) <- list(row.names(x$param),c("Average", "Estimate", "EF"))
 		  cat("Predicted Std. Errors: \n\n")
-		  print(format(pse, digits=digits),
-				  print.gap = 2, right=FALSE, quote = FALSE)			  
+		  print(format(pse, digits=digits), print.gap = 2, right=TRUE, quote = FALSE)
+	  } else {
+		  message("Cannot show some of the error matrices (see results).")
+	  }
     }	
 	invisible(x)	
 }
