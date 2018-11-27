@@ -952,8 +952,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	   # use only first provided method, usually `qscoring`
 	   # if non convergence then do a multistart search if enabled
 	   # otherwise use a restart with some nloptr minimization routine				
-	   do.call(searchMinimizer,
-		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,pl=pl,verbose=(pl>=3L)),args))
+	   do.call(searchMinimizer,	c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,pl=pl,verbose=(pl>=3L)),args))
 	 } else NULL
 	
 	if(!is.null(S0)){
@@ -961,7 +960,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 		 message("First local search has errors.")
 	    else if(S0$convergence < 0L || S0$convergence == 10) {
 		 if(verbose)
-		  cat("First local search did not converge. See attribute `optRes`. \n\n")						  
+		  cat(paste0("First local search did not converge ( status = ",S0$convergence),")\n")						  
 		}
 	}
 
@@ -983,7 +982,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		   cat("Multistart local search from",nstart,"starting points.\n")
+		   cat(paste("Multistart local search from",nstart,"starting points."),"\n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
@@ -1302,11 +1301,11 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		if(pl > 0L) {		   
 		   cat("Iterations..................",paste0("global=",nglobal,", local=",nlocal,"\n"))
 		   cat("Sampling....................",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
-		   cat("Local method................",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds)") else "success", "failed")))			
-		   if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n")	else cat("\n")				
+		   cat("Local method................",paste0(if(!.isError(S0)) {if(any(S0$bounds>0L)) paste0("`",S0$method, "` (success at bounds)") else paste0("`",S0$method,"` (success)") } else "failed"))			
+		   if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n") else cat("\n")				
 		   cat("Number of replications......",nsim,"\n")
 			if(locals$nextSample == "score")
-		   cat("weight factor...............",w,"\n")
+		   cat("Weight factor...............",w,"\n")
 			
 			cat("\n")
 			df <- as.data.frame(
@@ -1326,7 +1325,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			if(!.isError(S0)){
 				df <- cbind(df,formatC(signif(as.numeric(S0$par),digits=6),digits=6,format="e", flag="#"))
 				dimnames(df)[[2]] <- c("Start","Estimate", "Sample", "Local")
-				dfv <- cbind(dfv,formatC(signif(as.numeric(S0$value),digits=6),digits=6,format="e"))
+				dfv <- cbind(dfv,formatC(signif(as.numeric(S0$value),digits=6),digits=6,format="e", flag="#"))
 				dimnames(dfv)[[2]] <- c("","", "", "")
 			}		
 			
@@ -1364,7 +1363,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			}
 			cat("\n")
 		}
-		cat("------------------------------------------------------------\n\n")	  	
+		cat("----------------------------------------------------------------------\n\n")	  	
 	}	
 	
 	args <- list(...)
