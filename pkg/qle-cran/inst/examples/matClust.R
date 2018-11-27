@@ -215,7 +215,7 @@ OPT <- qle(qsd, simClust, cond=cond,
 		nsim=nsim,									
 		fnsim=Fnsim,								# function call to increase number of simulations
 		qscore.opts = qs.opts,
-		global.opts = list("maxiter"=2,"maxeval" = 3,
+		global.opts = list("maxiter"=10,"maxeval" = 15,
 				"weights"=c(50,10,5,1,0.1),
 				"NmaxQI"=5,"nstart"=100,
 				"xscale"=c(10,0.1,1)),

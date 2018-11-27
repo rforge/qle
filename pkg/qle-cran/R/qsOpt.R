@@ -983,7 +983,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		   cat("Multistart local search from ",nstart," starting points.\n")
+		   cat("Multistart local search from ",nstart," starting points...\n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
@@ -1302,7 +1302,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		if(pl > 0L) {		   
 		   cat("Iterations..................",paste0("global=",nglobal,", local=",nlocal,"\n"))
 		   cat("Sampling....................",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
-		   cat("Local method................",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed")))			
+		   cat("Local method................",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds)") else "success", "failed")))			
 		   if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n")	else cat("\n")				
 		   cat("Number of replications......",nsim,"\n")
 			if(locals$nextSample == "score")
@@ -1311,9 +1311,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			cat("\n")
 			df <- as.data.frame(
 					cbind(
-					 formatC(signif(as.numeric(xs),digits=6),digits=6,format="fg", flag="#"),
-					 formatC(signif(as.numeric(xt),digits=6),digits=6,format="fg", flag="#"),
-					 formatC(signif(as.numeric(Snext$par),digits=6),digits=6,format="fg", flag="#")))
+					 formatC(signif(as.numeric(xs),digits=6),digits=6,format="e", flag="#"),
+					 formatC(signif(as.numeric(xt),digits=6),digits=6,format="e", flag="#"),
+					 formatC(signif(as.numeric(Snext$par),digits=6),digits=6,format="e", flag="#")))
 	       		
 			dimnames(df) <- list(names(x0),c("Start","Estimate", "Sample"))
 			dfv <- as.data.frame(
@@ -1324,7 +1324,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			dimnames(dfv) <- list("value",c("","",""))
 		
 			if(!.isError(S0)){
-				df <- cbind(df,formatC(signif(as.numeric(S0$par),digits=6),digits=6,format="fg", flag="#"))
+				df <- cbind(df,formatC(signif(as.numeric(S0$par),digits=6),digits=6,format="e", flag="#"))
 				dimnames(df)[[2]] <- c("Start","Estimate", "Sample", "Local")
 				dfv <- cbind(dfv,formatC(signif(as.numeric(S0$value),digits=6),digits=6,format="e"))
 				dimnames(dfv)[[2]] <- c("","", "", "")
@@ -1364,7 +1364,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			}
 			cat("\n")
 		}
-		cat("-------------------------------------------\n\n")	  	
+		cat("------------------------------------------------------------\n\n")	  	
 	}	
 	
 	args <- list(...)
@@ -2178,18 +2178,16 @@ print.qle <- function(x, pl = 1L, digits = 4, format="e",...){
 				print.gap = 4, quote = FALSE)
 		
 		cat("\n")
-		if(pl >= 2L) {			
-			if(x$convergence >= 0L) {
-				by <- x$ctls[x$why,"val"]
-				names(by) <- x$why
-				cat("Convergence: ")
-				if("maxeval" %in% x$why)
-				  cat("maximum evaluations reached.\n\n")
-			    else cat("\n\n")
-				print.default(formatC(by, format="e", digits=digits), right=FALSE, print.gap=2,
-						quote=FALSE)
-			} else cat("(None of convergence criteria matched.)\n\n")
-		} 
+		if(x$convergence >= 0L) {
+			by <- x$ctls[x$why,"val"]
+			names(by) <- x$why
+			cat("Convergence: ")
+			if("maxeval" %in% x$why)
+			  cat("maximum evaluations reached.\n\n")
+		    else cat("\n\n")
+			print.default(formatC(by, format=format, digits=digits), right=FALSE, print.gap=2,	quote=FALSE)
+		} else cat("(None of convergence criteria matched.)\n\n")
+		 
 	}
   	if(pl >= 2L) {
 		cat("\n")	
