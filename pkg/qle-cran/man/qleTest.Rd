@@ -5,9 +5,9 @@
 \title{Monte Carlo testing}
 \usage{
 qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
-  nsim = 100, obs = NULL, alpha = 0.05, multi.start = 0L,
-  na.rm = TRUE, cores = 1L, cl = NULL, iseed = NULL,
-  verbose = FALSE)
+  nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05,
+  multi.start = 0L, na.rm = TRUE, cores = 1L, cl = NULL,
+  iseed = NULL, verbose = FALSE)
 }
 \arguments{
 \item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
@@ -22,9 +22,11 @@ qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
 
 \item{criterion}{optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter}
 
-\item{nsim}{number of bootstrap replications of the statistical model to generate (simulated) statistics, either a scalar value or a call returning the number of simulation replications
-applied to a new sample point with the current environment of function \code{qle},
-default is the initial value `\code{qsd$nsim}`}
+\item{nsim}{numeric, number of (initial) simulation replications for each new sample point}
+
+\item{fnsim}{optional, a call returning the number of simulation replications applied to a new
+sample point with the current environment of calling function \code{qle},
+default is the initial value `\code{qsd$nsim}`, respectively `\code{nsim}`}
 
 \item{obs}{optional, \code{NULL} (default), simulated statistics at the hypothesised parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}`}
 

@@ -4,11 +4,11 @@
 \alias{qle}
 \title{Simulated quasi-likelihood parameter estimation}
 \usage{
-qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
-  global.opts = list(), local.opts = list(), method = c("qscoring",
-  "bobyqa", "direct"), qscore.opts = list(), control = list(),
-  errType = "kv", pl = 0L, verbose = TRUE, use.cluster = FALSE,
-  cl = NULL, iseed = NULL, plot = FALSE)
+qle(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
+  Sigma = NULL, global.opts = list(), local.opts = list(),
+  method = c("qscoring", "bobyqa", "direct"), qscore.opts = list(),
+  control = list(), errType = "kv", pl = 0L, verbose = TRUE,
+  use.cluster = FALSE, cl = NULL, iseed = NULL, plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -17,9 +17,11 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 
 \item{...}{further arguments passed to `\code{sim}`}
 
-\item{nsim}{optional, either a scalar value or a call returning the number of simulation replications
-applied to a new sample point with the current environment of function \code{qle},
-default is the initial value `\code{qsd$nsim}`}
+\item{nsim}{numeric, number of (initial) simulation replications for each new sample point}
+
+\item{fnsim}{optional, a call returning the number of simulation replications applied to a new
+sample point with the current environment of calling function \code{qle},
+default is the initial value `\code{qsd$nsim}`, respectively `\code{nsim}`}
 
 \item{x0}{optional, numeric vector of starting parameters}
 

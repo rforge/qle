@@ -406,9 +406,10 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #' @param ...			arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}
 #' @param sim			user supplied simulation function, see \code{\link{qle}}
 #' @param criterion		optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter
-#' @param nsim			number of bootstrap replications of the statistical model to generate (simulated) statistics, either a scalar value or a call returning the number of simulation replications
-#' 						applied to a new sample point with the current environment of function \code{qle},
-#' 						default is the initial value `\code{qsd$nsim}`
+#' @param nsim			numeric, number of (initial) simulation replications for each new sample point
+#' @param fnsim 		optional, a call returning the number of simulation replications applied to a new
+#' 						sample point with the current environment of calling function \code{qle},
+#' 						default is the initial value `\code{qsd$nsim}`, respectively `\code{nsim}`
 #' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesised parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` 
 #' @param alpha			significance level for testing the hypothesis
 #' @param multi.start   integer, \code{=0,1,2}, level of multi start root finding (see details)
@@ -470,7 +471,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #' @rdname qleTest
 #' @export
 qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
-		             nsim = 100, obs = NULL, alpha = 0.05, multi.start = 0L,
+		             nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05, multi.start = 0L,
 					  na.rm = TRUE, cores = 1L, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
 	if(.isError(est))
@@ -481,11 +482,17 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 	# simulation increase function `nsim` 
 	if(missing(nsim))
 	  nsim <- attr(est$qsd$qldata,"nsim")  	  
-	Fnsim <-
-	 if(is.numeric(nsim)){
-	  as.call(list(function(n) n, quote(nsim)))
-	 } else if(!is.call(nsim)) {
-		 stop("Expected numeric value or an object of class `call` in argument `nsim`.")
+    Fnsim <-
+	  if(is.null(fnsim)){
+		  as.call(list(function(n) n, quote(nsim)))
+	  } else if(is.call(fnsim)) {		 
+		  fnsim[[1]] <- match.fun(fnsim[[1]])		 
+		  # make current environment available in function call 
+		  environment(fnsim[[1]]) <- environment()		 
+		  fnsim
+	  }
+	  else {
+		  stop("Expected numeric value or an object of class `call` in argument `nsim`.")
 	 }
     args <- list(...)
 	# basic checks

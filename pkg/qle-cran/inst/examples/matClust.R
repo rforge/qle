@@ -122,7 +122,7 @@ attr(cvm,"type") <- "max"
 #colMeans(S)
 
 opts <- list("pl"=10,"xscale"=c(10,0.1,1),"ftol_abs"=1e-8,
-		"score_tol"=1e-6,"step_tol"=1e-16,"restart"=1)
+		"score_tol"=1e-5,"restart"=0)
  
 (QS0 <- qscoring(qsd,x0,opts=opts,cvm=cvm,verbose=TRUE))
 
@@ -203,11 +203,19 @@ qs.opts <- list("xscale"=c(10,0.1,1),"ftol_abs"=1e-4,"score_tol"=1e-4)
 # options(qle.multicore="lapply")
 
 # start estimation
-F <- structure(function(x) try(do.call(function(x) 2*x,list("x"=100))), class="function")
+# nsim <- attr(qsd$qldata,"nsim")
+Fnsim <- as.call(list(
+	function(n) {		
+		if(status[["global"]] < 2L)	{
+		 min(2*n,1000)	
+		} else n
+	}, quote(nsim)))
 
-OPT <- qle(qsd, simClust, cond=cond, nsim=100,
+OPT <- qle(qsd, simClust, cond=cond,
+		nsim=nsim,									
+		fnsim=Fnsim,								# function call to increase number of simulations
 		qscore.opts = qs.opts,
-		global.opts = list("maxiter"=1,"maxeval" = 2,
+		global.opts = list("maxiter"=2,"maxeval" = 3,
 				"weights"=c(50,10,5,1,0.1),
 				"NmaxQI"=5,"nstart"=100,
 				"xscale"=c(10,0.1,1)),
@@ -219,7 +227,7 @@ OPT <- qle(qsd, simClust, cond=cond, nsim=100,
 						  "eta"=c(0.025,0.075),	    # ignored, automatic adjustment of weights
 						  "test"=FALSE),			# testing is enabled						  
 		method = c("qscoring","bobyqa","direct"),		
-		errType="max", iseed=297, cl=cl, pl=10,
+		errType="max", iseed=297, cl=cl, pl=1,
 		use.cluster = FALSE)						# cluster is only used for model simulation			
 
 print(OPT,pl=10)

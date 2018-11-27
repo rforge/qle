@@ -738,12 +738,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
  	    msg <- c(msg, paste0(" (status = ",S0$convergence,")") )
 	   if(inherits(S0,"error"))
 		msg <- c(msg, conditionMessage(S0))
-	   message(msg)
-	   cat("\n\n")
-	   if(pl > 0L){
-	   	   print(S0,pl=pl)
-		   cat("\n\n")
-	   }
+	   if(verbose)  message(msg)	   	   
 	   method <- method[-1]
 	   if(is.na(method[1]) || !restart){
 		message(.makeMessage("No convergence or restart required and only one local method supplied."))
@@ -958,7 +953,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 	   # if non convergence then do a multistart search if enabled
 	   # otherwise use a restart with some nloptr minimization routine				
 	   do.call(searchMinimizer,
-		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,pl=pl,verbose=verbose),args))
+		c(list(x0=x0[[1]],qsd=qsd,optInfo=optInfo,pl=pl,verbose=(pl>=3L)),args))
 	 } else NULL
 	
 	if(!is.null(S0)){
@@ -995,7 +990,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 						searchMinimizer(x,...)						# including a restart by default
 					},
 					cl=cl,cores=cores,fun="mclapply",qsd=qsd,
-					 optInfo=optInfo,pl=pl,verbose=verbose), args))		
+					 optInfo=optInfo,pl=pl,verbose=(pl>=3L)), args))		
    	
 	} else { RES <- list(S0) }	
 	
@@ -1049,9 +1044,10 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @param qsd			object of class \code{\link{QLmodel}}
 #' @param sim		    user-defined simulation function, see details
 #' @param ...			further arguments passed to `\code{sim}` 
-#' @param nsim			optional, either a scalar value or a call returning the number of simulation replications
-#' 						applied to a new sample point with the current environment of function \code{qle},
-#' 						default is the initial value `\code{qsd$nsim}`
+#' @param nsim			numeric, number of (initial) simulation replications for each new sample point
+#' @param fnsim 		optional, a call returning the number of simulation replications applied to a new
+#' 						sample point with the current environment of calling function \code{qle},
+#' 						default is the initial value `\code{qsd$nsim}`, respectively `\code{nsim}`
 #' @param x0 			optional, numeric vector of starting parameters
 #' @param obs			optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}` if given
 #' @param Sigma			optional, constant variance matrix estimate of statistics (see details) 
@@ -1276,7 +1272,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @export  
 #' @import parallel stats
 #' @importFrom graphics points
-qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
+qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		        Sigma = NULL, global.opts = list(), local.opts = list(),
 				  method = c("qscoring","bobyqa","direct"), qscore.opts = list(),
 				   control = list(), errType = "kv", pl = 0L, verbose = TRUE, 
@@ -1304,12 +1300,14 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 
 	.showConditions = function() {
 		if(pl > 0L) {		   
-		   cat("Iterations..........",paste0("global=",nglobal,", local=",nlocal,"\n"))
-		   cat("Sampling............",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
-		   cat("Local method........",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed")))			
-			if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n")	else cat("\n")				
+		   cat("Iterations..................",paste0("global=",nglobal,", local=",nlocal,"\n"))
+		   cat("Sampling....................",paste0(if(status[["global"]]>1L) "global" else "local", " (status=",status[["global"]],")\n"))
+		   cat("Local method................",paste0(ifelse(status[["minimized"]],if(!.isError(S0) && any(S0$bounds>0L)) paste0("success (at bounds: ",any(S0$bounds),")") else "success", "failed")))			
+		   if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n")	else cat("\n")				
+		   cat("Number of replications......",nsim,"\n")
 			if(locals$nextSample == "score")
-			 cat("weight factor.....",w,"\n")
+		   cat("weight factor...............",w,"\n")
+			
 			cat("\n")
 			df <- as.data.frame(
 					cbind(
@@ -1377,12 +1375,17 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
     if(missing(nsim))
 	  nsim <- attr(qsd$qldata,"nsim")  	  
     Fnsim <-
-     if(is.numeric(nsim)){
+     if(is.null(fnsim)){
 	  as.call(list(function(n) n, quote(nsim)))
-	 } else if(!is.call(nsim)) {
-		stop("Expected numeric value or an object of class `call` in argument `nsim`.")
-	}
-    
+	 } else if(is.call(fnsim)) {		 
+		 fnsim[[1]] <- match.fun(fnsim[[1]])		 
+		 # make current environment available in function call 
+		 environment(fnsim[[1]]) <- environment()		 
+		 fnsim
+	 } else {
+	  stop("Expected numeric value `nsim` or an object of class `call` in argument `fnsim`.")
+	 }
+	
 	# may overwrite (observed) statistics	
 	if(!is.null(obs)) {
 		  obs <- unlist(obs)
@@ -1974,7 +1977,8 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				}
 				# next number of simulations
 				# knowing the code we could easily define rule to increase `nsim` 
-				nsim <- try(eval(Fnsim,envir=environment()),silent=TRUE)
+				environment(Fnsim) <- environment()
+				nsim <- try(eval(Fnsim),silent=TRUE)
 				stopifnot(is.numeric(nsim))
 				
 				# simulate at new locations, qsd$nsim (default)
