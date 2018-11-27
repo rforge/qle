@@ -1320,7 +1320,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 						formatC(signif(fs,digits=6),digits=6,format="e"),
 						formatC(signif(ft,digits=6),digits=6,format="e"),
 						formatC(signif(Snext$value, digits=6),digits=6,format="e")))
-			dimnames(dfv) <- list("val",c("","",""))
+			dimnames(dfv) <- list("value",c("","",""))
 		
 			if(!.isError(S0)){
 				df <- cbind(df,formatC(signif(as.numeric(S0$par),digits=6),digits=6,format="e", flag="#"))
