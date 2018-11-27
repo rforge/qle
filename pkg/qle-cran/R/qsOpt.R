@@ -1049,8 +1049,9 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' @param qsd			object of class \code{\link{QLmodel}}
 #' @param sim		    user-defined simulation function, see details
 #' @param ...			further arguments passed to `\code{sim}` 
-#' @param nsim			optional, either a scalar value or a function returning the number of simulation replications
-#' 						at each new sample point during the local phase, default set by the initial value `\code{qsd$nsim}`
+#' @param nsim			optional, either a scalar value or a call returning the number of simulation replications
+#' 						applied to a new sample point with the current environment of function \code{qle},
+#' 						default is the initial value `\code{qsd$nsim}`
 #' @param x0 			optional, numeric vector of starting parameters
 #' @param obs			optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}` if given
 #' @param Sigma			optional, constant variance matrix estimate of statistics (see details) 
@@ -1375,11 +1376,13 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
   	# simulation increase function `nsim` 
     if(missing(nsim))
 	  nsim <- attr(qsd$qldata,"nsim")  	  
-	Fnsim <- 
-     if(is.function(nsim)){
-		 match.fun(nsim)	  	  
-	 } else { as.function(list("nsim"=nsim)) }	
-      
+    Fnsim <-
+     if(is.numeric(nsim)){
+	  as.call(list(function(n) n, quote(nsim)))
+	 } else if(!is.call(nsim)) {
+		stop("Expected numeric value or an object of class `call` in argument `nsim`.")
+	}
+    
 	# may overwrite (observed) statistics	
 	if(!is.null(obs)) {
 		  obs <- unlist(obs)
@@ -1790,12 +1793,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 										
 								} # candidate selection								
 							
-							} # generate sample 						
-							
-							# next number of simulations
-							# knowing the code we could easily define rule to increase `nsim` 
-							nsim <- try(Fnsim(),silent=TRUE)
-							stopifnot(is.numeric(nsim))
+							} # generate sample										
 							
 						} # end local sampling
 						
@@ -1974,6 +1972,10 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 						}
 					}					
 				}
+				# next number of simulations
+				# knowing the code we could easily define rule to increase `nsim` 
+				nsim <- try(eval(Fnsim,envir=environment()),silent=TRUE)
+				stopifnot(is.numeric(nsim))
 				
 				# simulate at new locations, qsd$nsim (default)
 				newSim <-
@@ -2074,7 +2076,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 							   "method"=S0$method,
 							   "nsim"=nsim,
 							   "iseed"=iseed),
-				class = c("qle","error"), call = sys.call(), error=e)	
+				class = c("qle","error"), call = match.call(), error=e)	
 							
 		}, finally = {
 		  if(noCluster && !is.null(cl)) {
@@ -2134,7 +2136,7 @@ qle <- function(qsd, sim, ..., nsim, x0 = NULL, obs = NULL,
 				  	   "method"=S0$method,
 				  	   "nsim"=nsim,
 					   "iseed"=iseed),
-		 class = "qle", call = sys.call())  	
+		 class = "qle", call = match.call())  	
  	 
 }
 
@@ -2463,7 +2465,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 	qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm),
 					"useSigma"=FALSE,"Iobs"=Iobs)
 		   
-	structure(try(.Call(C_QSopt, x0, qsd, qlopts, X, Sigma, cvm, opts), silent=TRUE),call=sys.call())	
+	structure(try(.Call(C_QSopt, x0, qsd, qlopts, X, Sigma, cvm, opts), silent=TRUE),call=match.call())	
 }
 
 

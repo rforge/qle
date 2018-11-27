@@ -22,7 +22,9 @@ qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
 
 \item{criterion}{optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter}
 
-\item{nsim}{number of bootstrap replications of the statistical model to generate (simulated) statistics}
+\item{nsim}{number of bootstrap replications of the statistical model to generate (simulated) statistics, either a scalar value or a call returning the number of simulation replications
+applied to a new sample point with the current environment of function \code{qle},
+default is the initial value `\code{qsd$nsim}`}
 
 \item{obs}{optional, \code{NULL} (default), simulated statistics at the hypothesised parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}`}
 

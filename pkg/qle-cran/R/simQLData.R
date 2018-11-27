@@ -235,7 +235,7 @@ simQLdata <-
 			  X=.LIST2ROW(X),
 			  iseed=iseed,
 		 	  error=if(length(nErr) > 0L) nErr else NULL,
-	  class="simQL", call=sys.call())
+	  class="simQL", call=match.call())
 	
 }
 

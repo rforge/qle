@@ -406,7 +406,9 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #' @param ...			arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}
 #' @param sim			user supplied simulation function, see \code{\link{qle}}
 #' @param criterion		optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter
-#' @param nsim			number of bootstrap replications of the statistical model to generate (simulated) statistics
+#' @param nsim			number of bootstrap replications of the statistical model to generate (simulated) statistics, either a scalar value or a call returning the number of simulation replications
+#' 						applied to a new sample point with the current environment of function \code{qle},
+#' 						default is the initial value `\code{qsd$nsim}`
 #' @param obs			optional, \code{NULL} (default), simulated statistics at the hypothesised parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}` 
 #' @param alpha			significance level for testing the hypothesis
 #' @param multi.start   integer, \code{=0,1,2}, level of multi start root finding (see details)
@@ -476,7 +478,15 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
     # last evaluation of criterion function  	
 	if(.isError(est$final))
 	  stop("Final criterion function evaluation failed. Please check attribute `error`.")
-		
+	# simulation increase function `nsim` 
+	if(missing(nsim))
+	  nsim <- attr(est$qsd$qldata,"nsim")  	  
+	Fnsim <-
+	 if(is.numeric(nsim)){
+	  as.call(list(function(n) n, quote(nsim)))
+	 } else if(!is.call(nsim)) {
+		 stop("Expected numeric value or an object of class `call` in argument `nsim`.")
+	 }
     args <- list(...)
 	# basic checks
 	stopifnot(class(est) == "qle")
@@ -559,6 +569,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 		sim <- match.fun(sim)
 		# check `sim` input values
 		.checkfun(sim,args,remove=TRUE)
+		nsim <- try(eval(Fnsim,envir=environment()),silent=TRUE)
 		stopifnot(is.numeric(nsim) || nsim > 0)
 				
 		simFun <- function(x) try(do.call(sim,c(list(x),args)))		
@@ -725,7 +736,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 			  	hasNa=which(has.na), 			# indices of NA parameters 
 		 		hasError=hasError,
 				iseed=iseed),																
-	 class=c("qleTest"), call=sys.call())	
+	 class=c("qleTest"), call=match.call())	
 }
 
 # printing function

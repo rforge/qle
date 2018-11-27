@@ -17,8 +17,9 @@ qle(qsd, sim, ..., nsim, x0 = NULL, obs = NULL, Sigma = NULL,
 
 \item{...}{further arguments passed to `\code{sim}`}
 
-\item{nsim}{optional, either a scalar value or a function returning the number of simulation replications
-at each new sample point during the local phase, default set by the initial value `\code{qsd$nsim}`}
+\item{nsim}{optional, either a scalar value or a call returning the number of simulation replications
+applied to a new sample point with the current environment of function \code{qle},
+default is the initial value `\code{qsd$nsim}`}
 
 \item{x0}{optional, numeric vector of starting parameters}
 
