@@ -866,7 +866,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 	 		S0 <- structure(
 					  c(S0,qd[[1]][which(!(names(qd[[1]]) %in% names(S0)))],
 					     "Qnorm"=0.5*sum(qd[[1]]$score^2)),
-					 Sigma = attr(qd,"Sigma"), restarted = attr(S0,"restarted"),				
+					 Sigma = attr(qd[[1]],"Sigma"), restarted = attr(S0,"restarted"),				
 				   class = "QSResult")			
 				
 	 	} else { 
