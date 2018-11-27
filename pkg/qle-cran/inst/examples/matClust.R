@@ -292,7 +292,7 @@ Stest <- qleTest(OPT,												# estimation results
 		   obs0=obs0,												# alternative observed statistics
 		    sim=simClust,cond=cond,nsim=50,	
 		     method=c("qscoring","bobyqa","direct"),				# possible restart methods
-		   	  opts=qs.opts, control=list("ftol_abs"=1e-8),			# minimization options 
+		   	  opts=qs.opts, control=list("ftol_abs"=1e-6),			# minimization options 
 			   multi.start=1L, cl=cl, cores=2L,verbose=TRUE)					# multi-start and parallel options	
    
 print(Stest)
