@@ -126,7 +126,10 @@ opts <- list("pl"=10,"xscale"=c(10,0.1,1),"ftol_abs"=1e-8,
  
 (QS0 <- qscoring(qsd,x0,opts=opts,cvm=cvm,verbose=TRUE))
 
-quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]$value
+D <- quasiDeviance(QS0$par,qsd,cvm=cvm,verbose=TRUE)[[1]]
+D$value
+#covarTx(qsd,theta=QS0$par,cvm=cvm)
+#attr(D,"Sigma")
 
 #print(QS0$Qnorm,digits=12)
 #print(QS0$value,digits=12)

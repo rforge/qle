@@ -49,9 +49,10 @@ options(qle.multicore="mclapply")
 OPT <- qle(qsd,
 		simfunc,		
 		nsim=20,
-		global.opts=list("maxeval"=50),
+		global.opts=list("maxeval"=25),
 		local.opts=list("lam_max"=1e-3,"weights"=0.5,
-				"useWeights"=FALSE,"test"=TRUE),cl=cl)
+				"useWeights"=FALSE,"test"=TRUE),
+		pl=0L, cl=cl)
 
 print(OPT)
 
