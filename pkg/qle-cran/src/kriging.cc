@@ -1342,11 +1342,14 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat, int &err) {
 		   double tmp = 0.0;
 		   double *m = varkm->krigr[0]->mean;
 		   double *s2 = varkm->krigr[0]->sig2;
-		   for(int k = 0; k < nCov; k++){
+		   for(int k = 0; k < nCov; k++) {
 			   tmp = std::sqrt(s2[k]);
-			   if(R_FINITE(tmp))
+			   if(R_FINITE(tmp)) {
 				 m[k] += 3.0*tmp;
-			   else WRR("`NaN` values detected in `varMatrix`.")
+			   } else {
+				   WRR("`NaN` values detected in `varMatrix`.")
+				   break;
+			   }
 		   }
 		   /* merge to variance matrix */
 		   err = chol2var(m,vmat,nCov,qld->workx);
