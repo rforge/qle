@@ -24,7 +24,7 @@ ub <- c("mu"=8.0,"sigma"=5.0)
 theta0 <- c("mu"=2,"sigma"=1)
 
 # simulate model at a minimum of required design points
-sim <- simQLdata(sim=simfunc,nsim=10,N=8,
+sim <- simQLdata(sim=simfunc,nsim=10,N=12,
 		method="maximinLHS",lb=lb,ub=ub)	 
 
 # set number of simulations manually
@@ -48,16 +48,16 @@ options(qle.multicore="mclapply")
 
 OPT <- qle(qsd,
 		simfunc,		
-		nsim=20,
+		nsim=10,
 		global.opts=list("maxeval"=25),
-		local.opts=list("lam_max"=1e-3,"weights"=0.5,
-				"useWeights"=FALSE,"test"=TRUE),
-		pl=0L, cl=cl)
+		local.opts=list("lam_max"=1e-3,"useWeights"=TRUE,"test"=TRUE),
+		pl=5L, cl=cl, plot=TRUE)
 
 print(OPT)
 
 OPT$final
 OPT$why
+OPT$ctls
 
 ## testing with criterion `mahal`
 ## here: no Iobs for best root selection
