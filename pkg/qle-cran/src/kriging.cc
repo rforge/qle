@@ -1330,23 +1330,37 @@ wrap_intern_kriging(double *x, void *data, double *mean, int &err) {
 void
 ql_model_s::varMatrix(double *x, double *s, double *vmat, int &err) {
 	/* kriging prediction variances */
-	if(qld->qlopts.varType == KRIG) {
+	if(qld->qlopts.varType) {
 	   if(varkm == NULL)
-		 ERR("Null pointer exception in `varMatrix`. This seems to a severe bug.");
+		 ERR("Null pointer exception in `varMatrix`. This seems to be a severe bug.");
 	   if( (err = varkm->intern_kriging(x)) != NO_ERROR){
 		    LOG_ERROR(err,"intern_kriging");
 		  	return;
        }
-	   /*! Merge to matrix*/
-	   err = chol2var(varkm->krigr[0]->mean,vmat,nCov,qld->workx);
-
-	   //printVector("varkm->mean",varkm->krigr[0]->mean,&nCov);
-	   //printMatrix("vmat",vmat,&nCov,&nCov);
-
-	   if(glkm->krigType) {
-		   //printVector("s",s,&nCov);
-		   err = add2diag(vmat,nCov,s);
+	   /*! use kriging variances of variance matrix kriging models */
+	   if(qld->qlopts.varType == FULL){
+		   double tmp = 0.0;
+		   double *m = varkm->krigr[0]->mean;
+		   double *s2 = varkm->krigr[0]->sig2;
+		   for(int k = 0; k < nCov; k++){
+			   tmp = std::sqrt(s2[k]);
+			   if(R_FINITE(tmp))
+				 m[k] += 3.0*tmp;
+			   else WRR("`NaN` values detected in `varMatrix`.")
+		   }
+		   /* merge to variance matrix */
+		   err = chol2var(m,vmat,nCov,qld->workx);
+	   } else {
+		   /* merge to variance matrix */
+		   err = chol2var(varkm->krigr[0]->mean,vmat,nCov,qld->workx);
+		   if(glkm->krigType)
+		   	 err = add2diag(vmat,nCov,s);
 	   }
+
+	   // printVector("s",s,&nCov);
+	   // printVector("varkm->mean",varkm->krigr[0]->mean,&nCov);
+	   // printMatrix("vmat",vmat,&nCov,&nCov);
+
 	} else if(glkm->krigType) {
 		 err = addVar(s,nCov,vmat,qld->work);
 	}

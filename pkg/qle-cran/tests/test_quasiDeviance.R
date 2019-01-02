@@ -49,7 +49,8 @@ D$varS
 
 # variance matrix of statistics Var(T(X))
 print(S)
-covarTx(qsd,theta=x0,useVar=TRUE)
+#debug(covarTx)
+covarTx(qsd,theta=x0,useVar=FALSE)
 
 # value quasi-deviance
 D$value

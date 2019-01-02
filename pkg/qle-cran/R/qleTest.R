@@ -512,7 +512,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 	
 	# use last Sigma (unless kriging variance matrix)  
 	info <- attr(est,"optInfo")
-	if(est$qsd$var.type != "kriging")		
+	if(all(est$qsd$var.type != c("kriging","full")))		
 	  opt.args <- c(opt.args,list(W=info$W,theta=info$theta))
     # optional: overwrite last criterion (from estimation result)
   	if(!is.null(criterion))

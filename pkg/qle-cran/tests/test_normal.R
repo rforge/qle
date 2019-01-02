@@ -35,7 +35,7 @@ obs <- structure(c("T1"=2,"T2"=1), class="simQL")
 attr(sim,"nsim") <- 100
 
 # construct QL approximation model
-qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean",
+qsd <- getQLmodel(sim,lb,ub,obs,var.type="full",
 		model="sirfk", verbose=TRUE)
 
 # no bootstrap since sample average approximation `wcholMean`

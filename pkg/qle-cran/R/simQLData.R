@@ -375,7 +375,7 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 					"vars" = diag(vmat),					  
 					"is.pos" = is.pos)
 		
-		if(Nb > 0 && var.type == "kriging"){
+		if(Nb > 0 && var.type %in% c("kriging","full")){
 		  ret$Lb <- try(.resampleCov(dataT,Nb),silent=TRUE)
 		  if(inherits(ret$Lb,"try-error"))
 			attr(ret,"error") <- TRUE			  
@@ -467,7 +467,7 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 	   
 		# bootstrap variances of covariances 
 		# a local nugget variances
-		if(Nb > 0 && var.type == "kriging"){
+		if(Nb > 0 && var.type %in% c("kriging","full")){
 			Lb <- lapply(res[ok],"[[","Lb")			
 			Lbmats <- as.data.frame(do.call(rbind,Lb[ok2]))
 			colnames(Lbmats) <- paste("Lb", rep(1:NCOL(Lbmats)),sep="")
@@ -501,7 +501,7 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 	structure(qld,
 			  xdim=ncol(X),
 			  nsim=nsim,
-			  Nb=if(var.type != "kriging") 0 else Nb,
+			  Nb=if(all(var.type != c("kriging","full"))) 0 else Nb,
 			  nWarnings=nWarnings,
 			  nErrors=nErrors,
 			  nIgnored=nIgnored,

@@ -537,7 +537,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
 	# constant Sigma?
 	useSigma <- (qsd$var.type == "const")		
-	if(qsd$var.type != "kriging" && !useSigma){		
+	if(all(qsd$var.type != c("kriging","full")) && !useSigma){		
 		Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX	
 	} else if(useSigma && !inverted){
 		# Only for constant Sigma, which is used as is!
@@ -585,7 +585,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		if(qsd$var.type == "const" && qsd$criterion == "qle")
 			stop("`Sigma` cannot be used as a constant variance matrix for criterion `qle`.")			
 				
-	} else if(qsd$var.type == "kriging" && is.null(qsd$covL))
+	} else if(any(qsd$var.type == c("kriging","full")) && is.null(qsd$covL))
 		stop("Covariance models for kriging variance matrix must be given, see function `setQLdata`.")	
 	  else if(qsd$var.type == "const") 
 		stop("`Sigma` must not be NULL for `const` variance matrix approximation.")
@@ -783,7 +783,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 									directL(fn, lower=qsd$lower, upper=qsd$upper, control=control)
 								},
 								"lbfgs" = {									
-									if(qsd$criterion != "mahal" || qsd$var.type == "kriging")
+									if(qsd$criterion != "mahal" || qsd$var.type == "kriging" || qsd$var.type == "full")
 									  stop("`lbfgs` only for criterion `mahal` using a constant `Sigma` or an average variance approximation.")
 									lbfgs(x0,
 										  fn = function(x) {
@@ -1363,7 +1363,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			}
 			cat("\n")
 		}
-		cat("----------------------------------------------------------------------\n\n")	  	
+		if(pl > 0L) cat("----------------------------------------------------------------------\n\n")	  	
 	}	
 	
 	args <- list(...)
@@ -1758,7 +1758,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													 w <- min(w+locals$eta[2],1)
 												 }									 										 
 											  }						
-											  # minimize criterion criterion funtion at candidates
+											  # minimize criterion criterion function at candidate points
 										  	  fval <- criterionFun(Y,W=I,theta=xt,value.only=2L)
 											  if(.isError(fval) || !is.numeric(fval)){
 												stop("Criterion function evaluation failed (score criterion).")
@@ -2199,7 +2199,7 @@ print.qle <- function(x, pl = 1L, digits = 4, format="e",...){
 			cat("\n\n ***  Final results *** \n\n\n")			
 			print(x$final)
 	 	}
-		if(x$qsd$var.type != "kriging"){
+		if(!(x$qsd$var.type %in% c("kriging","full"))) {
 			W <- attr(x,"optInfo")$W
 			if(!is.null(W)) {
 				cat("Weighting matrix: \n\n W = \n\n")
@@ -2450,7 +2450,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
   
     xdim <- attr(qsd$qldata,"xdim")
   	X <- as.matrix(qsd$qldata[seq(xdim)])  		
-	if(qsd$var.type != "kriging" && is.null(Sigma)){
+	if(all(qsd$var.type != c("kriging","full")) && is.null(Sigma)){
 		# Only mean covariance matrix is estimated here. 
 		# Adding prediction variances (kriging/CV) at C level		
 		if(verbose && qsd$var.type %in% c("wcholMean","wlogMean")){
