@@ -50,7 +50,7 @@ D$varS
 # variance matrix of statistics Var(T(X))
 print(S)
 #debug(covarTx)
-covarTx(qsd,theta=x0,useVar=FALSE)
+covarTx(qsd,theta=x0,useVar=TRUE)
 
 # value quasi-deviance
 D$value
@@ -59,3 +59,15 @@ t(qs)%*%solve(D$I)%*%qs
 # modified quasi-information: Mahalanobis distance of quasi-score
 D$qval
 t(qs)%*%solve(C)%*%qs
+
+## test Variance Matrix approximation
+#chol2var <- function(Xs) {
+#	n <- (-1 + sqrt(1 + 8*length(Xs)))/2;
+#	m <- matrix(0,n,n)
+#	m[col(m)>=row(m)] <- Xs
+#	return( crossprod(m) )
+#}
+#(V <- covarTx(qsd,theta=Xs[5,],useVar=TRUE))
+#L <- qsd$qldata[5,grep("^L",names(qsd$qldata))]
+#chol2var(as.numeric(L))
+#V[[1]]$VTX
