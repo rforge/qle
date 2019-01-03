@@ -60,14 +60,14 @@ t(qs)%*%solve(D$I)%*%qs
 D$qval
 t(qs)%*%solve(C)%*%qs
 
-## test Variance Matrix approximation
+### test Variance Matrix approximation
 #chol2var <- function(Xs) {
 #	n <- (-1 + sqrt(1 + 8*length(Xs)))/2;
 #	m <- matrix(0,n,n)
 #	m[col(m)>=row(m)] <- Xs
 #	return( crossprod(m) )
 #}
-#(V <- covarTx(qsd,theta=Xs[5,],useVar=TRUE))
-#L <- qsd$qldata[5,grep("^L",names(qsd$qldata))]
+#(V <- covarTx(qsd,theta=Xs[5,],useVar=FALSE))
+#L <- qsd$qldata[5,grep("^L",names(qsd$qldata))][1:3]
 #chol2var(as.numeric(L))
 #V[[1]]$VTX
