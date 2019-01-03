@@ -1143,7 +1143,6 @@ double ql_model_s::intern_qfTrace(double *x) {
 	if(info > 0)
      WRR("`NaN` detected in `mat_trans`.")
 
-	//solveDSPTRS(qld->vmat,nCov,qld->Atmp,dx,&info);
 	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
 	if(info != NO_ERROR){
 	  LOG_ERROR(info,"gsiSolve");
@@ -1200,7 +1199,6 @@ double ql_model_s::intern_qfVarStat(double *x) {
 	if(info>0)
 	 WRR("`NaN` detected in `mat_trans`.")
 
-	//solveDSPTRS(qld->vmat,nCov,qld->Atmp,dx,&info);
 	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
 	if(info != NO_ERROR){
 	  LOG_ERROR(info,"gsiSolve");
@@ -1238,7 +1236,6 @@ int ql_model_s::intern_quasiInfo(double *jac, double *qimat) {
 	if(info > 0)
 	 WRR("`NaN` detected in `mat_trans`.")
 
-	//solveDSPTRS(qld->vmat,nCov,qld->Atmp,dx,&info);
 	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
 	if(info != NO_ERROR){
 		LOG_ERROR(info,"gsiSolve");
@@ -1344,7 +1341,7 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat, int &err) {
 	   for(int k = 0; k < varkm->nCov; k++) {
 		   tmp = std::sqrt(s2[k]);
 		   if(R_FINITE(tmp)) {
-			 m[k] += 3.0*tmp;
+			 m[k] -= 3.0*tmp;
 		   } else {
 			   WRR("`NaN` values detected in `varMatrix`.")
 			   break;

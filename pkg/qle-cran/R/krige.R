@@ -380,10 +380,11 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
 			# nCovL: number of Cholesky decomposed termns (exclude bootstrap variances)		
 			L <- estim(qsd$covL,theta,Xs,dataL[1:length(qsd$covL)],krig.type="var")			
 			Lm <- do.call(rbind,sapply(L,"[","mean"))
-			Lsig2 <- try(sqrt(do.call(rbind,sapply(L,"[","sigma2"))),silent=TRUE)
-			if(inherits(Lsig2, "try-error") || anyNA(Lsig2))
-			 stop("Could not extract Kriging variances of variance matrix interpolation models.")			 				
-			varCHOLmerge(Lm+3.0*Lsig2,sig2,var.type,doInvert,Tnames)		 				 
+			Lsig <- try(sqrt(do.call(rbind,sapply(L,"[","sigma2"))),silent=TRUE)
+			if(inherits(Lsig, "try-error") || anyNA(Lsig))
+			 stop("Could not extract Kriging variances of variance matrix interpolation models.")
+		 	tmp <- try(Lm-3.0*Lsig)
+			varCHOLmerge(tmp,sig2,var.type,doInvert,Tnames)		 				 
 		} else {
 			stop("Unknown variance matrix type.")
 		}	
