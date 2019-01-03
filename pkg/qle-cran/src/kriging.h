@@ -13,7 +13,7 @@
 #include "covariance.h"
 
 /** typedefs */
-typedef enum { MEAN = 0, KRIG = 1, FULL = 2} var_type;
+typedef enum { MEAN = 0, KRIG = 1} var_type;
 typedef enum { DUAL = 0, VARIANCE = 1, BOTH = 2} krig_type;
 typedef enum { COPY_ZERO = 0, COPY_ONE = 1, COPY_MOD = 2, COPY_TRACE = 3} value_type;
 
@@ -95,8 +95,6 @@ typedef struct ql_options_s {
 	  const char *var_type = translateChar(asChar(R_varType));
 	  if( !strcmp("kriging",var_type) ) {
 		  varType = KRIG;
-	  } else if( !strcmp("full",var_type)) {
-		  varType = FULL;
 	  } else varType = MEAN;
   }
 } ql_options_t, *ql_options;

@@ -581,7 +581,7 @@ fitCov <- function(models, Xs, data, control = list(),
 #' @rdname QLmodel
 #' @export 
 QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
-		    var.type = c("wcholMean","cholMean","wlogMean","logMean","kriging","full","const"),
+		    var.type = c("wcholMean","cholMean","wlogMean","logMean","kriging","const"),
 				useVar = TRUE, criterion = c("qle","mahal"), verbose = FALSE)
 {	
 	if(!inherits(qldata,"QLdata"))
@@ -607,7 +607,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
   	var.type <- match.arg(var.type)
 	criterion <- match.arg(criterion)
 		
-	if(is.null(mods$covL) && var.type %in% c("kriging","full"))
+	if(is.null(mods$covL) && var.type %in% c("kriging"))
 	  stop("Covariance models for variance matrix interpolation must be set for argument \'var.type\'.")
 	if(!is.numeric(nfit) || length(nfit)>1L )
 	 stop("Argument 'nfit must be numeric of length one.")	
@@ -794,7 +794,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		)
 
 	 covL <- NULL	 
-	 if(var.type %in% c("kriging","full")){
+	 if(var.type == "kriging"){
 		 # check input
 		 args <- var.opts
 		 if(length(args)>0L) {
@@ -1123,7 +1123,7 @@ updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
 	  qsd$covT <- .update(qsd$covT,qsd$qldata[stid],nextData[vid]/nsim.new)				  
 	  # update kriging VARIANCE models
  	  # Cholesky terms are the data
-	  if(qsd$var.type %in% c("kriging","full")) {
+	  if(qsd$var.type == "kriging") {
 		if(is.null(qsd$covL))
 		   stop("A covariance model for kriging the variance matrix must be defined but is `Null`.")
 	    qsd$covL <-

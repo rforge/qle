@@ -537,7 +537,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
 	# constant Sigma?
 	useSigma <- (qsd$var.type == "const")		
-	if(all(qsd$var.type != c("kriging","full")) && !useSigma){		
+	if(qsd$var.type != "kriging" && !useSigma){		
 		Sigma <- covarTx(qsd,...,cvm=cvm)[[1]]$VTX	
 	} else if(useSigma && !inverted){
 		# Only for constant Sigma, which is used as is!
@@ -585,7 +585,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		if(qsd$var.type == "const" && qsd$criterion == "qle")
 			stop("`Sigma` cannot be used as a constant variance matrix for criterion `qle`.")			
 				
-	} else if(any(qsd$var.type == c("kriging","full")) && is.null(qsd$covL))
+	} else if(qsd$var.type == "kriging" && is.null(qsd$covL))
 		stop("Covariance models for kriging variance matrix must be given, see function `setQLdata`.")	
 	  else if(qsd$var.type == "const") 
 		stop("`Sigma` must not be NULL for `const` variance matrix approximation.")
@@ -783,7 +783,7 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 									directL(fn, lower=qsd$lower, upper=qsd$upper, control=control)
 								},
 								"lbfgs" = {									
-									if(qsd$criterion != "mahal" || qsd$var.type == "kriging" || qsd$var.type == "full")
+									if(qsd$criterion != "mahal" || qsd$var.type == "kriging")
 									  stop("`lbfgs` only for criterion `mahal` using a constant `Sigma` or an average variance approximation.")
 									lbfgs(x0,
 										  fn = function(x) {
@@ -2199,7 +2199,7 @@ print.qle <- function(x, pl = 1L, digits = 4, format="e",...){
 			cat("\n\n ***  Final results *** \n\n\n")			
 			print(x$final)
 	 	}
-		if(!(x$qsd$var.type %in% c("kriging","full"))) {
+		if(x$qsd$var.type != "kriging") {
 			W <- attr(x,"optInfo")$W
 			if(!is.null(W)) {
 				cat("Weighting matrix: \n\n W = \n\n")
@@ -2450,7 +2450,7 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
   
     xdim <- attr(qsd$qldata,"xdim")
   	X <- as.matrix(qsd$qldata[seq(xdim)])  		
-	if(all(qsd$var.type != c("kriging","full")) && is.null(Sigma)){
+	if(qsd$var.type != "kriging" && is.null(Sigma)){
 		# Only mean covariance matrix is estimated here. 
 		# Adding prediction variances (kriging/CV) at C level		
 		if(verbose && qsd$var.type %in% c("wcholMean","wlogMean")){

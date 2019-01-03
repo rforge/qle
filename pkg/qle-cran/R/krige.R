@@ -260,7 +260,7 @@ varLOGdecomp <- function(L) {
 #'  distant to an estimate of the model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
 #'  `\code{W}` of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
 #'  different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}",
-#'  "\code{kriging}" or "\code{full}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
+#'  "\code{kriging}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
 #'  defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
 #'  the approximation type. Depending on the type of kriging for the statistics, `\code{qsd$krig.type}`, prediction variances
 #'  \eqn{\sigma(\theta)} of the sample mean of statistics at `\code{theta}` are added. If `\code{qsd$krig.type}` equals
@@ -370,19 +370,20 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
 			} 				
 			varCHOLmerge(rbind(colSums(dataL*matrix(rep(d,nc),nrow(dataL),nc))/sum(d)),
 					sig2,var.type,doInvert,Tnames)
-		} else if(var.type %in% c("kriging","full")) {			
+		} else if(var.type == "kriging") {			
 			if(is.null(qsd$covL) || is.null(theta))
 			  stop("For kriging the variance matrix argument `covL` and `theta` must be given.")			
-			# Kriging variance matrix is based on Cholsky decomposed terms
-	        # TODO: try a log decomposition later		  
-			L <- estim(qsd$covL,theta,Xs,dataL[1:length(qsd$covL)],krig.type="var")	# nCovL: number of Cholesky decomposed termns (exclude bootstrap variances)		
+			
+		  	## Kriging variance matrix is based on Cholsky decomposed terms
+	        ## TODO: try a log decomposition later		  
+			
+			# nCovL: number of Cholesky decomposed termns (exclude bootstrap variances)		
+			L <- estim(qsd$covL,theta,Xs,dataL[1:length(qsd$covL)],krig.type="var")			
 			Lm <- do.call(rbind,sapply(L,"[","mean"))
-			if(var.type == "full"){				
-				Lsig2 <- try(sqrt(do.call(rbind,sapply(L,"[","sigma2"))),silent=TRUE)
-				if(inherits(Lsig2, "try-error") || anyNA(Lsig2))
-				 stop("Could not extract Kriging variances of variance matrix interpolation models.")			 				
-			 	varCHOLmerge(Lm+3.0*Lsig2,NULL,var.type,doInvert,Tnames)				
-		 	} else varCHOLmerge(Lm,sig2,var.type,doInvert,Tnames)			 
+			Lsig2 <- try(sqrt(do.call(rbind,sapply(L,"[","sigma2"))),silent=TRUE)
+			if(inherits(Lsig2, "try-error") || anyNA(Lsig2))
+			 stop("Could not extract Kriging variances of variance matrix interpolation models.")			 				
+			varCHOLmerge(Lm+3.0*Lsig2,sig2,var.type,doInvert,Tnames)		 				 
 		} else {
 			stop("Unknown variance matrix type.")
 		}	
@@ -441,7 +442,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 			return (tmp)
 	  }	
 	VTX <- try({
-	 if(var.type %in% c("cholMean","wcholMean","kriging","full")) 
+	 if(var.type %in% c("cholMean","wcholMean","kriging")) 
 		.chol2var(Xs)
 	 else expm::expm(.mergeMatrix(Xs))		
 	}, silent=TRUE)		
@@ -592,7 +593,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 	tryCatch({
 		# use `Sigma` but add prediction variances
 		useSigma <- (qsd$var.type == "const")
-		if(all(qsd$var.type != c("kriging","full")) && !useSigma){
+		if(all(qsd$var.type != c("kriging")) && !useSigma){
 			# Here: `Sigma` is inverted at C level
 			Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX
 		}
@@ -746,7 +747,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 	  #  3. Sigma constant
 	  tryCatch({		
 		   useSigma <- (qsd$var.type == "const")
-		   if(all(qsd$var.type != c("kriging","full")) && !useSigma){			   
+		   if(all(qsd$var.type != c("kriging")) && !useSigma){			   
 			   # Sigma is inverted at C level
 			   Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX			   
 		   } else if(useSigma && !inverted){

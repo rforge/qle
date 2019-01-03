@@ -41,7 +41,7 @@ The function estimates the variance matrix of statistics at some (unsampled) poi
  distant to an estimate of the model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
  `\code{W}` of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
  different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}",
- "\code{kriging}" or "\code{full}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
+ "\code{kriging}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
  defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
  the approximation type. Depending on the type of kriging for the statistics, `\code{qsd$krig.type}`, prediction variances
  \eqn{\sigma(\theta)} of the sample mean of statistics at `\code{theta}` are added. If `\code{qsd$krig.type}` equals
