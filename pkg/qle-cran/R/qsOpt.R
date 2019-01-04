@@ -1788,12 +1788,13 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 											  qd <- criterionFun(Y,W=I,theta=xt)
 											  if(.isError(qd))
 												stop("Criterion function evaluation failed (maximize trace criterion).")											  
-											  fval <- try(sapply(qd,function(x) log(det(x$varS))),silent=TRUE)											  
+											  fval <- try(sapply(qd,function(x) 0.5*(log(det(x$varS))+x$qval) ),silent=TRUE)											  
 											  if(.isError(fval) || !is.numeric(fval))
 												  stop("Criterion function 'logdet' failed.")											  
 											  dw <- if(abs(dmax-dmin) < EPS) 1		
 													  else (dists-dmin)/(dmax-dmin)
 											  which.max(fval*dw)
+											  #which.max(fval)
 										  }
 										) # end switch
 										
