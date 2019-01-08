@@ -1771,6 +1771,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													 else (dmax-dists)/(dmax-dmin)
 											  which.min( w*sw + (1-w)*dw )								
 										  },
+										  ## TODO trace of inverse Fisher Information!
 										  "trace" = {						
 											  # maximize trace criterion
 											  # (same for quasi-deviance and mahalanobis distance)
@@ -1783,7 +1784,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													 else (dists-dmin)/(dmax-dmin)
 											  which.max( fval*dw )
 										  },
-										  "logdet" = {	
+										  "logdet" = {									# combined D-/G-optimality weighted against distances of sample points
 											  if(locals$useWeights) {										
 												  k <- nlocal %% mWeights
 												  w <- ifelse(k != 0L,
@@ -1798,13 +1799,12 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 											  qd <- criterionFun(Y,W=I,theta=xt)
 											  if(.isError(qd))
 												stop("Criterion function evaluation failed (maximize trace criterion).")											  
-											  fval <- try(sapply(qd,function(x) w*log(det(x$varS))-(1-w)*x$qval),silent=TRUE)											  
+											  fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*x$qval),silent=TRUE)											  
 											  if(.isError(fval) || !is.numeric(fval))
 												  stop("Criterion function 'logdet' failed.")											  
-											  dw <- if(abs(dmax-dmin) < EPS) 1		
-													  else (dists-dmin)/(dmax-dmin)
-											  which.max(fval*dw)
-											  #which.max(fval)
+											  dw <- if(abs(dmax-dmin) < EPS) 1		  	  
+											  		else (dists-dmin)/(dmax-dmin)
+											  which.max(fval*dw)											  
 										  }
 										) # end switch
 										
