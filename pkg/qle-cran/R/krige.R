@@ -383,12 +383,12 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
 			Lsig <- try(sqrt(do.call(rbind,sapply(L,"[","sigma2"))),silent=TRUE)
 			if(inherits(Lsig, "try-error") || anyNA(Lsig))
 			 stop("Could not extract Kriging variances of variance matrix interpolation models.")		 	
-			VTX <- varCHOLmerge(Lm,sig2,var.type,doInvert,Tnames)		
+			VTX <- varCHOLmerge(Lm,NULL,var.type,doInvert,Tnames)		
 			lapply(seq_len(NROW(Lm)),
 				function(i) {
 					Sig2 <- try(.chol2var(as.numeric(3.0*Lsig[i,])),silent=TRUE)
 					if(inherits(Sig2,"try-error")){
-					    msg <- paste0("'chol2var' failed for kriging variance matrix.")
+					    msg <- paste0("'chol2var' failed to compute the kriging variance of (kriging) variance matrix models.")
 						message(msg)
 						return(.qleError(message=msg,error=Sig2))
 				  	}
@@ -396,10 +396,8 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
 					res <- 
 					 structure(
 					  list("VTX"=V$VTX,
-						   "var"=if(!is.null(V$var))
-									V$var+Sig2 			# with kriging variance of statistics mean 'sig2'  
-				   				 else V$VTX+Sig2,       # and without 'sig2' 
-						   "Sig2"=Sig2)					# might be useful sometime
+						   "var"=V$VTX+Sig2, 			# with kriging variance of statistics mean 'sig2'				   				  
+						   "sig2"=Sig2)					# a matrix: kriging variances of variance matrix models
 		   			  )					  
 					  if(doInvert) {
 						  res$inv <- try(do.call("gsiInv",list(res$var)),silent=TRUE)

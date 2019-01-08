@@ -1334,34 +1334,46 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat, int &err) {
 		    LOG_ERROR(err,"intern_kriging");
 		  	return;
        }
-	   /*! use kriging variances of variance matrix kriging models */
-	   double tmp = 0.0,
-			  *s2 = varkm->krigr[0]->sig2,
-			  *vm = qld->vmat_work;
+	   /* merge to variance matrix */
+	   err = chol2var(varkm->krigr[0]->mean,vmat,nCov,qld->workx);
+	   if(err != NO_ERROR) return;
 
-	   for(int k = 0; k < varkm->nCov; k++) {
+	   /* use kriging variances of variance matrix kriging models */
+	   if(glkm->krigType) {
+		double *s2 = varkm->krigr[0]->sig2, *vm = qld->vmat_work;
+
+		int k = 0;
+		double tmp = 0.0;
+	    for(k = 0; k < varkm->nCov; k++) {
 		   tmp = std::sqrt(s2[k]);
 		   if(R_FINITE(tmp)) {
 			 s2[k] = 3.0*tmp;
 		   } else {
 			   WRR("`NaN` values detected in `varMatrix`.")
+			   err = NaN_ERROR;
+			   LOG_ERROR(err,"varMatrix");
 			   break;
 		   }
-	   }
-	   /* merge to variance matrix */
-	   err = chol2var(varkm->krigr[0]->mean,vmat,nCov,qld->workx);
-	   /* 2nd. time merging of kriging variances */
-	   err = chol2var(s2,vm,nCov,qld->workx);
-	   /* add variances (for each component of the matrix) */
-	   for(int k = 0; k < nCov2; k++)
+	    }
+	    if(err != NO_ERROR) return;
+	    /* 2nd. time merging of kriging variances */
+	    err = chol2var(s2,vm,nCov,qld->workx);
+	    if(err != NO_ERROR) return;
+
+	    /* add back transformed variances (for each component of the matrix) */
+	    for(k = 0; k < nCov2; k++)
 		 vmat[k] += vm[k];
 
-	   if(glkm->krigType)
-	  	 err = add2diag(vmat,nCov,s);
+	    /* add kriging variance of statistics to variance matrix */
+	    //err = add2diag(vmat,nCov,s);
 
-	   // printVector("s",s,&nCov);
-	   // printVector("varkm->mean",varkm->krigr[0]->mean,&nCov);
-	   // printMatrix("vmat",vmat,&nCov,&nCov);
+	   }
+
+#ifdef DEBUG
+	    printVector("s",s,&nCov);
+	    printVector("varkm->mean",varkm->krigr[0]->mean,&nCov);
+	    printMatrix("vmat",vmat,&nCov,&nCov);
+#endif
 
 	} else if(glkm->krigType) {
 		 err = addVar(s,nCov,vmat,qld->work);

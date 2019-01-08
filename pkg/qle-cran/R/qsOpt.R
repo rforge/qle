@@ -1304,7 +1304,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		   cat("Local method................",paste0(if(!.isError(S0)) {if(any(S0$bounds>0L)) paste0("`",S0$method, "` (success at bounds)") else paste0("`",S0$method,"` (success)") } else "failed"))			
 		   if(!.isError(S0) && isTRUE(attr(S0,"restarted"))) cat(" [restarted]","\n") else cat("\n")				
 		   cat("Number of replications......",nsim,"\n")
-			if(locals$nextSample == "score")
+			if(locals$useWeights)
 		   cat("Weight factor...............",w,"\n")
 			
 			cat("\n")
@@ -1783,12 +1783,22 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													 else (dists-dmin)/(dmax-dmin)
 											  which.max( fval*dw )
 										  },
-										  "logdet" = {						
+										  "logdet" = {	
+											  if(locals$useWeights) {										
+												  k <- nlocal %% mWeights
+												  w <- ifelse(k != 0L,
+														  locals$weights[k],
+														  locals$weights[mWeights] )
+											  }
+											  if(reset){
+												  reset <- FALSE
+												  w <- locals$weights[1]													 
+											  }
 											  # maximize logarithm of determinant criterion											  
 											  qd <- criterionFun(Y,W=I,theta=xt)
 											  if(.isError(qd))
 												stop("Criterion function evaluation failed (maximize trace criterion).")											  
-											  fval <- try(sapply(qd,function(x) 0.5*(log(det(x$varS))+x$qval) ),silent=TRUE)											  
+											  fval <- try(sapply(qd,function(x) w*log(det(x$varS))-(1-w)*x$qval),silent=TRUE)											  
 											  if(.isError(fval) || !is.numeric(fval))
 												  stop("Criterion function 'logdet' failed.")											  
 											  dw <- if(abs(dmax-dmin) < EPS) 1		

@@ -21,7 +21,7 @@ int check_Lapack_error( int info, const char* name, int line, const char *file);
  *         V=t(L)%*%L
  *
  * @param x  vector of cholesky decomposed entries
- * @param z  result matrix V=t(L)%*%L
+ * @param z  result matrix V=L%*%L^t
  * @param nx dimension
  * @param y  work, nx*nx length
  */
