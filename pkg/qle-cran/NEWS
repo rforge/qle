@@ -97,6 +97,8 @@ Current known issues
 	
 TODO
 ----	
+	o Vignette is not updated for version 0.18.6 yet
+
 	o provide 'nlm' routine: (Quasi-)Newton for Mahalanobis criterion function with constant variance matrix,
 	 	gradient as quasi-score and quasi-information as Hessian    
 	
