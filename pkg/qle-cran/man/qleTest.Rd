@@ -5,12 +5,12 @@
 \title{Monte Carlo testing}
 \usage{
 qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
-  nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05,
-  multi.start = 0L, na.rm = TRUE, cores = 1L, cl = NULL,
-  iseed = NULL, verbose = FALSE)
+  approx = FALSE, nsim = 100, fnsim = NULL, obs = NULL,
+  alpha = 0.05, multi.start = 0L, na.rm = TRUE, cores = 1L,
+  cl = NULL, iseed = NULL, verbose = FALSE)
 }
 \arguments{
-\item{est}{object of class \code{qle}, the estimation results from function \code{\link{qle}}}
+\item{est}{object of class \code{qle} or \code{mahal}, estimation results after calling function \code{\link{qle}}}
 
 \item{par0}{optional, vector of parameter for the null hypothesis}
 
@@ -21,6 +21,8 @@ qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
 \item{sim}{user supplied simulation function, see \code{\link{qle}}}
 
 \item{criterion}{optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter}
+
+\item{approx}{optional, \code{FALSE} (default), if \code{TRUE} and cirterion "\code{qle}" the test statistic is the modified quasideviance, nothing changes for criterion "\code{mahal}"}
 
 \item{nsim}{numeric, number of (initial) simulation replications for each new sample point}
 

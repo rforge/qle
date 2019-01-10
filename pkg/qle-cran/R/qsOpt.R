@@ -1476,18 +1476,23 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 	if(length(local.opts) > 0L) {
 		.checkOptions(locals,local.opts)		
 		locals[names(local.opts)] <- local.opts	
-	}	
+	}
+	id <- pmatch(locals$nextSample,c("score","trace","logdet"))
+	if(is.na(id[1])) stop(paste0("Undefined sampling criterion: ",locals$nextSample))
+	
 	# setting controls as data frame
 	ctls <- .setControls(globals,locals)
 	# data frame for storing relative estimation error deviation
 	# add to `ctls` if testing is enabled
 	perr <- 
 	 if(locals$test) {
+	  if(qsd$krig.type!="var")
+		 stop(paste0("Testing cannot be applied if 'dual' kriging is used for the statistics."))
 	  if(length(locals$perr_tol) != xdim)
 		locals$perr_tol <- rep(locals$perr_tol,length.out=xdim)  
 	  data.frame(cbind("cond" = locals$perr_tol, "val" = rep(Inf,xdim),
 			           "stop" = rep(0,xdim), "count" = rep(globals$NmaxQI,xdim)),
-		  row.names = xnames, check.names = FALSE)
+		  row.names = paste0(xnames,"_relEF"), check.names = FALSE)
 	 } else NULL
 
 	# weight factor
@@ -1637,10 +1642,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 								  if(.isError(newObs))
 									  stop(paste(c("Cannot generate data at approximate root: \n\t ",
 											 format(xt, digits=6, justify="right")),collapse = " "))				  
-								  # test for an approximate root (based on criterion function)
-							      # use multistart and select best root if first root finding
-							      # from `xt` fails to converge
-								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
+								  # test for an approximate root either of modifier QD or modified Mahalanobis distance								  
+							      # using multistart and selecting best root if first root finding from `xt` fails to converge
+								  .rootTest(xt, S0$qval, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X),
 										    cl=if(isTRUE(use.cluster)) cl, pl=pl, verbose=verbose)	
@@ -1723,46 +1727,43 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 									dmin <- min(dists)
 									dmax <- max(dists)									 
 									nlocal <- nlocal + 1L
-									 
+									
+									# use user defined weights
+									if(locals$useWeights) {										
+										k <- nlocal %% mWeights
+										w <- ifelse(k != 0L,
+												locals$weights[k],
+												locals$weights[mWeights] )
+									} else {										
+										if(ft < 0.95*fold ||
+												ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
+										{
+											ctls["nfail","val"] <- 0L
+											ctls["nsucc","val"] <- ctls["nsucc","val"] + 1L												
+										} else {
+											ctls["nsucc","val"] <- 0L
+											ctls["nfail","val"] <- ctls["nfail","val"] + 1L												
+										}
+										if(reset){
+											reset <- FALSE
+											w <- locals$weights[1]													 
+										}
+										# update weights									
+										if(ctls["nfail","val"] > 0L && 
+												!(ctls["nfail","val"] %% ctls["nfail","cond"])){											 											 
+											w <- max(w-locals$eta[1],0)
+										} else if(ctls["nsucc","val"] > 0L && 
+												!(ctls["nsucc","val"] %% ctls["nsucc","cond"])){										 
+											w <- min(w+locals$eta[2],1)
+										}									 										 
+									}
 									id <- 
 									  switch(
 									    locals$nextSample,
-									     "score" = {			
-											 # use user defined weights
-											   if(locals$useWeights) {										
-												  k <- nlocal %% mWeights
-												  w <- ifelse(k != 0L,
-														  locals$weights[k],
-														  locals$weights[mWeights] )
-											   } else {
-												 
-												if(ft < 0.95*fold ||
-												   ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
-												 {
-													 ctls["nfail","val"] <- 0L
-													 ctls["nsucc","val"] <- ctls["nsucc","val"] + 1L												
-												 } else {
-													 ctls["nsucc","val"] <- 0L
-													 ctls["nfail","val"] <- ctls["nfail","val"] + 1L												
-												 }
-												 if(reset){
-													 reset <- FALSE
-													 w <- locals$weights[1]													 
-												 }
-												 # update weights									
-												 if(ctls["nfail","val"] > 0L && 
-												  !(ctls["nfail","val"] %% ctls["nfail","cond"])){											 											 
-													 w <- max(w-locals$eta[1],0)
-												 } else if(ctls["nsucc","val"] > 0L && 
-														 !(ctls["nsucc","val"] %% ctls["nsucc","cond"])){										 
-													 w <- min(w+locals$eta[2],1)
-												 }									 										 
-											  }						
-											  # minimize criterion function at candidate points
+									     "score" = {										  
 										  	  fval <- criterionFun(Y,W=I,theta=xt,value.only=2L)
-											  if(.isError(fval) || !is.numeric(fval)){
-												stop("Criterion function evaluation failed (score criterion).")
-											  }
+											  if(.isError(fval) || anyNA(fval))
+												stop("Criterion function evaluation failed (score criterion).")											  
 											  smin <- min(fval)
 											  smax <- max(fval)
 											  sw <- if(abs(smax-smin) < EPS) 1 
@@ -1770,41 +1771,25 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 											  dw <- if(abs(dmax-dmin) < EPS) 1		
 													 else (dmax-dists)/(dmax-dmin)
 											  which.min( w*sw + (1-w)*dw )								
-										  },
-										  ## TODO trace of inverse Fisher Information!
+										  },										 
 										  "trace" = {						
-											  # maximize trace criterion
-											  # (same for quasi-deviance and mahalanobis distance)
-											  # Sigma is re-computed here at theta
+											  # maximize average trace criterion											  
 											  fval <- criterionFun(Y,W=I,theta=xt,value.only=3L)
-											  if(.isError(fval) || !is.numeric(fval)){
-												 stop("Criterion function evaluation failed (maximize trace criterion).")
-											  }
-											  dw <- if(abs(dmax-dmin) < EPS) 1		
-													 else (dists-dmin)/(dmax-dmin)
-											  which.max( fval*dw )
+											  if(.isError(fval) || anyNA(fval))
+											    stop("Criterion function evaluation failed (average trace criterion).")										  
+											  if(abs(dmax-dmin) < EPS) {
+												  which.max(fval)
+											  } else which.max(fval*(dists-dmin)/(dmax-dmin))											  
 										  },
-										  "logdet" = {									# combined D-/G-optimality weighted against distances of sample points
-											  if(locals$useWeights) {										
-												  k <- nlocal %% mWeights
-												  w <- ifelse(k != 0L,
-														  locals$weights[k],
-														  locals$weights[mWeights] )
-											  }
-											  if(reset){
-												  reset <- FALSE
-												  w <- locals$weights[1]													 
-											  }
+										  "logdet" = {										 
 											  # maximize logarithm of determinant criterion											  
 											  qd <- criterionFun(Y,W=I,theta=xt)
 											  if(.isError(qd))
-												stop("Criterion function evaluation failed (maximize trace criterion).")											  
-											  fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*x$qval),silent=TRUE)											  
-											  if(.isError(fval) || !is.numeric(fval))
-												  stop("Criterion function 'logdet' failed.")											  
-											  dw <- if(abs(dmax-dmin) < EPS) 1		  	  
-											  		else (dists-dmin)/(dmax-dmin)
-											  which.max(fval*dw)											  
+												stop("Criterion function evaluation failed (maximize trace criterion).")					  							  
+											  fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*max(diag(x$varS))),silent=TRUE)											  
+											  if(.isError(fval) || anyNA(fval))
+												stop("Criterion function evaluation for 'logdet' failed.")											  
+											  which.min(fval)									  
 										  }
 										) # end switch
 										

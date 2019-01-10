@@ -118,7 +118,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     qfs_options_t qfs(&qlm,R_opt);
 
     /* scoring iteration */
-    double fval=R_PosInf, qnorm=R_PosInf;
+    double fval=R_PosInf, qnorm=R_PosInf, qval=R_PosInf;
     qfs_result status = qfscoring(xsol,xdim,fval,fntype,&qfs);
 
     /* return objects */
@@ -174,6 +174,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     SEXP R_obs = getListElement( R_qsd, "obs" );
     SET_DIMNAMES_MATRIX(R_VmatNames,R_obs)
 
+    // not for dual kriging: prediction variances would not be available
     if(qlm.glkm->krigType) {
       	PROTECT(R_sig2 = allocVector(REALSXP,qlm.nCov));
       	++nProtected;
@@ -184,11 +185,13 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
        	PROTECT(R_varS = allocMatrix(REALSXP,qlm.dx,qlm.dx));
        	++nProtected;
        	qlm.intern_varScore(REAL(R_varS));
+       	qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
     }
 
 #ifdef DEBUG
     Rprintf("value: %f \n", fval);
     Rprintf("Qnorm: %f \n", qnorm);
+    Rprintf("qval: %f \n", qval);
     printMatrix("vmat",qlm.qld->vmat, &xdim,&xdim);
     printMatrix("jac",REAL(R_jac), &xdim,&qlm.nCov);
     printMatrix("I",REAL(R_I), &xdim,&xdim);
@@ -206,7 +209,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     static const char *nms[] =
      {"convergence", "message", "iter", "value", "par",
      "score", "sig2", "I", "Iobs", "varS", "start", "bounds", "Qnorm",
-	 "method", "criterion", ""};
+	 "qval", "method", "criterion", ""};
 
     SEXP R_ret = R_NilValue;
     PROTECT(R_ret = mkNamed(VECSXP, nms));
@@ -225,8 +228,10 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     SET_VECTOR_ELT(R_ret, 10, R_start);
     SET_VECTOR_ELT(R_ret, 11, ScalarInteger(qfs.bounds));
     SET_VECTOR_ELT(R_ret, 12, ScalarReal(qnorm));
-    SET_VECTOR_ELT(R_ret, 13, mkString("qscoring"));
-    SET_VECTOR_ELT(R_ret, 14, mkString("qle"));
+    SET_VECTOR_ELT(R_ret, 13, ScalarReal(qval));
+    SET_VECTOR_ELT(R_ret, 14, mkString("qscoring"));
+    SET_VECTOR_ELT(R_ret, 15, mkString("qle"));
+
     setVmatAttrib(&qlm, R_VmatNames, R_ret);
     SET_CLASS_NAME(R_ret,"QSResult")
 

@@ -495,7 +495,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  {
             	  double fval = 0;
             	  int nprotect = 5;
-            	  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac", "varS", ""};
+            	  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac", "varS", "qval", ""};
 
 				  for(i=0;i<np;i++)
 				  {
@@ -553,6 +553,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 SET_VECTOR_ELT(R_ans, 4, R_sig2);
 					 SET_VECTOR_ELT(R_ans, 5, R_jac);
 					 SET_VECTOR_ELT(R_ans, 6, R_varS);
+					 SET_VECTOR_ELT(R_ans, 7, ScalarReal(fval));
 
 					 SET_VECTOR_ELT(R_ret, i, R_ans);
 					 UNPROTECT(6);
@@ -647,7 +648,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  {
 					  double fval = 0;
 					  int nprotect = 5;
-					  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS",""};
+					  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS", "qval", ""};
 
 					  for(i=0;i<np;i++)
 					  {
@@ -693,6 +694,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							SET_VECTOR_ELT(R_ans, 4, R_sig2);
 							SET_VECTOR_ELT(R_ans, 5, R_jac);
 							SET_VECTOR_ELT(R_ans, 6, R_varS);
+							SET_VECTOR_ELT(R_ans, 7, ScalarReal(fval));
 
 							setVmatAttrib(&qlm, R_VmatNames, R_ans);
 							SET_VECTOR_ELT(R_ret, i, R_ans);

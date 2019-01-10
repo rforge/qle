@@ -75,6 +75,15 @@ Changes with 0.18.5
 9) removed 4),6),7)
 
 
+Changes with 0.18.6
+-------------------
+10) tests within parameter estimation by 'qle' are now applied using the modified quasideviance 
+
+11) added new sampling criterion (without distance scaling) 'logdet' to get a minimum prediction quasi-score variance and estimation variance design
+
+12) add option 'approx' to 'qleTest' in order to choose between quasi-deviance and modified quasi-deviance as a test statistic
+
+
 Current known issues
 --------------------
 	o flip of sign in quasi-score vector (qscoring)	  

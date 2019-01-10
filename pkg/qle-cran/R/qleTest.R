@@ -255,7 +255,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
    return (dm)  
 }
 
-# intern use only!
+# intern use only:'value' is modified QD/Mahalanobis distance as test statistic
 .rootTest <- function(par, value, I, obs, alpha, test, ...,
 		       			multi.start = 0L, Npoints = 10, cl = NULL,
 			   			  na.rm = TRUE, pl = 0L, verbose = FALSE){	
@@ -264,6 +264,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	xdim <- length(par)
 	hasError <- integer(0)
 	opt.args <- list(...)
+	stopifnot(!is.null(value))
 	
 	RES <- 
 	 if(multi.start > 0L){
@@ -342,7 +343,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	# some (empirical) measures	
 	msem <- .MSE(mpars,par)	
 	# value of test statistic at re-estimated parameters			
-	tvals <- sapply(RES[ok],"[[","value") 
+	tvals <- sapply(RES[ok],"[[","qval") 
 	stopifnot(is.numeric(tvals))
 	
 	# invert QI for predicted std. error (asymptotic) at estimated theta 
@@ -400,12 +401,13 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #'
 #' @description Monte Carlo hypothesis testing 
 #'
-#' @param est			object of class \code{qle}, the estimation results from function \code{\link{qle}}
+#' @param est			object of class \code{qle} or \code{mahal}, estimation results after calling function \code{\link{qle}}
 #' @param par0			optional, vector of parameter for the null hypothesis 
 #' @param obs0			optional, vector of observed statistics corresponding to `\code{par0}`
 #' @param ...			arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}
 #' @param sim			user supplied simulation function, see \code{\link{qle}}
 #' @param criterion		optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter
+#' @param approx		optional, \code{FALSE} (default), if \code{TRUE} and cirterion "\code{qle}" the test statistic is the modified quasideviance, nothing changes for criterion "\code{mahal}"
 #' @param nsim			numeric, number of (initial) simulation replications for each new sample point
 #' @param fnsim 		optional, a call returning the number of simulation replications applied to a new
 #' 						sample point with the current environment of calling function \code{qle},
@@ -470,7 +472,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #' @author M. Baaske
 #' @rdname qleTest
 #' @export
-qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
+qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL, approx = FALSE,
 		             nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05, multi.start = 0L,
 					  na.rm = TRUE, cores = 1L, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
@@ -556,13 +558,13 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 						  verbose=verbose)
 			 }
 		 }, error = function(e) {
-			  msg <- .makeMessage("Error in criterion function evaluation: ",conditionMessage(e))				 
+			  msg <- .makeMessage("Error in criterion function evaluation due to ",conditionMessage(e))				 
 			 .qleError(message=msg,call=sys.call(),error=e)		
 		 })
 		 if(!.isError(local)){			
 			 local <- local[[1]]
 		 } else {
-			 message(paste0("Cannot continue testing: ",local$message))
+			 message(paste0("Cannot continue testing due to ",local$message))
 			 return(local)
 		 }			
 	} 
@@ -694,8 +696,10 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 	msem <- .MSE(mpars,local$par)
 		
 	# value of test statistic at re-estimated parameters			
-	tvals <- sapply(RES[ok],"[[","value") 
-	stopifnot(is.numeric(tvals))
+	type <- if(approx && est$qsd$krig.type == "var") "qval" else "value"		
+	val <- local[[type]]
+	tvals <- sapply(RES[ok],"[[",type)	
+	stopifnot(is.numeric(c(val,tvals)))
 	
 	# invert QI for predicted std. error (asymptotic) at estimated theta 
 	qi <- try(gsiInv(local$I),silent=TRUE)
@@ -710,7 +714,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 					"rmse"=sqrt(diag(msem)),
 					"bias"=colMeans(t(t(mpars)-local$par)),
 					"mean"=colMeans(mpars))),
-			"sb"=local$value, "Sb"=tvals,
+			"sb"=val, "Sb"=tvals,
 			"test"=est$qsd$criterion)
 	
 	# had errors

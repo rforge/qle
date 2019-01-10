@@ -561,8 +561,6 @@ typedef struct ql_model_s {
 	double intern_mahalValue(double *x);			// use constant (inverted) variance
 	double intern_mahalVarTrace(double *x);			// use constant (inverted) variance
 	double intern_mahalValue_theta(double *x);		// computing inverse variance
-
-
 } ql_model_t, *ql_model;
 
 //////////////////////////// wrapper ///////////////////////////////////////////////////////

@@ -154,7 +154,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  or criterion function approximation. If a local minimizer of the criterion function has been accepted as an approximate root, then a local search
  tries to improve its accuracy. The next evaluation point is either selected according to a weighted minimum-distance criterion (see [2] and vignette),
  for the choice `\code{nextSample}` equal to "\code{score}", or by maximizing the weighted variance of the quasi-score vector in
- case `\code{nextSample}` is equal to "\code{var}". In all other cases, for example, if identifiable roots of the QS could not be found
+ case `\code{nextSample}` is equal to "\code{trace}". In all other cases, for example, if identifiable roots of the QS could not be found
  or the (numerical) convergence of the local solvers failed, the global phase of the algorithm is invoked and selects new potential
  candidates accross the whole search space based on a weighted selection criterion. This assigns large weights to candidates
  with low criterion function values and vise versa. During both phases the cycling between local and global candidates is
@@ -217,7 +217,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
   \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
-  \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{var}" (see details)} 
+  \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{trace}" (see details)} 
   }
 
  The following controls `\code{global.opts}` for the global search phase are available:   
