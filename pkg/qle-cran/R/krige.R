@@ -597,6 +597,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 {		
 	if(check)
 	 .checkArguments(qsd,Sigma=Sigma) 
+ 	stopifnot(is.numeric(w))
 	if(!is.list(points))
 	 points <- .ROW2LIST(points) 	
  	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
@@ -639,14 +640,14 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 			    unlist(
 				   do.call(doInParallel,
 					  c(list(X=M,
-					    FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only) {
-							.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only)	 
+					    FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only, w) {
+							.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only, w)	 
 						}, cl=cl),
-				     list(qsd, qlopts, X, Sigma, cvm, value.only))),
+				     list(qsd, qlopts, X, Sigma, cvm, value.only, w))),
 	             recursive = FALSE)
  							
 		} else {
-			.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only)
+			.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only,w)
 		}
 		
 		# check for NAs
@@ -750,11 +751,11 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 	  
 	  if(check)
 	   .checkArguments(qsd,Sigma=Sigma)
-   
+   	  stopifnot(is.numeric(w))
 	  if(!is.list(points))
 	 	 points <- .ROW2LIST(points)	  	  
-	  X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
-	  
+	  X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])  
+
 	  # may overwrite (observed) statistics	
 	  if(!is.null(obs)) {
 		  obs <- unlist(obs)
@@ -799,14 +800,14 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 			   unlist(
 				   do.call(doInParallel,
 						c(list(X=M,
-							   FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only) {
-								   .Call(C_mahalanobis,points,qsd,qlopts,X,Sigma,cvm,value.only)	 
+							   FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only,w) {
+								   .Call(C_mahalanobis,points,qsd,qlopts,X,Sigma,cvm,value.only,w)	 
 							   }, cl=cl),
-					   list(qsd, qlopts, X, Sigma, cvm, value.only))),
+					   list(qsd, qlopts, X, Sigma, cvm, value.only,w))),
 				recursive = FALSE)			  
 			   
 		    } else {
-			  .Call(C_mahalanobis,points,qsd,qlopts,X,Sigma,cvm,value.only)
+			  .Call(C_mahalanobis,points,qsd,qlopts,X,Sigma,cvm,value.only,w)
 			}
 			
 			# if it is computed by W, theta

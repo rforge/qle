@@ -559,8 +559,8 @@ typedef struct ql_model_s {
 	void quasiScore(double *mean, double *jac, double *vmat, double *score, int &err);
 
 	double intern_mahalValue(double *x);			// use constant (inverted) variance
-	double intern_mahalVarTrace(double *x);			// use constant (inverted) variance
 	double intern_mahalValue_theta(double *x);		// computing inverse variance
+
 } ql_model_t, *ql_model;
 
 //////////////////////////// wrapper ///////////////////////////////////////////////////////

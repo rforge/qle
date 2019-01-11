@@ -1762,7 +1762,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 									    locals$nextSample,
 									     "score" = {										  
 										  	  fval <- criterionFun(Y,W=I,theta=xt,value.only=2L)
-											  if(.isError(fval) || !is.numeric(fval))
+											  if(.isError(fval) || anyNA(fval))
 												stop("Criterion function evaluation failed (score criterion).")											  
 											  smin <- min(fval)
 											  smax <- max(fval)
@@ -1772,13 +1772,13 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													 else (dmax-dists)/(dmax-dmin)
 											  which.min( w*sw + (1-w)*dw )								
 										  },										 
-										  "logdet" = {										 
-											  # maximize logarithm of determinant criterion											  
+										  "logdet" = {								  
 											  fval <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)			
-											  if(.isError(fval) || !is.numeric(fval))
+											  if(.isError(fval) || anyNA(fval))
 												stop("Criterion function evaluation for 'logdet' failed.")
 											  which.min(fval)
-											  ## put to C level for faster computation
+											  
+											  ## put to C level for faster computation (see above)
 											  # qd <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)
 											  # if(.isError(qd))
 											  #  stop("Criterion function evaluation failed (maximize trace criterion).")					  							  

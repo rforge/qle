@@ -459,14 +459,24 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
        * */
 	  if(opts->useSigma)
 	  {
-		  /* only values */
+		  /* only return scalar values */
+
+		  /* 1 (TRUE) Mahalanobis distance
+		   * 2 modified quasi-deviance
+		   * 3 weighted sampling criterion 'logdet'		   *
+		   * */
 		  if(type) {
 			  PROTECT(R_ret = allocVector(REALSXP,np));
 			  double *fx = REAL(R_ret);
 
-			  if(type == COPY_TRACE) {
-				  for(i=0; i < np; ++i)
-					fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
+			  if(type > COPY_ONE && qlm.glkm->krigType) {
+				  if(type == COPY_MOD){
+					  for(;i < np; ++i)
+						 fx[i] = qlm.intern_qfVarStat(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
+				  } else {
+				   for(;i < np; ++i)
+					 fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
+				  }
 			  } else {
  				  for(i=0; i < np; ++i)
 			        fx[i] = qlm.intern_mahalValue(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
@@ -491,7 +501,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			  /* using prediction variances */
 			  if(glkm->krigType)
 			  {
-            	  double fval = 0;
+            	  double fval = 0, qval = 0;
             	  int nprotect = 5;
             	  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac", "varS", "qval", ""};
 
@@ -535,6 +545,8 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 info = qlm.intern_varScore(REAL(R_varS));
 		 	 	 	 CHECK_UNPROTECT("intern_varScore")
 
+		 	 	 	 qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
+		 	 	 	 CHECK_UNPROTECT("qfValue")
 		 	 	 	 /* copy prediction variance */
 					 MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
 
@@ -551,7 +563,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 					 SET_VECTOR_ELT(R_ans, 4, R_sig2);
 					 SET_VECTOR_ELT(R_ans, 5, R_jac);
 					 SET_VECTOR_ELT(R_ans, 6, R_varS);
-					 SET_VECTOR_ELT(R_ans, 7, ScalarReal(fval));
+					 SET_VECTOR_ELT(R_ans, 7, ScalarReal(qval));
 
 					 SET_VECTOR_ELT(R_ret, i, R_ans);
 					 UNPROTECT(6);
@@ -610,16 +622,21 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 	  } else {
 
 		  if(type) {
-			  PROTECT(R_ret = allocVector(REALSXP,np));
-  			  double *f = REAL(R_ret);
+			PROTECT(R_ret = allocVector(REALSXP,np));
+  			double *fx = REAL(R_ret);
 
-  			  if(type == COPY_TRACE) {
-			    for(i=0; i < np; ++i)
-				  f[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
-  			  } else {
-  				for(i=0;i<np;i++)
-  				  f[i] = qlm.intern_mahalValue_theta(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
-  			  }
+  			if(type > COPY_ONE && qlm.glkm->krigType) {
+				  if(type == COPY_MOD){
+					  for(;i < np; ++i)
+						 fx[i] = qlm.intern_qfVarStat(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
+				  } else {
+					  for(;i < np; ++i)
+						 fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
+				  }
+			 } else {
+				for(i=0; i < np; ++i)
+				  fx[i] = qlm.intern_mahalValue_theta(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
+			 }
 
 		  } else {
 
@@ -644,7 +661,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 			  if(glkm->krigType)
 			  {
-					  double fval = 0;
+					  double fval = 0, qval = 0;
 					  int nprotect = 5;
 					  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS", "qval", ""};
 
@@ -676,6 +693,8 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							qlm.intern_varScore(REAL(R_varS));
 							CHECK_UNPROTECT("intern_varScore")
 
+							qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
+							CHECK_UNPROTECT("qfValue")
 							/* copy prediction variance */
 							MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
 
@@ -692,7 +711,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 							SET_VECTOR_ELT(R_ans, 4, R_sig2);
 							SET_VECTOR_ELT(R_ans, 5, R_jac);
 							SET_VECTOR_ELT(R_ans, 6, R_varS);
-							SET_VECTOR_ELT(R_ans, 7, ScalarReal(fval));
+							SET_VECTOR_ELT(R_ans, 7, ScalarReal(qval));
 
 							setVmatAttrib(&qlm, R_VmatNames, R_ans);
 							SET_VECTOR_ELT(R_ret, i, R_ans);
@@ -821,71 +840,6 @@ double ql_model_s::intern_mahalValue(double *x) {
 	return sum;
 }
 
-double ql_model_s::intern_mahalVarTrace(double *x) {
-	 int k = 0, info = 0;
-	 double sum = 0;
-
-	 if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
-		LOG_ERROR(info,"intern_kriging");
-		return R_NaN;
-	}
-
-	 krig_result krig = glkm->krigr[0];
-	 for(k = 0; k < nCov; ++k)
-	   qld->qtheta[k] = qld->obs[k] - krig->mean[k];
-
-	 matmult(qld->vmat,nCov,nCov,qld->qtheta,nCov,ONE_ELEMENT,qld->tmp,info);
-	 if(info > 0){
-	   LOG_WARNING(info,"matmult")
-	   return R_NaN;
-	 }
-	 /* score vector */
-	 if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
-		LOG_ERROR(info,"intern_jacobian");
-		return R_NaN;
-	 }
-
-	 matmult(jac,dx,nCov,qld->tmp,nCov,ONE_ELEMENT,score,info);
-	 if(info > 0){
-	   LOG_WARNING(info,"matmult")
-	   return R_NaN;
-	 }
-	 /* variance of score vector stored in qimat */
-	 mat_trans(qld->jactmp,nCov,jac,dx,dx,nCov,info);
-	 if(info > 0){
-		LOG_WARNING(info,"mat_trans")
-	    return R_NaN;
-	 }
-	 matmult(qld->vmat,nCov,nCov,qld->jactmp,nCov,dx,qld->Atmp,info);
-	 if(info > 0){
-	   LOG_WARNING(info,"matmult")
-	   return R_NaN;
-	 }
-	 /* We need prediction variances
-	  * for the variance of quasi-score. The variance
-	  * matrix is fixed and thus has no additional
-	  * diagonal terms, i.e. kriging/CV variances)
-	  */
-	 if ( (info = intern_cvError(x)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_cvError");
-		 return R_NaN;
-	 }
-
-	 if ( (info = intern_varScore(qimat)) != NO_ERROR) {
-		 LOG_ERROR(info,"intern_varScore");
-		 return R_NaN;
-	 }
-
-	 for(k = 0; k < dx; ++k)
-	     sum += qimat[k*dx+k];
-
-	 if(!R_FINITE(sum)){
-		 LOG_WARNING(1,"intern_mahalVarTrace")
-	 	 return R_NaN;
-	 }
-	 return sum/(double)dx;
-}
-
 /**
  *  \brief A test implementation for
  *  	   Cross-validation based prediction errors
@@ -998,6 +952,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 					  CHECK_UNPROTECT("intern_quasiObs")
 
 					  qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
+					  CHECK_UNPROTECT("qfValue")
 					  MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
 
 					  setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
