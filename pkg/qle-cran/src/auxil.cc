@@ -361,6 +361,35 @@ void matmult_diag_sqrt(double *x, int nrx, int ncx, double *y,int &info) {
 	info=have_na;
 }
 
+/* adapted from R source */
+double logdet(double *A, int n, int useLog, int &info) {
+	info = 0;
+	double modulus = 0.0; /* -Wall */
+	int *jpvt = (int *) R_alloc(n, sizeof(int));
+	F77_CALL(dgetrf)(&n, &n, A, &n, jpvt, &info);
+	if (info < 0)
+	  Rf_error(_("error code %d from Lapack routine '%s'"), info, "dgetrf");
+	else if (info > 0) {
+	 modulus = (useLog ? R_NegInf : 0.);
+	} else {
+		 if (useLog) {
+			modulus = 0.0;
+			size_t N1 = n+1;
+			for (int i = 0; i < n; i++) {
+			 double dii = A[i * N1]; /* ith diagonal element */
+			 modulus += std::log(dii < 0 ? -dii : dii);
+			}
+		 } else {
+			modulus = 1.0;
+			size_t N1 = n+1;
+			for (int i = 0; i < n; i++) modulus *= A[i * N1];
+			if (modulus < 0) modulus = -modulus;
+		 }
+	}
+	return modulus;
+}
+
+
 void matmult(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z, int &info) {
     int i, j, k,
 		have_na = 0;

@@ -262,9 +262,9 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	aiqm <- NULL
 	mScore <- NULL	
 	xdim <- length(par)
-	hasError <- integer(0)
 	opt.args <- list(...)
-	stopifnot(!is.null(value))
+	hasError <- integer(0)	
+	stopifnot(is.numeric(value))
 	
 	RES <- 
 	 if(multi.start > 0L){
@@ -407,7 +407,6 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #' @param ...			arguments passed to the simulation function `\code{sim}`, \code{\link{searchMinimizer}} and \code{\link{multiSearch}}
 #' @param sim			user supplied simulation function, see \code{\link{qle}}
 #' @param criterion		optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter
-#' @param approx		optional, \code{FALSE} (default), if \code{TRUE} and cirterion "\code{qle}" the test statistic is the modified quasideviance, nothing changes for criterion "\code{mahal}"
 #' @param nsim			numeric, number of (initial) simulation replications for each new sample point
 #' @param fnsim 		optional, a call returning the number of simulation replications applied to a new
 #' 						sample point with the current environment of calling function \code{qle},
@@ -472,7 +471,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #' @author M. Baaske
 #' @rdname qleTest
 #' @export
-qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL, approx = FALSE,
+qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 		             nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05, multi.start = 0L,
 					  na.rm = TRUE, cores = 1L, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
@@ -696,10 +695,8 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL, app
 	msem <- .MSE(mpars,local$par)
 		
 	# value of test statistic at re-estimated parameters			
-	type <- if(approx && est$qsd$krig.type == "var") "qval" else "value"		
-	val <- local[[type]]
-	tvals <- sapply(RES[ok],"[[",type)	
-	stopifnot(is.numeric(c(val,tvals)))
+	tvals <- sapply(RES[ok],"[[","value")	
+	stopifnot(is.numeric(c(local$value,tvals)))
 	
 	# invert QI for predicted std. error (asymptotic) at estimated theta 
 	qi <- try(gsiInv(local$I),silent=TRUE)
@@ -714,7 +711,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL, app
 					"rmse"=sqrt(diag(msem)),
 					"bias"=colMeans(t(t(mpars)-local$par)),
 					"mean"=colMeans(mpars))),
-			"sb"=val, "Sb"=tvals,
+			"sb"=local$value, "Sb"=tvals,
 			"test"=est$qsd$criterion)
 	
 	# had errors

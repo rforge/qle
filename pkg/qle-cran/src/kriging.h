@@ -541,8 +541,8 @@ typedef struct ql_model_s {
 		 return info;
 	}
 
-	double intern_qfTrace(double *x);
     double intern_qfVarStat(double *x);
+    double intern_wlogdet(double *x, double w);
     double qfValue(double *score, double *varS);
 
     int intern_qfScore(double *x){ return qfScore(x,jac, score, qimat); }
@@ -585,9 +585,9 @@ SEXP finalizeQL();
 
 SEXP initQL(SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm);
 
-SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_qdValue);
+SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_qdValue, SEXP R_w);
 
-SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat,	SEXP R_cm, SEXP R_qdValue);
+SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat,	SEXP R_cm, SEXP R_qdValue, SEXP R_w);
 
 SEXP qDValue(SEXP R_point);
 

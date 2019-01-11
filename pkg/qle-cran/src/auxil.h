@@ -60,7 +60,9 @@ void matmult_diag(double *x, int nrx, int ncx, double *y, int &info);
 void matmult_diag_sqrt(double *x, int nrx, int ncx, double *y, int &info);
 void mat_trans(double *y, int ldy, double *x, int ldx, int nrow, int ncol, int &info);
 void matrix_col_sum(double *x, int *nx, int *y);
-
+//
+double logdet(double *A, int n, int useLog, int &info);
+//
 void solveLU(double *A, int nA, double *B, int nB, int &err);
 void solveQR(double *X, int nrx, int ncx, double *y, int ncy, int &err);
 //

@@ -432,7 +432,7 @@ void setVmatAttrib(ql_model qlm, SEXP R_VmatNames, SEXP R_ans) {
  *    either returns only the value or with computed components
  */
 
-SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_qdValue)
+SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_qdValue, SEXP R_w)
 {
 	  int i = 0, info = 0,
 		 np = LENGTH(R_points);
@@ -447,10 +447,8 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 	  int dx = glkm->dx,
 		  nCov = glkm->nCov;
 
-      SEXP R_ret, R_ans,
-	  	   R_S, R_jac, R_I;
-	  SEXP R_varS = R_NilValue,
-		   R_sig2 = R_NilValue;
+      SEXP R_ret, R_ans,  R_S, R_jac, R_I;
+	  SEXP R_varS = R_NilValue, R_sig2 = R_NilValue;
 
       /* constant Sigma
        *
@@ -468,7 +466,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 			  if(type == COPY_TRACE) {
 				  for(i=0; i < np; ++i)
-					fx[i] = qlm.intern_mahalVarTrace(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
+					fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
 			  } else {
  				  for(i=0; i < np; ++i)
 			        fx[i] = qlm.intern_mahalValue(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
@@ -617,7 +615,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
   			  if(type == COPY_TRACE) {
 			    for(i=0; i < np; ++i)
-				  f[i] = qlm.intern_qfTrace(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
+				  f[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
   			  } else {
   				for(i=0;i<np;i++)
   				  f[i] = qlm.intern_mahalValue_theta(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
@@ -911,7 +909,7 @@ double ql_model_s::intern_mahalVarTrace(double *x) {
 //}
 
 
-SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_qdValue)
+SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_qdValue, SEXP R_w)
 {
       int i = 0, info = 0,
     	  np = LENGTH(R_points);
@@ -931,7 +929,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 				   fx[i] = qlm.intern_qfVarStat(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
         	 } else {
 			   for(;i < np; ++i)
-				 fx[i] = qlm.intern_qfTrace(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
+				 fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
 			}
   		  } else {
   			for(; i < np; ++i)
@@ -1111,7 +1109,7 @@ double ql_model_s::qfScoreStat(double *x, double *jac, double *score, double *qi
 	return qfValue(score,qimat);
 }
 
-double ql_model_s::intern_qfTrace(double *x) {
+double ql_model_s::intern_wlogdet(double *x, double w) {
 	/* kriging */
 	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
 		LOG_ERROR(info,"intern_kriging")
@@ -1140,32 +1138,32 @@ double ql_model_s::intern_qfTrace(double *x) {
 		return R_NaN;
 	}
 
-	/*! unfortunately transpose jac  and calculate matrix A */
-	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov,info);
-	if(info > 0)
-     WRR("`NaN` detected in `mat_trans`.")
-
-	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
-	if(info != NO_ERROR){
-	  LOG_ERROR(info,"gsiSolve");
-	  return R_NaN;
+	if ( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR){
+		 LOG_ERROR(info,"intern_quasiInfo")
+		 return info;
 	}
-
-	/* this actually computes the (average) trace of the variance of quasi-score */
+	double sum = logdet(qimat, dx, 1, info);
+	if(info != NO_ERROR) {
+	  WRR("`NaN` detected in `logdet`.")
+	  LOG_ERROR(info,"intern_wlogdet")
+	  return info;
+	}
+	/* compute variance matrix of quasi-score */
 	if( (info = intern_varScore(qimat)) != NO_ERROR) {
 		 LOG_ERROR(info,"inter_varScore")
 		 return R_NaN;
 	}
-
-	double sum=0;
-	for(int i=0; i < dx; ++i)
-	  sum += qimat[i*dx+i];
+	double test = 0.0, tmp = 0.0;
+	for(int i=0; i < dx; ++i) {
+	   tmp = qimat[i*dx+i];
+	   if (tmp > test) test=tmp;
+	}
+	sum = w*sum+(1-w)*test;
 	if(!R_FINITE(sum)){
-	  WRR("`NaN` detected in `intern_qfTrace`.")
+	  WRR("`NaN` detected in `intern_wlogdet`.")
 	  return R_NaN;
 	}
-
-	return sum/(double)dx;
+	return sum;
 }
 
 double ql_model_s::intern_qfVarStat(double *x) {
@@ -1198,8 +1196,10 @@ double ql_model_s::intern_qfVarStat(double *x) {
 	}
 	/*! unfortunately transpose jac  and calculate matrix A */
 	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov,info);
-	if(info>0)
-	 WRR("`NaN` detected in `mat_trans`.")
+	if(info>0){
+	  WRR("`NaN` detected in `mat_trans`.")
+      return R_NaN;
+	}
 
 	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
 	if(info != NO_ERROR){
@@ -1235,18 +1235,20 @@ double ql_model_s::qfValue(double *score, double *varS) {
 int ql_model_s::intern_quasiInfo(double *jac, double *qimat) {
 	/*! unfortunately transpose jac */
 	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov,info);
-	if(info > 0)
-	 WRR("`NaN` detected in `mat_trans`.")
-
+	if(info > 0){
+	  WRR("`NaN` dtected in `mat_trans`.")
+      return R_NaN;
+	}
 	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
 	if(info != NO_ERROR){
 		LOG_ERROR(info,"gsiSolve");
 		return info;
 	}
 	matmult(jac,dx,nCov,qld->Atmp,nCov,dx,qimat,info);
-	if(info > 0)
-	 WRR("`NaN` detected in `matmult`.")
-
+	if(info > 0){
+	  WRR("`NaN` detected in `matmult`.")
+	  return R_NaN;
+	}
 	return info;
 }
 

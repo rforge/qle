@@ -1550,12 +1550,12 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		switch(qsd$criterion,
 			"mahal" = {				  		  
 				  function(x,...) {				  
-					mahalDist(x,qsd,Sigma,cvm=cvm,inverted=TRUE,check=FALSE,...,cl=if(isTRUE(use.cluster)) cl)
+				    mahalDist(x,qsd,Sigma,cvm=cvm,inverted=TRUE,check=FALSE,...,cl=if(isTRUE(use.cluster)) cl)
 				  }  
 			 },
 			 "qle" = {				  
 				 function(x,...)
-					quasiDeviance(x,qsd,NULL,cvm=cvm,check=FALSE,...,cl=if(isTRUE(use.cluster)) cl)					
+				  quasiDeviance(x,qsd,NULL,cvm=cvm,check=FALSE,...,cl=if(isTRUE(use.cluster)) cl)					
 			 }, { stop("Unknown criterion function!") }
 		) 
  
@@ -1736,7 +1736,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 												locals$weights[mWeights] )
 									} else {										
 										if(ft < 0.95*fold ||
-												ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
+										ctls["lam_max","val"] < ctls["lam_max","tmp"])													 
 										{
 											ctls["nfail","val"] <- 0L
 											ctls["nsucc","val"] <- ctls["nsucc","val"] + 1L												
@@ -1762,7 +1762,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 									    locals$nextSample,
 									     "score" = {										  
 										  	  fval <- criterionFun(Y,W=I,theta=xt,value.only=2L)
-											  if(.isError(fval) || anyNA(fval))
+											  if(.isError(fval) || !is.numeric(fval))
 												stop("Criterion function evaluation failed (score criterion).")											  
 											  smin <- min(fval)
 											  smax <- max(fval)
@@ -1772,26 +1772,22 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													 else (dmax-dists)/(dmax-dmin)
 											  which.min( w*sw + (1-w)*dw )								
 										  },										 
-										  "trace" = {						
-											  # maximize average trace criterion											  
-											  fval <- criterionFun(Y,W=I,theta=xt,value.only=3L)
-											  if(.isError(fval) || anyNA(fval))
-											    stop("Criterion function evaluation failed (average trace criterion).")										  
-											  if(abs(dmax-dmin) < EPS) {
-												  which.max(fval)
-											  } else which.max(fval*(dists-dmin)/(dmax-dmin))											  
-										  },
 										  "logdet" = {										 
 											  # maximize logarithm of determinant criterion											  
-											  qd <- criterionFun(Y,W=I,theta=xt)
-											  if(.isError(qd))
-												stop("Criterion function evaluation failed (maximize trace criterion).")					  							  
-											  fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*max(diag(x$varS))),silent=TRUE)											  
-											  if(.isError(fval) || anyNA(fval))
-												stop("Criterion function evaluation for 'logdet' failed.")											  
-											  which.min(fval)									  
+											  fval <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)			
+											  if(.isError(fval) || !is.numeric(fval))
+												stop("Criterion function evaluation for 'logdet' failed.")
+											  which.min(fval)
+											  ## put to C level for faster computation
+											  # qd <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)
+											  # if(.isError(qd))
+											  #  stop("Criterion function evaluation failed (maximize trace criterion).")					  							  
+											  # fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*max(diag(x$varS))),silent=TRUE)											  
+											  # if(.isError(fval) || !is.numeric(fval))
+											  #   stop("Criterion function evaluation for 'logdet' failed.")											  
+											  # which.min(fval)									  
 										  }
-										) # end switch
+										) 
 										
 										if(!is.numeric(id) || length(id) == 0L){
 											status[["global"]] <- 2L

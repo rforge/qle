@@ -5,8 +5,8 @@
 \title{Quasi-deviance computation}
 \usage{
 quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-  inverted = FALSE, check = TRUE, value.only = FALSE, na.rm = TRUE,
-  cl = NULL, verbose = FALSE)
+  inverted = FALSE, check = TRUE, w = 0.5, value.only = FALSE,
+  na.rm = TRUE, cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{points}{list or matrix of points where to compute the QD (a numeric vector is considered to be a (multidimensional) point)}
@@ -24,6 +24,8 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 \item{inverted}{logical, \code{FALSE} (default), currently ignored}
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
+
+\item{w}{numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion}
 
 \item{value.only}{if \code{TRUE} only the values of the QD are returned}
 

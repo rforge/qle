@@ -526,6 +526,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param cvm			list of cross-validation models (see \code{\link{prefitCV}})
 #' @param obs	 	    numeric vector of observed statistics, this overwrites `\code{qsd$obs}`, if supplied
 #' @param inverted 		logical, \code{FALSE} (default), currently ignored
+#' @param w			    numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion
 #' @param check			logical, \code{TRUE} (default), whether to check input arguments
 #' @param value.only  	if \code{TRUE} only the values of the QD are returned
 #' @param na.rm 		logical, if \code{TRUE} (default) remove `Na`s from the result
@@ -591,7 +592,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @rdname quasiDeviance
 #' @export
 quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL, 
-					 inverted = FALSE, check = TRUE, value.only=FALSE, na.rm = TRUE,
+					 inverted = FALSE, check = TRUE, w = 0.5, value.only=FALSE, na.rm = TRUE,
 					  cl = NULL, verbose=FALSE)
 {		
 	if(check)
@@ -686,6 +687,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' @param inverted    logical, \code{FALSE} (default), whether `\code{Sigma}` is already inverted when
 #' 					  used as constant variance matrix only
 #' @param check       logical, \code{TRUE} (default), whether to check all input arguments
+#' @param w			  numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion 
 #' @param value.only  only return the value of the MD 
 #' @param na.rm   	  logical, if \code{TRUE} (default) remove `Na` values from the results
 #' @param cl		  cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
@@ -742,7 +744,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' @rdname mahalDist
 #' @export
 mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-		               inverted = FALSE, check = TRUE, value.only = FALSE, na.rm = TRUE,
+		               inverted = FALSE, check = TRUE, w = 0.5, value.only = FALSE, na.rm = TRUE,
 					    cl = NULL, verbose = FALSE)
 {
 	  
