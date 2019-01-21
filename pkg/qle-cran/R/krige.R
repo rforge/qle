@@ -289,29 +289,23 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
    	var.type <- qsd$var.type
 	krig.type <- qsd$krig.type
 	Tnames <- names(qsd$obs)
+	dataT <- qsd$qldata[(xdim+1L):(xdim+nstat)]
 	dataL <- qsd$qldata[(xdim+2*nstat+1L):ncol(qsd$qldata)]					# Cholesky decomposed terms
 	nc <- ncol(dataL)
 		
 	sig2 <-
-	  if(krig.type != "dual") {
-		dataT <- qsd$qldata[(xdim+1L):(xdim+nstat)]
-	 	if(!is.null(cvm)) {
-			if(is.null(theta) || is.null(dataT))
-		  		stop("'Argument `theta` and `dataT` must not be 'NULL' for using CV.")
-	  	
-		 	tryCatch({
-				krig.type <- "both"			
+	 if(!is.null(theta)) {
+		 if(!is.null(cvm)) {		  
+		 	tryCatch({							
 				Y <- estim(qsd$covT,theta,Xs,dataT,krig.type="var")
 				# cross-validation variance/RMSE of statistics
 				cverrorTx(theta,Xs,dataT,cvm,Y,"cve")		
 			 }, error = function(e) { e })
-	 
-	 	} else if((krig.type == "var" || krig.type == "both")) {
-	   	   if(is.null(theta))
-		 	 stop("'Argument 'theta' must not be 'NULL' for using kriging prediction variances.")
-	       try(varKM(qsd$covT,theta,Xs,dataT),silent=TRUE)
-	    } 
-	} else NULL
+		 
+		 } else if((krig.type == "var")) {
+		       try(varKM(qsd$covT,theta,Xs,dataT),silent=TRUE)
+		 } 
+	} else NULL 
 	
 	 
 	if(.isError(sig2)) {
@@ -372,7 +366,7 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 			## functions in R code, any other code calling C does its own
 			## kriging more efficiently
 			if(is.null(qsd$covL) || is.null(theta))
-			  stop("For kriging the variance matrix argument `covL` and `theta` must be given.")			
+			  stop("Kriging the variance matrix requires arguments `qsd$covL` and `theta` to be given.")			
 					  	
 			# nCovL: number of Cholesky decomposed terms (excluding bootstrap variances)		
 			L <- estim(qsd$covL,theta,Xs,dataL[1:length(qsd$covL)],krig.type="var")			

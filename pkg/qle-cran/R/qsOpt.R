@@ -549,11 +549,10 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		}
 	}
 	if(useSigma && is.null(Sigma))
-		stop("`Sigma` cannot be NULL if used as a constant variance matrix.")
+	 stop("`Sigma` cannot be NULL if used as a constant variance matrix.")
+
 	# init QL data and kriging models	
-	qlopts <- list("varType"=qsd$var.type,
-				   "useCV"=!is.null(cvm),
-				   "useSigma"=useSigma)
+	qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm), "useSigma"=useSigma)
 	
 	 # return TRUE for success othewise signal error
 	try(.Call(C_initQL,qsd,qlopts,X,Sigma,cvm))	
