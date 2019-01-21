@@ -1061,12 +1061,13 @@ int ql_model_s::intern_quasiObs(double *x, double *score, double *qiobs) {
 
 /* variance of quasi-score vector:
  * kriging variances as diagonal matrix hat{Sigma}_k */
-int ql_model_s::intern_varScore(double *vars){
-	 matmult_diag_sqrt(qld->Atmp,nCov,dx,glkm->krigr[0]->sig2,info);
-	 if(info > 0)
+int ql_model_s::intern_varScore(double *vars)
+{
+	  matmult_diag_sqrt(qld->Atmp,nCov,dx,glkm->krigr[0]->sig2,info);
+	  if(info > 0)
 		LOG_WARNING(info, "`NaN` detected in `matmult_diag_sqrt`.")
-	 matmult_trans(qld->Atmp,nCov,dx,qld->Atmp,nCov,dx,vars,info);
-	 if(info > 0)
+	  matmult_trans(qld->Atmp,nCov,dx,qld->Atmp,nCov,dx,vars,info);
+	  if(info > 0)
 		LOG_WARNING(info," `NaN` detected in `matmult_trans`.")
 
 #if DEBUG
@@ -1074,8 +1075,7 @@ int ql_model_s::intern_varScore(double *vars){
 	printVector("sig2",glkm->krigr[0]->sig2,&nCov);
 	printMatrix("vars",vars,&dx,&dx);
 #endif
-
-	return info;
+	 return info;
 }
 
 /** @brief Allocate storage for a kriging model
