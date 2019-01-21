@@ -156,7 +156,7 @@
 		 "eta" = c(0.025,0.05),						   # c("decrease"=0.05,"increase"=0.075) additive step size	
 		 "nfail" = 2,								   # number of failed (not yet improved) iterations until next decrease of weights 
 		 "nsucc" = 3,								   # number of successful iterations until next increase of weights 
-		 "nextSample" = "score",					   # default selection criterion
+		 "nextSample" = "logdet",					   # default selection criterion
 		 "useWeights" = TRUE,						   # do not dynamically adjust weights and cycle through the weights							   
 		 "test" = FALSE)							   # do not test approximate root		 
 }
@@ -1159,8 +1159,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #'  the criterion function three different sampling criteria are used to select next evaluation points which aim on potentially improving the quasi-score
 #'  or criterion function approximation. If a local minimizer of the criterion function has been accepted as an approximate root, then a local search
 #'  tries to improve its accuracy. The next evaluation point is either selected according to a weighted minimum-distance criterion (see [2] and vignette),
-#'  for the choice `\code{nextSample}` equal to "\code{score}", or by maximizing the weighted variance of the quasi-score vector in
-#'  case `\code{nextSample}` is equal to "\code{trace}". In all other cases, for example, if identifiable roots of the QS could not be found
+#'  for the choice `\code{nextSample}` equal to "\code{score}". In all other cases, for example, if identifiable roots of the QS could not be found
 #'  or the (numerical) convergence of the local solvers failed, the global phase of the algorithm is invoked and selects new potential
 #'  candidates accross the whole search space based on a weighted selection criterion. This assigns large weights to candidates
 #'  with low criterion function values and vise versa. During both phases the cycling between local and global candidates is
@@ -1223,7 +1222,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #'   \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
 #'   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
 #'   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
-#'   \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{trace}" (see details)} 
+#'   \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{logdet}" (see details)} 
 #'   }
 #' 
 #'  The following controls `\code{global.opts}` for the global search phase are available:   
@@ -1477,7 +1476,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		.checkOptions(locals,local.opts)		
 		locals[names(local.opts)] <- local.opts	
 	}
-	id <- pmatch(locals$nextSample,c("score","trace","logdet"))
+	id <- pmatch(locals$nextSample,c("score","logdet"))
 	if(is.na(id[1])) stop(paste0("Undefined sampling criterion: ",locals$nextSample))
 	
 	# setting controls as data frame
@@ -1644,7 +1643,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 											 format(xt, digits=6, justify="right")),collapse = " "))				  
 								  # test for an approximate root either of modifier QD or modified Mahalanobis distance								  
 							      # using multistart and selecting best root if first root finding from `xt` fails to converge
-								  .rootTest(xt, S0$qval, I, newObs[[1]], locals$alpha, qsd$criterion,
+								  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 										  qsd, method, qscore.opts, control, Sigma=Sigma, W=W,
 										   theta=theta, cvm=cvm, multi.start=1L, Npoints=nrow(X),
 										    cl=if(isTRUE(use.cluster)) cl, pl=pl, verbose=verbose)	
@@ -1748,7 +1747,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 											reset <- FALSE
 											w <- locals$weights[1]													 
 										}
-										# update weights									
+										# update weights for both criteria!										
 										if(ctls["nfail","val"] > 0L && 
 												!(ctls["nfail","val"] %% ctls["nfail","cond"])){											 											 
 											w <- max(w-locals$eta[1],0)
@@ -1760,38 +1759,56 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 									id <- 
 									  switch(
 									    locals$nextSample,
-									     "score" = {										  
-										  	  fval <- criterionFun(Y,W=I,theta=xt,value.only=2L)
-											  if(.isError(fval) || anyNA(fval))
-												stop("Criterion function evaluation failed (score criterion).")											  
+									     "score" = {							
+											  # normalized distances
+											  dw <- if(abs(dmax-dmin) < EPS) 1 else (dmax-dists)/(dmax-dmin)
+											  fval <- criterionFun(Y,W=I,theta=xt,value.only=2L)
+											  if(.isError(fval))
+												stop("Criterion function 'score' evaluation failed.")
+											  else if(any(!is.finite(fval))) {
+												  hasNA <- which(!is.finite(fval))
+												  dw <- dw[-hasNA]
+												  fval <- fval[-hasNA]
+												  message(paste0("A total of ",length(hasNA)," of criterion function evaluations has NA values."))												 
+											  }
 											  smin <- min(fval)
 											  smax <- max(fval)
-											  sw <- if(abs(smax-smin) < EPS) 1 
-												 	 else (fval-smin)/(smax-smin)	
-											  dw <- if(abs(dmax-dmin) < EPS) 1		
-													 else (dmax-dists)/(dmax-dmin)
+											  sw <- if(abs(smax-smin) < EPS) 1 else (fval-smin)/(smax-smin)											  
 											  which.min( w*sw + (1-w)*dw )								
 										  },										 
-										  "logdet" = {								  
-											  fval <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)			
-											  if(.isError(fval) || anyNA(fval))
-												stop("Criterion function evaluation for 'logdet' failed.")
-											  which.min(fval)
+										  "logdet" = {		
+											  ## !!!
+											  ## TODO:
+											  ## !!!
 											  
-											  ## put to C level for faster computation (see above)
-											  # qd <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)
-											  # if(.isError(qd))
-											  #  stop("Criterion function evaluation failed (maximize trace criterion).")					  							  
-											  # fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*max(diag(x$varS))),silent=TRUE)											  
-											  # if(.isError(fval) || !is.numeric(fval))
-											  #   stop("Criterion function evaluation for 'logdet' failed.")											  
-											  # which.min(fval)									  
+											  ## put to C level for faster computation (see below)
+											  qd <- criterionFun(Y,W=I,theta=xt)	
+										  	  # fval <- try(sapply(qd,function(x) w*log(det(x$varS))+(1-w)*x$qval),silent=TRUE)
+											  # fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*max(diag(x$varS))),silent=TRUE)
+											  # fval <- try(sapply(qd,function(x) w*log(det(x$varS))-(1-w)*x$qval),silent=TRUE)
+											  fval <- try(sapply(qd,
+												function(x) {													
+													B <- x$jac%*%gsiInv(attr(x,"Sigma"))													
+													varS <- B%*%(attr(x,"Sigma")+diag(x$sig2))%*%t(B)
+													w*log(det(varS))-(1-w)*t(x$score)%*%gsiInv(varS)%*%x$score
+							                     }),
+										 		silent=TRUE)
+#											  
+											  #fval <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)			
+#											  if(.isError(fval))
+#												  stop("Criterion function evaluation for 'logdet' failed.")
+#											  else if(any(!is.finite(fval))) {
+#												  hasNA <- which(!is.finite(fval))
+#												  fval <- fval[-hasNA]
+#												  message(paste0("A total of ",length(hasNA)," of criterion function evaluations has NA values."))												 
+#											  }					
+											  which.max(fval)											 							  
 										  }
 										) 
 										
 										if(!is.numeric(id) || length(id) == 0L){
 											status[["global"]] <- 2L
-											message("Could not find index of selection candidate. Switch to global phase.")							
+											message("Could not get index of next sample point out of candidates. Try global phase now.")							
 									 	} else {
 											# compute criterion function at new sample point						
 											Spar <- criterionFun(Y[id,],W=I,theta=xt)											
@@ -1835,22 +1852,27 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 							# possibly weighted (by W at theta) obtained
 							# from last successful local minimizer
 							fval <- criterionFun(Y,W=W,theta=theta,value.only=TRUE)									  																		
-							if(.isError(fval) || !is.numeric(fval)){
+							if(.isError(fval)){
 							  stop("Criterion function evaluation failed (global phase).")
+							} else if(any(!is.finite(fval))) {
+								hasNA <- which(!is.finite(fval))
+								fval <- fval[-hasNA]
+								dists <- dists[-hasNA]								
+								message(paste0("A total of ",length(hasNA)," of criterion function evaluations has NA values."))
 							}
 							# next sampling location							
 							fmin <- min(fval)
 							fmax <- max(fval)
 							k <- nglobal %% mWeightsGL
 							w <- ifelse(k != 0L, globals$weights[k], globals$weights[mWeightsGL] )
-							fd <- if(abs(fmax-fmin) < EPS) 1 
-							      else (fval-fmin)/(fmax-fmin)							
+							fd <- if(abs(fmax-fmin) < EPS) 1 else (fval-fmin)/(fmax-fmin)							
 							# next sampling point
 							id <- which.max( exp(-w*fd) * dists )										
-							if(!is.numeric(id) || length(id) == 0L)
-							  stop("Could not find index of selection candidate.")							
+							if(!is.finite(id) || length(id) == 0L)
+							  stop("Could not get index of next sample point out of candidates.")							
 							
-						    # compute criterion function at new sample point						
+						    # compute criterion function at new sample point
+							# return full list of elements, either QD or MD
 							Spar <- criterionFun(Y[id,],W=W,theta=theta)							
 							
 						} # end global						

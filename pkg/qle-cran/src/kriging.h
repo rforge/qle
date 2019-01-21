@@ -15,7 +15,7 @@
 /** typedefs */
 typedef enum { MEAN = 0, KRIG = 1} var_type;
 typedef enum { DUAL = 0, VARIANCE = 1, BOTH = 2} krig_type;
-typedef enum { COPY_ZERO = 0, COPY_ONE = 1, COPY_MOD = 2, COPY_TRACE = 3} value_type;
+typedef enum { COPY_ZERO = 0, COPY_ONE = 1, COPY_MOD = 2} value_type;
 
 typedef struct krig_storage_s {
 	double *Qwork,
@@ -105,7 +105,7 @@ typedef struct krig_model_s {
 	  dx;      /* dimension */
 
   value_type cpy;	   /* if 'data' should be  copied */
-  krig_type krigtype;
+  krig_type krigType;
 
   double *Xmat,	 /* design (always only pointer) */
   	  	 *data,  /* stats vector */
@@ -127,7 +127,7 @@ typedef struct krig_model_s {
 
   krig_model_s(SEXP _R_cov, double *_Xmat, double *_data,
 		  int _lx, int _dx, krig_type _type,  value_type _cpy = COPY_ONE 	/* copy _data */ ) :
-	 lx(_lx), dx(_dx), cpy(_cpy), krigtype(_type), Xmat(_Xmat),
+	 lx(_lx), dx(_dx), cpy(_cpy), krigType(_type), Xmat(_Xmat),
 	 data(0),Fmat(0),Cmat(0),Cinv(0),X1mat(0),Qmat(0),dw(0),f0(0),s0(0),trend(0),fddim(0),
 	 cov(_R_cov)
   {
@@ -135,7 +135,7 @@ typedef struct krig_model_s {
   }
 
   ~krig_model_s() {
-	  if(krigtype) {
+	  if(krigType) {
 	      FREE(Cinv)
 	      FREE(X1mat)
 	      FREE(Qmat)
@@ -232,9 +232,9 @@ typedef struct glkrig_models_s
 
   glkrig_models_s(SEXP _R_covList, double *_Xmat, double **_data, int _lx, int _dx,
 		  	  	  	 krig_type _krigType, int idx = 0, value_type _cpy = COPY_ONE) :
-		 Xmat(0), lx(_lx), dx(_dx), nCov(LENGTH(_R_covList)), info(0), cpy(_cpy), krigType(_krigType)
+		Xmat(0), lx(_lx), dx(_dx), nCov(LENGTH(_R_covList)),
+		info(0), cpy(_cpy), krigType(_krigType)
   {
-
   	  /* kriging results storage */
   	  for(int i=0; i<2; i++) {
   		if( (krigr[i] = new krig_result_s(nCov,lx,krigType)) == NULL)
@@ -419,7 +419,7 @@ typedef struct ql_model_s {
 	GLKM varkm;  			/* Kriging models for variance matrices */
 	CVKM cvmod;				/* CV models (Cross-Validation kriging models) */
 	ql_data qld;
-    ql_storage_t qlsolve;		  /* general storage for solving kriging equations */
+    ql_storage_t qlsolve;	/* general storage for solving kriging equations */
 
 	double *qimat,  /* expected Quasi-Information */
 		   *score,  /* quasi score vector */
@@ -441,12 +441,16 @@ typedef struct ql_model_s {
 
 		/* list of covariance models*/
 		SEXP R_covT = getListElement( R_qsd, "covT" );
-	    /* list of covariance models for variances*/
+
+		/* list of covariance models for variances*/
 		SEXP R_covL = getListElement( R_qsd, "covL" );
+
 		/* reference statistic values*/
 		SEXP R_obs = getListElement( R_qsd, "obs" );
+
 		/* ql data list */
 		SEXP R_qldata = getListElement( R_qsd, "qldata" );
+		/* always set to "var" at R level */
 		SEXP R_krigType = getListElement( R_qsd, "krig.type" );
 
 		nCov = LENGTH(R_covT);
@@ -464,6 +468,7 @@ typedef struct ql_model_s {
 			   ERR("Covariance model for kriging variance matrix is not set (Null).");
 
 			 int idx = dx+2*nCov;
+			 // always use VARIANCE as krigType for kriging variance matrix of statistics
 			 if( (varkm = new(std::nothrow) glkrig_models_s(R_covL,R_Xmat,R_qldata,R_NilValue,idx,_cpy)) == NULL)
 			   MEM_ERR(1,glkrig_models_s)
 		 }
@@ -507,33 +512,18 @@ typedef struct ql_model_s {
 	}
 
 	inline int intern_cvError(double *x) {
-		  if(glkm->krigType && qld->qlopts.useCV) {
-		  	 cvmod->cvError(x,glkm->km,glkm->krigr[0]->sig2,info);
-		  	 if(info != NO_ERROR)
-		  	   LOG_ERROR(info," in `cvError`.")
-		  }
-		  return info;
+	  if(qld->qlopts.useCV) {
+		 cvmod->cvError(x,glkm->km,glkm->krigr[0]->sig2,info);
+		 if(info != NO_ERROR)
+		   LOG_ERROR(info,"cvError")
+	  }
+	  return info;
     }
 
-	 /* variance score vector, only for krigType `var` !!! */
-	inline int intern_varScore(double *vars)
-	{
-   		 matmult_diag_sqrt(qld->Atmp,nCov,dx,glkm->krigr[0]->sig2,info);
-   		 if(info > 0)
-   			LOG_WARNING(info, "`NaN` detected in `matmult_diag_sqrt`.")
-		 matmult_trans(qld->Atmp,nCov,dx,qld->Atmp,nCov,dx,vars,info);
-		 if(info > 0)
-			LOG_WARNING(info," `NaN` detected in `matmult_trans`.")
+	/* variance of quasi-score within the approximating kriging models */
+	int intern_varScore(double *vars);
 
-#if DEBUG
-		printMatrix("Atmp (1)",qld->Atmp,&nCov,&dx);
-		printVector("sig2",glkm->krigr[0]->sig2,&nCov);
-		printMatrix("vars",vars,&dx,&dx);
-#endif
-		return info;
-
-    }
-
+	/* observed quasi-information matrix (FD approximation of quasiscore vector) */
 	int intern_quasiObs(double *x, double *score, double *qiobs);
 
 	inline int intern_quasiScore(double *jac, double *score) {
@@ -541,16 +531,16 @@ typedef struct ql_model_s {
 		 return info;
 	}
 
-    double intern_qfVarStat(double *x);
     double intern_wlogdet(double *x, double w);
-    double qfValue(double *score, double *varS);
+    double intern_wlogdetMahal(double *x, double w);
 
-    int intern_qfScore(double *x){ return qfScore(x,jac, score, qimat); }
+    double qfValue(double *score, double *varS);
+    int intern_qfScore(double *x){ return qfScore(x,jac,score,qimat); }
 
     inline double intern_qfValue() { return qfValue(score,qimat); }
     inline double intern_qfScoreStat(double *x) { return qfScoreStat(x,jac,score,qimat); }
 
-	void varMatrix(double *x, double *s, double *vmat, int &err);
+	void varMatrix(double *x, double *vmat, int &err);
 
 	int qfScore(double *x, double *jac, double *score, double *qimat);
 	double qfScoreStat(double *x, double *jac, double *score, double *qimat);
@@ -558,8 +548,10 @@ typedef struct ql_model_s {
 	int intern_quasiInfo(double *jac, double *qimat);
 	void quasiScore(double *mean, double *jac, double *vmat, double *score, int &err);
 
-	double intern_mahalValue(double *x);			// use constant (inverted) variance
-	double intern_mahalValue_theta(double *x);		// computing inverse variance
+	double intern_mahalValue(double *x);
+
+    double mahalDist(double *x,double *jac,double *score,double *qimat);
+	double intern_mahalanobis(double *x) { return mahalDist(x,jac,score,qimat); }
 
 } ql_model_t, *ql_model;
 

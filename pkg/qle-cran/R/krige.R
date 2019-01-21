@@ -240,13 +240,12 @@ varLOGdecomp <- function(L) {
 #' @param W			weight matrix for weighted average approximation
 #' @param theta	    parameter vector for weighted average approximation 
 #' @param cvm		list of fitted cross-validation models, see \code{\link{prefitCV}}
-#' @param useVar 	logical, if \code{TRUE}, then use prediction variances (see details)
 #' @param doInvert	if \code{TRUE}, return the inverse of the variance matrix approximation
 #'
 #' @return
 #' 	List of variance matrices with the following structure:
 #' 	\item{VTX}{ variance matrix approximation}
-#'  \item{sig2}{ if applicable, kriging prediction variances of statistics at `\code{theta}`}
+#'  \item{sig2}{kriging prediction variances of statistics at `\code{theta}`}
 #'  \item{var}{ matrix `\code{VTX}` with added variances `\code{sig2}` to the diagonal terms}
 #'  \item{inv}{ if applicable, the inverse of either `\code{VTX}` or `\code{var}`}
 #'
@@ -271,9 +270,7 @@ varLOGdecomp <- function(L) {
 #' 	where \eqn{\hat{V}} denotes one of the above variance approximation types.
 #' 
 #'  The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
-#'  cross-validation (CV) approach, see vignette for details. Finally, we can switch off using prediction variances of either type by setting
-#'  `\code{useVar}`=\code{FALSE}. In general, this should be avoided. However, if the estimation problem under investigation is \emph{simple enough},
-#'  then this choice may be still useful.
+#'  cross-validation (CV) approach, see vignette for details.
 #'    
 #' @examples 
 #'  data(normal)
@@ -283,7 +280,7 @@ varLOGdecomp <- function(L) {
 #' @author M. Baaske
 #' @rdname covarTx
 #' @export
-covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doInvert = FALSE)
+covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 {		
 	xdim <- attr(qsd$qldata,"xdim")
 	Xs <- as.matrix(qsd$qldata[seq(xdim)])
@@ -296,7 +293,7 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE, doI
 	nc <- ncol(dataL)
 		
 	sig2 <-
-	  if(useVar && krig.type != "dual") {
+	  if(krig.type != "dual") {
 		dataT <- qsd$qldata[(xdim+1L):(xdim+nstat)]
 	 	if(!is.null(cvm)) {
 			if(is.null(theta) || is.null(dataT))

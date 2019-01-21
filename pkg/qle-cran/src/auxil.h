@@ -58,6 +58,7 @@ void matmult(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z
 void matmult_trans(double *x, int nrx, int ncx, double *y, int nry, int ncy, double *z, int &info);
 void matmult_diag(double *x, int nrx, int ncx, double *y, int &info);
 void matmult_diag_sqrt(double *x, int nrx, int ncx, double *y, int &info);
+//
 void mat_trans(double *y, int ldy, double *x, int ldx, int nrow, int ncol, int &info);
 void matrix_col_sum(double *x, int *nx, int *y);
 //

@@ -4,8 +4,7 @@
 \alias{covarTx}
 \title{Variance matrix approximation}
 \usage{
-covarTx(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE,
-  doInvert = FALSE)
+covarTx(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -16,14 +15,12 @@ covarTx(qsd, W = NULL, theta = NULL, cvm = NULL, useVar = FALSE,
 
 \item{cvm}{list of fitted cross-validation models, see \code{\link{prefitCV}}}
 
-\item{useVar}{logical, if \code{TRUE}, then use prediction variances (see details)}
-
 \item{doInvert}{if \code{TRUE}, return the inverse of the variance matrix approximation}
 }
 \value{
 List of variance matrices with the following structure:
 	\item{VTX}{ variance matrix approximation}
- \item{sig2}{ if applicable, kriging prediction variances of statistics at `\code{theta}`}
+ \item{sig2}{kriging prediction variances of statistics at `\code{theta}`}
  \item{var}{ matrix `\code{VTX}` with added variances `\code{sig2}` to the diagonal terms}
  \item{inv}{ if applicable, the inverse of either `\code{VTX}` or `\code{var}`}
 }
@@ -52,9 +49,7 @@ The function estimates the variance matrix of statistics at some (unsampled) poi
 	where \eqn{\hat{V}} denotes one of the above variance approximation types.
 
  The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
- cross-validation (CV) approach, see vignette for details. Finally, we can switch off using prediction variances of either type by setting
- `\code{useVar}`=\code{FALSE}. In general, this should be avoided. However, if the estimation problem under investigation is \emph{simple enough},
- then this choice may be still useful.
+ cross-validation (CV) approach, see vignette for details.
 }
 \examples{
  data(normal)

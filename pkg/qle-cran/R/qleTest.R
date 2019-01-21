@@ -343,7 +343,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	# some (empirical) measures	
 	msem <- .MSE(mpars,par)	
 	# value of test statistic at re-estimated parameters			
-	tvals <- sapply(RES[ok],"[[","qval") 
+	tvals <- sapply(RES[ok],"[[","value") 
 	stopifnot(is.numeric(tvals))
 	
 	# invert QI for predicted std. error (asymptotic) at estimated theta 

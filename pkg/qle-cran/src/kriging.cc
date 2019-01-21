@@ -358,48 +358,41 @@ SEXP qDValue(SEXP R_point) {
 
 /**
  * \brief
- * 		Calculate Mahalanobis distance of statistics.
+ * 		Calculate Mahalanobis distance of the statistics and its gradient.
  *
  * 		If R_Sigma is used as inverse covariance matrix of statistics
  * 		(simulated), then the score vector as the gradient is returned,
- * 		otherwise the covariance matrix is continuously computed at each point acc.
- * 		to the settings of `ql`.
+ * 		otherwise the covariance matrix is continuously computed at each point
+ * 		according to the settings stored in `qlopts`. The quasi-score as a gradient
+ * 		makes sense only in case of constant variance matrix 'Sigma^{-1}' or if an
+ * 		average approximation without kriging variances is used, that is, for kriging
+ * 		type 'krigType'=="dual'.
  */
 SEXP mahalValue(SEXP R_point) {
   if(!qlm_global)
      ERR("Pointer to `qldata` object not set (NULL).");
 
-  int info = 0,
-	  dx = qlm_global->glkm->dx,
-	  nCov = qlm_global->glkm->nCov;
-
-  double f = 0;
+  GLKM glkm = qlm_global->glkm;
+  ql_data qld = qlm_global->qld;
+  int info=0, dx=glkm->dx, nCov=glkm->nCov;
+  double *fdwork = qld->fdwork;
   double *x = REAL(AS_NUMERIC(R_point));
 
-  if(qlm_global->qld->qlopts.useSigma) {
-  	 f = qlm_global->intern_mahalValue(x);
-  } else {
-     f = qlm_global->intern_mahalValue_theta(x);
-  }
-
-  if (qlm_global->info != NO_ERROR){
-	  LOG_ERROR(info,"mahalValue")
-	  return ScalarReal(f);
-  }
+  double f = qlm_global->intern_mahalValue(x);
+  if(qlm_global->info != NO_ERROR)
+    XERR(info,"mahalValue")
 
   SEXP R_ans, R_score;
   PROTECT(R_ans = ScalarReal(f));
   PROTECT(R_score = allocVector(REALSXP,dx));
 
-  /* Jacobian */
-  double *fdwork = qlm_global->qld->fdwork;
-  if( (info = qlm_global->glkm->intern_jacobian(x,qlm_global->jac,fdwork)) != NO_ERROR)
-	XERR(info,"intern_jacobian")
+  if( (info = glkm->intern_jacobian(x,qld->jactmp,fdwork)) != NO_ERROR)
+    XERR(info,"intern_jacobian")
 
-  /* score vector */
-  matmult(qlm_global->jac,dx,nCov,qlm_global->qld->tmp,nCov,ONE_ELEMENT,REAL(R_score),info);
-  if(info > 0)
-	 LOG_WARNING(info,"matmult")
+  //score vector as gradient of mahalanobis distance
+  matmult(qld->jactmp,dx,nCov,qld->tmp,nCov,ONE_ELEMENT,REAL(R_score),info);
+  if(info != NO_ERROR )
+    XWRR(info,"matmult")
 
   setAttrib(R_ans,install("score"),R_score);
   UNPROTECT(2);
@@ -420,425 +413,247 @@ void setVmatAttrib(ql_model qlm, SEXP R_VmatNames, SEXP R_ans) {
     UNPROTECT(1);
 }
 
-/**
- * \brief
- *
- * 	  Mahalanobis distance
- *
- *    1. Using a constant (already inverted) Sigma
- *    2. Average approximations: with and without prediction variances
- *    3. Kriging approximation of variance matrix
- *
- *    either returns only the value or with computed components
- */
 
 SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_qdValue, SEXP R_w)
 {
-	  int i = 0, info = 0,
-		 np = LENGTH(R_points);
-	  value_type type = (value_type) asInteger(AS_INTEGER(R_qdValue));
+	int i = 0, np = LENGTH(R_points);
+	value_type type = (value_type) asInteger(AS_INTEGER(R_qdValue));
+	/* init model storage */
+	ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, type);
 
-	  ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, type);
+	GLKM glkm = qlm.glkm;
+	ql_data qld = qlm.qld;
+	ql_options opts = &qld->qlopts;
 
-	  GLKM glkm = qlm.glkm;
-	  ql_data qld = qlm.qld;
-	  ql_options opts = &qld->qlopts;
+	int dx = glkm->dx,
+	  nCov = glkm->nCov;
 
-	  int dx = glkm->dx,
-		  nCov = glkm->nCov;
 
-      SEXP R_ret, R_ans,  R_S, R_jac, R_I;
-	  SEXP R_varS = R_NilValue, R_sig2 = R_NilValue;
+	if(type > COPY_ZERO) {														/* only return scalar values */
+ 		  SEXP R_ret = R_NilValue;
+		  PROTECT(R_ret = allocVector(REALSXP,np));
+		  double *fx = REAL(R_ret);
 
-      /* constant Sigma
-       *
-       * Comment:
-       *
-       * Constant variance matrix is stored
-       * as an attribute at the corresponding R function
-       * */
-	  if(opts->useSigma)
-	  {
-		  /* only return scalar values */
-
-		  /* 1 (TRUE) Mahalanobis distance
-		   * 2 modified quasi-deviance
-		   * 3 weighted sampling criterion 'logdet'		   *
-		   * */
-		  if(type) {
-			  PROTECT(R_ret = allocVector(REALSXP,np));
-			  double *fx = REAL(R_ret);
-
-			  if(type > COPY_ONE && qlm.glkm->krigType) {
-				  if(type == COPY_MOD){
-					  for(;i < np; ++i)
-						 fx[i] = qlm.intern_qfVarStat(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
-				  } else {
-				   for(;i < np; ++i)
-					 fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
-				  }
-			  } else {
- 				  for(i=0; i < np; ++i)
-			        fx[i] = qlm.intern_mahalValue(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
-			  }
-
+		  if(type == COPY_MOD) {
+			 for(;i < np; ++i)
+			   fx[i] = qlm.intern_wlogdetMahal(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
 		  } else {
-			  // results
-			  PROTECT(R_ret = allocVector(VECSXP,np));
-
-			  // names QI
-			  SEXP R_nI = VECTOR_ELT(R_points,0);
-			  SEXP R_dimnames = R_NilValue;
-			  PROTECT(R_dimnames = allocVector(VECSXP,2));
-			  SET_DIMNAMES_MATRIX(R_dimnames,R_nI)
-
-			  // names Jacobian
-			  SEXP R_dimT = R_NilValue;
-			  PROTECT(R_dimT = allocVector(VECSXP,2));
-			  SEXP R_nT = getListElement( R_qsd, "obs" );
-			  SET_DIMNAMES_MATRIX2(R_dimT,R_nI,R_nT)
-
-			  /* using prediction variances */
-			  if(glkm->krigType)
-			  {
-            	  double fval = 0, qval = 0;
-            	  int nprotect = 5;
-            	  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac", "varS", "qval", ""};
-
-				  for(i=0;i<np;i++)
-				  {
-					 PROTECT(R_S = allocVector(REALSXP,dx));
-					 PROTECT(R_sig2 = allocVector(REALSXP,nCov));
-					 PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
-					 PROTECT(R_varS = allocMatrix(REALSXP,dx,dx));
-					 PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
-
-					 double *x = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
-
-					 /* mahalanobis distance */
-					 fval = qlm.intern_mahalValue(x);
-					 info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
-					 CHECK_UNPROTECT("intern_jacobian")
-
-					 /* score vector */
-					 matmult(REAL(R_jac),dx,nCov,qlm.qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),info);
-					 CHECK_UNPROTECT("matmult")
-
-					 /* quasi-info */
-					 mat_trans(qld->jactmp,nCov,REAL(R_jac),dx,dx,nCov,info);
-					 CHECK_UNPROTECT("mat_trans")
-
-					 matmult(qld->vmat,nCov,nCov,qld->jactmp,nCov,dx,qld->Atmp,info);
-					 CHECK_UNPROTECT("matmult")
-
-					 matmult(REAL(R_jac),dx,nCov,qld->Atmp,nCov,dx,REAL(R_I),info);
-					 CHECK_UNPROTECT("matmult")
-
-					 /* We need prediction variances
-					  * for the variance of quasi-score. The variance
-					  * matrix is fixed and thus has no additional
-					  * diagonal terms, i.e. kriging/CV variances)
-					  */
-					 info = qlm.intern_cvError(x);
-		 	 	 	 CHECK_UNPROTECT("intern_cvError")
-
-					 info = qlm.intern_varScore(REAL(R_varS));
-		 	 	 	 CHECK_UNPROTECT("intern_varScore")
-
-		 	 	 	 qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
-		 	 	 	 CHECK_UNPROTECT("qfValue")
-		 	 	 	 /* copy prediction variance */
-					 MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
-
-					 /*  set names but not for varS! */
-					 setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
-					 setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
-					 setAttrib(R_sig2,R_NamesSymbol,getAttrib(R_nT,R_NamesSymbol));
-
-					 PROTECT(R_ans = mkNamed(VECSXP, nms));
-					 SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					 SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
-					 SET_VECTOR_ELT(R_ans, 2, R_I);
-					 SET_VECTOR_ELT(R_ans, 3, R_S);
-					 SET_VECTOR_ELT(R_ans, 4, R_sig2);
-					 SET_VECTOR_ELT(R_ans, 5, R_jac);
-					 SET_VECTOR_ELT(R_ans, 6, R_varS);
-					 SET_VECTOR_ELT(R_ans, 7, ScalarReal(qval));
-
-					 SET_VECTOR_ELT(R_ret, i, R_ans);
-					 UNPROTECT(6);
-				  }
-
-			  } else {
-
-				  /* no prediction variances */
-				  double fval=0;
-				  int nprotect=3;
-				  const char *nms[] = {"value", "par", "I", "score", "jac", ""};
-
-				  for(i=0;i<np;i++)
-				  {
-					 PROTECT(R_S = allocVector(REALSXP,dx));
-					 PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
-					 PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
-
-					 double *x = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
-					 /* mahalanobis distance */
-					 fval = qlm.intern_mahalValue(x);
-					 info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
-					 CHECK_UNPROTECT("intern_jacobian")
-
-					 /* score vector */
-					 matmult(REAL(R_jac),dx,nCov,qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),info);
-					 CHECK_UNPROTECT("matmult")
-
-					 /* quasi-info */
-					 mat_trans(qld->jactmp,nCov,REAL(R_jac),dx,dx,nCov,info);
-					 CHECK_UNPROTECT("mat_trans")
-
-					 matmult(qld->vmat,nCov,nCov,qld->jactmp,nCov,dx,qld->Atmp,info);
-					 CHECK_UNPROTECT("matmult")
-
-					 matmult(REAL(R_jac),dx,nCov,qld->Atmp,nCov,dx,REAL(R_I),info);
-					 CHECK_UNPROTECT("matmult")
-
-					 setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
-					 setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
-
-					 PROTECT(R_ans = mkNamed(VECSXP, nms));
-					 SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					 SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
-					 SET_VECTOR_ELT(R_ans, 2, R_I);
-					 SET_VECTOR_ELT(R_ans, 3, R_S);
-					 SET_VECTOR_ELT(R_ans, 4, R_jac);
-
-					 SET_VECTOR_ELT(R_ret, i, R_ans);
-					 UNPROTECT(4);
-				  }
-			  }
-			  UNPROTECT(2); // matrix dim names
+			  for(i=0; i < np; ++i)
+				fx[i] = qlm.intern_mahalValue(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
 		  }
+
+		  UNPROTECT(1);
+		  return R_ret;
+
+	} else {
+
+		  SEXP R_S, R_jac, R_I, R_ans, R_varS, R_sig2;
+
+		  /* results */
+		  SEXP R_ret = R_NilValue;
+		  PROTECT(R_ret = allocVector(VECSXP,np));
+
+		  /* names QI */
+		  SEXP R_nI = VECTOR_ELT(R_points,0);
+		  SEXP R_dimnames = R_NilValue;
+		  PROTECT(R_dimnames = allocVector(VECSXP,2));
+		  SET_DIMNAMES_MATRIX(R_dimnames,R_nI)
+
+		  /* names Jacobian */
+		  SEXP R_dimT = R_NilValue;
+		  PROTECT(R_dimT = allocVector(VECSXP,2));
+		  SEXP R_nT = getListElement( R_qsd, "obs" );
+		  SET_DIMNAMES_MATRIX2(R_dimT,R_nI,R_nT)
+
+	 	  int nprotect = 5;
+		  int &info = qlm.info;
+		  double fval = 0, qval = 0;
+		  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac", "varS", "qval", ""};
+
+		  for(i=0; i<np; i++)
+		  {
+			 PROTECT(R_S = allocVector(REALSXP,dx));
+			 PROTECT(R_sig2 = allocVector(REALSXP,nCov));
+			 PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
+			 PROTECT(R_varS = allocMatrix(REALSXP,dx,dx));
+			 PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
+
+			 double *x = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
+			 /* mahalanobis distance */
+			 fval = qlm.mahalDist(x,REAL(R_jac),REAL(R_S),REAL(R_I));
+			 CHECK_UNPROTECT("mahalDist")
+
+			 info = qlm.intern_varScore(REAL(R_varS));
+			 CHECK_UNPROTECT("intern_varScore")
+
+			 qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
+			 CHECK_UNPROTECT("qfValue")
+			 /* copy prediction variance */
+			 MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
+
+			 /*  set names but not for varS! */
+			 setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
+			 setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
+			 setAttrib(R_sig2,R_NamesSymbol,getAttrib(R_nT,R_NamesSymbol));
+
+			 PROTECT(R_ans = mkNamed(VECSXP, nms));
+			 SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
+			 SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+			 SET_VECTOR_ELT(R_ans, 2, R_I);
+			 SET_VECTOR_ELT(R_ans, 3, R_S);
+			 SET_VECTOR_ELT(R_ans, 4, R_sig2);
+			 SET_VECTOR_ELT(R_ans, 5, R_jac);
+			 SET_VECTOR_ELT(R_ans, 6, R_varS);
+			 SET_VECTOR_ELT(R_ans, 7, ScalarReal(qval));
+
+			 SET_VECTOR_ELT(R_ret, i, R_ans);
+			 UNPROTECT(6);
+		  }
+
+		  UNPROTECT(3);
+		  return R_ret;
+	}
+}
+
+double ql_model_s::mahalDist(double *x, double *jac, double *score, double *qimat) {
+	/* kriging */
+	  if( (info = glkm->intern_kriging(x)) != NO_ERROR){
+		LOG_ERROR(info,"intern_kriging")
+		return R_NaN;
+	  }
+	  krig_result krig = glkm->krigr[0];
+	  if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
+	  	LOG_ERROR(info,"intern_jacobian")
+		return R_NaN;
+	  }
+
+	  if(qld->qlopts.useSigma) {
+		  for(int k = 0; k < nCov; ++k)
+		  	qld->tmp[k] = qld->qtheta[k] = qld->obs[k] - krig->mean[k];
+
+		  /* vmat is already inverted at R level */
+		  matmult(qld->vmat,nCov,nCov,qld->qtheta,nCov,ONE_ELEMENT,qld->tmp,info);
+		  if(info != NO_ERROR ){
+		    LOG_WARNING(info,"matmult")
+			return R_NaN;
+		  }
+		  /* score vector as gradient of Mahalanobis distance */
+		  mat_trans(qld->jactmp,nCov,jac,dx,dx,nCov,info);
+		  if(info > 0){
+		    WRR("`NaN` detected in `mat_trans`.")
+			return R_NaN;
+		  }
+		  matmult(qld->vmat,nCov,nCov,qld->jactmp,nCov,dx,qld->Atmp,info);
+		  /* quasi-information */
+		  matmult(jac,dx,nCov,qld->Atmp,nCov,dx,qimat,info);
+		  /* quasi-score */
+		  matmult(jac,dx,nCov,qld->tmp,nCov,ONE_ELEMENT,score,info);
+	  	  if(info != NO_ERROR){
+	  	    WRR("`NaN` detected in `matmult`.")
+ 		    return R_NaN;
+	  	  }
 
 	  } else {
 
-		  if(type) {
-			PROTECT(R_ret = allocVector(REALSXP,np));
-  			double *fx = REAL(R_ret);
+		  /* continuously update variance matrix in any way
+		   * with calculation of quasi-score and quasi-information
+		  /* might use prediction variances or CV errors */
 
-  			if(type > COPY_ONE && qlm.glkm->krigType) {
-				  if(type == COPY_MOD){
-					  for(;i < np; ++i)
-						 fx[i] = qlm.intern_qfVarStat(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
-				  } else {
-					  for(;i < np; ++i)
-						 fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
-				  }
-			 } else {
-				for(i=0; i < np; ++i)
-				  fx[i] = qlm.intern_mahalValue_theta(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
-			 }
-
-		  } else {
-
-			  PROTECT(R_ret = allocVector(VECSXP,np));
-
-			  // names QI
-			  SEXP R_nI = VECTOR_ELT(R_points,0);
-			  SEXP R_dimnames = R_NilValue;
-			  PROTECT(R_dimnames = allocVector(VECSXP,2));
-			  SET_DIMNAMES_MATRIX(R_dimnames,R_nI)
-
-			  // names Jacobian
-			  SEXP R_dimT = R_NilValue;
-			  SEXP R_nT = getListElement( R_qsd, "obs" );
-			  PROTECT(R_dimT = allocVector(VECSXP,2));
-			  SET_DIMNAMES_MATRIX2(R_dimT,R_nI,R_nT)
-
-			  // names variance matrix
-			  SEXP R_VmatNames = R_NilValue;
-			  PROTECT(R_VmatNames = allocVector(VECSXP,2));
-			  SET_DIMNAMES_MATRIX(R_VmatNames,R_nT)
-
-			  if(glkm->krigType)
-			  {
-					  double fval = 0, qval = 0;
-					  int nprotect = 5;
-					  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS", "qval", ""};
-
-					  for(i=0;i<np;i++)
-					  {
-							R_CheckUserInterrupt();
-							PROTECT(R_S = allocVector(REALSXP,dx));
-							PROTECT(R_sig2 = allocVector(REALSXP,nCov));
-							PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
-							PROTECT(R_varS = allocMatrix(REALSXP,dx,dx));
-							PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
-
-							double *x = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
-							fval = qlm.intern_mahalValue_theta(x);
-
-							// Jacobian
-							info = glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
-							CHECK_UNPROTECT("intern_jacobian")
-
-							// score vector
-							matmult(REAL(R_jac),dx,nCov,qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),info);
-							CHECK_UNPROTECT("matmult")
-
-							// quasi-Info
-							info = qlm.intern_quasiInfo(REAL(R_jac),REAL(R_I));
-							CHECK_UNPROTECT("intern_quasiInfo")
-
-							//* variance score vector */
-							qlm.intern_varScore(REAL(R_varS));
-							CHECK_UNPROTECT("intern_varScore")
-
-							qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
-							CHECK_UNPROTECT("qfValue")
-							/* copy prediction variance */
-							MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
-
-							/* set names */
-							setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
-							setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
-							setAttrib(R_sig2,R_NamesSymbol,getAttrib(R_nT,R_NamesSymbol));
-
-							PROTECT(R_ans = mkNamed(VECSXP, nms));
-							SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-							SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
-							SET_VECTOR_ELT(R_ans, 2, R_I);
-							SET_VECTOR_ELT(R_ans, 3, R_S);
-							SET_VECTOR_ELT(R_ans, 4, R_sig2);
-							SET_VECTOR_ELT(R_ans, 5, R_jac);
-							SET_VECTOR_ELT(R_ans, 6, R_varS);
-							SET_VECTOR_ELT(R_ans, 7, ScalarReal(qval));
-
-							setVmatAttrib(&qlm, R_VmatNames, R_ans);
-							SET_VECTOR_ELT(R_ret, i, R_ans);
-							UNPROTECT(6);
-					  }
-
-			  } else {
-
-					  double fval = 0;
-					  int nprotect = 3;
-					  const char *nms[] = {"value", "par", "I", "score", "jac",""};
-
-					  for(i=0;i<np;i++)
-					  {
-							R_CheckUserInterrupt();
-							PROTECT(R_S = allocVector(REALSXP,dx));
-							PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
-							PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
-
-							double *x = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
-							fval = qlm.intern_mahalValue_theta(x);
-
-							// Jacobian
-							glkm->intern_jacobian(x,REAL(R_jac),qld->fdwork);
-							CHECK_UNPROTECT("intern_jacobian")
-
-							// score vector
-							matmult(REAL(R_jac),dx,nCov,qld->tmp,nCov,ONE_ELEMENT,REAL(R_S),info);
-							CHECK_UNPROTECT("matmult")
-
-							// quasi-Info
-							qlm.intern_quasiInfo(REAL(R_jac),REAL(R_I));
-							CHECK_UNPROTECT("intern_quasiInfo")
-
-							setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
-							setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
-
-							PROTECT(R_ans = mkNamed(VECSXP, nms));
-							SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-							SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
-							SET_VECTOR_ELT(R_ans, 2, R_I);
-							SET_VECTOR_ELT(R_ans, 3, R_S);
-							SET_VECTOR_ELT(R_ans, 4, R_jac);
-
-							setVmatAttrib(&qlm, R_VmatNames, R_ans);
-							SET_VECTOR_ELT(R_ret, i, R_ans);
-							UNPROTECT(4);
-					  }
-			  }
-			  UNPROTECT(3); // matrix dimnames
+		  if ( (info = intern_cvError(x)) != NO_ERROR){
+		  	LOG_ERROR(info,"intern_cvError")
+			return R_NaN;
 		  }
-	}
+		  /* variance matrix if kriging the variance matrix switched on */
+		  varMatrix(x,qld->vmat,info);
+		  if(info != NO_ERROR){
+		  	LOG_ERROR(info,"varMatrix")
+			return R_NaN;
+		  }
+		  /* quasi-score */
+		  if( (info = intern_quasiScore(jac,score)) != NO_ERROR){
+		  	LOG_ERROR(info,"intern_quasi-score")
+			return R_NaN;
+		  }
+		  /* quasi-information */
+		  if( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR) {
+			 LOG_ERROR(info,"inter_quasiInfo")
+		     return R_NaN;
+		  }
+		  for(int k = 0; k < nCov; ++k)
+	  	  	qld->tmp[k] = qld->qtheta[k];
+		  gsiSolve(qld->vmat,nCov,qld->tmp,ONE_ELEMENT,qlsolve.vmat,info,Chol);
+		  if(info != NO_ERROR){
+			LOG_ERROR(info,"gsiSolve")
+			return R_NaN;
+		  }
+	  }
 
-	UNPROTECT(1);
-	return R_ret;
-
+	  double sum = 0;
+	  for(int k = 0; k < nCov; ++k)
+		 sum += qld->tmp[k] * qld->qtheta[k];
+	  if( !R_FINITE(sum))
+		 LOG_WARNING(NaN_ERROR,"mahalDist")
+	  return sum;
 }
 
-/* inverse variance matrix has
- *  to be computed for each theta!
- *
- *  Only call if not using Sigma!
- *
- */
-double ql_model_s::intern_mahalValue_theta(double *x) {
-  int k = 0;
+
+double ql_model_s::intern_mahalValue(double *x) {
   /* kriging */
   if( (info = glkm->intern_kriging(x)) != NO_ERROR){
-	  LOG_ERROR(info,"intern_kriging")
-	  return R_NaN;
+	LOG_ERROR(info,"intern_kriging")
+	return R_NaN;
   }
-
   krig_result krig = glkm->krigr[0];
 
-  /* continuously update variance matrix */
-  /* without calculation of score vector as the gradient */
-  for(k = 0; k < nCov; ++k)
+  for(int k = 0; k < nCov; ++k)
 	qld->tmp[k] = qld->qtheta[k] = qld->obs[k] - krig->mean[k];
 
-  if ( (info = intern_cvError(x)) != NO_ERROR){
-	LOG_ERROR(info,"intern_cvError")
-	return R_NaN;
-  }
-  varMatrix(x,krig->sig2,qld->vmat,info);
-  if(info != NO_ERROR){
- 	LOG_ERROR(info,"varMatrix")
- 	return R_NaN;
+  if(qld->qlopts.useSigma)
+  {
+	  /* vmat is already inverted at R level */
+	  matmult(qld->vmat,nCov,nCov,qld->qtheta,nCov,ONE_ELEMENT,qld->tmp,info);
+	  if(info != NO_ERROR ){
+	    LOG_WARNING(info,"matmult")
+	    return R_NaN;
+	  }
+
+  } else {
+
+	  /* continuously update variance matrix in any way
+	   * without calculation of quasi-score and quasi-information
+	   * might use prediction variances or CV errors */
+
+	  if ( (info = intern_cvError(x)) != NO_ERROR){
+	  	LOG_ERROR(info,"intern_cvError")
+	  	return R_NaN;
+	  }
+	  /* variance matrix if kriging the variance matrix switched on */
+	  varMatrix(x,qld->vmat,info);
+	  if(info != NO_ERROR){
+	  	LOG_ERROR(info,"varMatrix")
+		return R_NaN;
+	  }
+	  info = add2diag(qld->vmat,nCov,glkm->krigr[0]->sig2);
+	  if(info != NO_ERROR){
+		 WRR("`NaN` detected in `add2diag` adding kriging variances to variance matrix approximation.")
+		 return R_NaN;
+	  }
+	  gsiSolve(qld->vmat,nCov,qld->tmp,ONE_ELEMENT,qlsolve.vmat,info,Chol);
+	  if(info != NO_ERROR){
+		LOG_ERROR(info,"gsiSolve")
+		return R_NaN;
+	  }
   }
 
-  gsiSolve(qld->vmat,nCov,qld->tmp,ONE_ELEMENT,qlsolve.vmat,info,Chol);
-  if(info != NO_ERROR){
-	LOG_ERROR(info,"gsiSolve")
-	return R_NaN;
-  }
   double sum = 0;
-  for(k = 0; k < nCov; ++k)
-	 sum += qld->tmp[k] * qld->qtheta[k];
-  if( !R_FINITE(sum))
-	 LOG_WARNING(1,"intern_mahalValue_theta")
+  for(int k = 0; k < nCov; ++k)
+   sum += qld->tmp[k] * qld->qtheta[k];
+  if(!R_FINITE(sum))
+   LOG_WARNING(1,"intern_mahalValue")
+
   return sum;
 }
 
-/* vmat is inverse variance matrix */
-double ql_model_s::intern_mahalValue(double *x) {
-	int k = 0, info = 0;
-	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
-		LOG_ERROR(info,"intern_kriging");
-		return R_NaN;
-	}
-
-	krig_result krig = glkm->krigr[0];
- 	for(k = 0; k < nCov; ++k){
-	   qld->qtheta[k] = qld->obs[k] - krig->mean[k];
- 	}
-
-	matmult(qld->vmat,nCov,nCov,qld->qtheta,nCov,ONE_ELEMENT,qld->tmp,info);
-	if(info >0 ){
-	  LOG_WARNING(info,"matmult")
-	  return R_NaN;
-	}
-	double sum=0;
-	for(k = 0; k < nCov; ++k)
-	  sum += qld->tmp[k] * qld->qtheta[k];
-	if(!R_FINITE(sum))
-	 LOG_WARNING(1,"intern_mahalValue")
-	return sum;
-}
 
 /**
  *  \brief A test implementation for
@@ -872,19 +687,15 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 
       ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, type);
 
-      if(type) {
-    	  SEXP Rval;
+      if(type > COPY_ZERO) {
+
+    	  SEXP Rval = R_NilValue;
     	  PROTECT(Rval = allocVector(REALSXP,np));
           double *fx = REAL(Rval);
 
-          if(type > COPY_ONE && qlm.glkm->krigType) {
-        	 if(type == COPY_MOD){
-				  for(;i < np; ++i)
-				   fx[i] = qlm.intern_qfVarStat(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
-        	 } else {
-			   for(;i < np; ++i)
+          if(type > COPY_ONE) {
+        	  for(;i < np; ++i)
 				 fx[i] = qlm.intern_wlogdet(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
-			}
   		  } else {
   			for(; i < np; ++i)
   			  fx[i] = qlm.intern_qfScoreStat(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))));
@@ -892,7 +703,7 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
 
           if (qlm.info != NO_ERROR){
         	  UNPROTECT(1);
-        	  PRINT_MSG("At least one value of quasi-deviance(s) has errors.")
+        	  PRINT_MSG("At least one of all quasi-deviance computations produced errors.")
         	  XERR(info,"quasiDeviance")
           }
 
@@ -907,8 +718,8 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
     	  double *point = NULL,
     			  fval = 0, qval = 0;
 
-          SEXP R_ret, R_ans, R_sig2 = R_NilValue;
-          SEXP R_Iobs, R_S, R_jac, R_I, R_varS;
+    	  SEXP R_ans, R_sig2, R_Iobs, R_S, R_jac, R_I, R_varS;
+          SEXP R_ret = R_NilValue;
           PROTECT(R_ret = allocVector(VECSXP,np));
 
           // names QI
@@ -928,86 +739,53 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
           PROTECT(R_VmatNames = allocVector(VECSXP,2));
           SET_DIMNAMES_MATRIX(R_VmatNames,R_nT)
 
-          if(qlm.glkm->krigType) {
-        	  int nprotect=6;
-        	  const char *nms[] =
-        	  	  {"value", "par", "I", "score", "sig2",
-        	  	   "jac","varS", "Iobs", "qval", ""};
+          int nprotect = 6;
+          const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS", "Iobs", "qval", ""};
 
-        	  for(; i < np; ++i) {
-					  PROTECT(R_S = allocVector(REALSXP,dx));
-					  PROTECT(R_sig2 = allocVector(REALSXP,nCov));
-					  PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
-					  PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
-					  PROTECT(R_varS = allocMatrix(REALSXP,dx,dx));
-					  PROTECT(R_Iobs = allocMatrix(REALSXP,dx,dx));
+          for(; i < np; ++i)
+          {
+			  PROTECT(R_S = allocVector(REALSXP,dx));
+			  PROTECT(R_sig2 = allocVector(REALSXP,nCov));
+			  PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
+			  PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
+			  PROTECT(R_varS = allocMatrix(REALSXP,dx,dx));
+			  PROTECT(R_Iobs = allocMatrix(REALSXP,dx,dx));
 
-					  point = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
-					  fval = qlm.qfScoreStat(point,REAL(R_jac),REAL(R_S),REAL(R_I));
+			  point = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
+			  fval = qlm.qfScoreStat(point,REAL(R_jac),REAL(R_S),REAL(R_I));
 
-					  info = qlm.intern_varScore(REAL(R_varS));
-					  CHECK_UNPROTECT("intern_varScore")
+			  info = qlm.intern_varScore(REAL(R_varS));
+			  CHECK_UNPROTECT("intern_varScore")
 
-					  info = qlm.intern_quasiObs(point,REAL(R_S),REAL(R_Iobs));
-					  CHECK_UNPROTECT("intern_quasiObs")
+			  info = qlm.intern_quasiObs(point,REAL(R_S),REAL(R_Iobs));
+			  CHECK_UNPROTECT("intern_quasiObs")
 
-					  qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
-					  CHECK_UNPROTECT("qfValue")
-					  MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
+			  /* qval is test statistic only within Kriging model*/
+			  qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
+			  CHECK_UNPROTECT("qfValue")
+			  MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,nCov);
 
-					  setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
-					  setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
-					  setAttrib(R_Iobs, R_DimNamesSymbol, R_dimnames);
-					  setAttrib(R_sig2,R_NamesSymbol,getAttrib(R_nT,R_NamesSymbol));
+			  setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
+			  setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
+			  setAttrib(R_Iobs, R_DimNamesSymbol, R_dimnames);
+			  setAttrib(R_sig2,R_NamesSymbol,getAttrib(R_nT,R_NamesSymbol));
 
-					  PROTECT(R_ans = mkNamed(VECSXP, nms));
-					  SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					  SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
-					  SET_VECTOR_ELT(R_ans, 2, R_I);
-					  SET_VECTOR_ELT(R_ans, 3, R_S);
-					  SET_VECTOR_ELT(R_ans, 4, R_sig2);
-					  SET_VECTOR_ELT(R_ans, 5, R_jac);
-					  SET_VECTOR_ELT(R_ans, 6, R_varS);
-					  SET_VECTOR_ELT(R_ans, 7, R_Iobs);
-					  SET_VECTOR_ELT(R_ans, 8, ScalarReal(qval));
+			  PROTECT(R_ans = mkNamed(VECSXP, nms));
+			  SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
+			  SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
+			  SET_VECTOR_ELT(R_ans, 2, R_I);
+			  SET_VECTOR_ELT(R_ans, 3, R_S);
+			  SET_VECTOR_ELT(R_ans, 4, R_sig2);
+			  SET_VECTOR_ELT(R_ans, 5, R_jac);
+			  SET_VECTOR_ELT(R_ans, 6, R_varS);
+			  SET_VECTOR_ELT(R_ans, 7, R_Iobs);
+			  SET_VECTOR_ELT(R_ans, 8, ScalarReal(qval));
 
-					  setVmatAttrib(&qlm, R_VmatNames, R_ans);
-					  SET_VECTOR_ELT(R_ret, i, R_ans);
-					  UNPROTECT(7);
-        	  }
-          } else {
-        	  int nprotect=4;
-        	  const char *nms[] =
-				  {"value", "par", "I", "score", "jac", "Iobs",""};
-
-			  for(; i < np;  ++i) {
-					  PROTECT(R_S = allocVector(REALSXP,dx));
-					  PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
-					  PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
-					  PROTECT(R_Iobs = allocMatrix(REALSXP,dx,dx));
-
-					  point = REAL(AS_NUMERIC(VECTOR_ELT(R_points,i)));
-					  fval = qlm.qfScoreStat(point,REAL(R_jac),REAL(R_S),REAL(R_I));
-					  info = qlm.intern_quasiObs(point,REAL(R_S),REAL(R_Iobs));
-					  CHECK_UNPROTECT("intern_quasiObs")
-
-					  setAttrib(R_jac, R_DimNamesSymbol, R_dimT);
-					  setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
-					  setAttrib(R_Iobs, R_DimNamesSymbol, R_dimnames);
-
-					  PROTECT(R_ans = mkNamed(VECSXP, nms));
-					  SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
-					  SET_VECTOR_ELT(R_ans, 1, VECTOR_ELT(R_points,i));
-					  SET_VECTOR_ELT(R_ans, 2, R_I);
-					  SET_VECTOR_ELT(R_ans, 3, R_S);
-					  SET_VECTOR_ELT(R_ans, 4, R_jac);
-					  SET_VECTOR_ELT(R_ans, 5, R_Iobs);
-
-					  setVmatAttrib(&qlm, R_VmatNames, R_ans);
-					  SET_VECTOR_ELT(R_ret, i, R_ans);
-					  UNPROTECT(5);
-			  }
+			  setVmatAttrib(&qlm, R_VmatNames, R_ans);
+			  SET_VECTOR_ELT(R_ret, i, R_ans);
+			  UNPROTECT(7);
           }
+
           UNPROTECT(4);
           return R_ret;
       }
@@ -1034,7 +812,7 @@ int ql_model_s::qfScore(double *x, double *jac, double *score, double *qimat) {
 		 LOG_ERROR(info,"intern_cvError")
 		 return info;
 	}
-	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,info);
+	varMatrix(x,qld->vmat,info);
 	if(info != NO_ERROR) {
 		LOG_ERROR(info,"varMatrix")
 		return info;
@@ -1052,8 +830,6 @@ int ql_model_s::qfScore(double *x, double *jac, double *score, double *qimat) {
 	//printMatrix("Imat",qimat,&dx,&dx);
 	return NO_ERROR;
 }
-
-
 /**
  * \brief Quasi-Fisher score statistic
  *
@@ -1065,108 +841,38 @@ double ql_model_s::qfScoreStat(double *x, double *jac, double *score, double *qi
 }
 
 double ql_model_s::intern_wlogdet(double *x, double w) {
-	/* kriging */
-	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
-		LOG_ERROR(info,"intern_kriging")
-		return R_NaN;
+	double val = intern_qfScoreStat(x);
+	if(info != NO_ERROR) {
+	  WRR("`NaN` detected in `intern_qfScoreStat`.")
+	  return R_NaN;
 	}
 
-	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
-		LOG_ERROR(info,"intern_jacobian")
-		return R_NaN;
-	}
-
-	/* quasi-score */
-	if( (info = intern_cvError(x)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_cvError")
-		 return R_NaN;
-	}
-
-	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,info);
-	if(info > 0) {
-		LOG_ERROR(info,"varMatrix")
-		return R_NaN;
-	}
-
-	if( (info = intern_quasiScore(jac,score)) != NO_ERROR){
-		LOG_ERROR(info,"intern_quasiScore")
-		return R_NaN;
-	}
-
-	if ( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_quasiInfo")
-		 return info;
-	}
 	double sum = logdet(qimat, dx, 1, info);
 	if(info != NO_ERROR) {
 	  WRR("`NaN` detected in `logdet`.")
 	  LOG_ERROR(info,"intern_wlogdet")
 	  return info;
 	}
-	/* compute variance matrix of quasi-score */
-	if( (info = intern_varScore(qimat)) != NO_ERROR) {
-		 LOG_ERROR(info,"inter_varScore")
-		 return R_NaN;
-	}
-	double test = 0.0, tmp = 0.0;
-	for(int i=0; i < dx; ++i) {
-	   tmp = qimat[i*dx+i];
-	   if (tmp > test) test=tmp;
-	}
-	sum = w*sum+(1-w)*test;
-	if(!R_FINITE(sum)){
-	  WRR("`NaN` detected in `intern_wlogdet`.")
-	  return R_NaN;
-	}
-	return sum;
+
+	return w*sum - (1.0-w)*val;
 }
 
-double ql_model_s::intern_qfVarStat(double *x) {
-	/* kriging */
-	if ( (info = glkm->intern_kriging(x)) != NO_ERROR){
-	    LOG_ERROR(info,"intern_kriging")
-		return R_NaN;
-	}
-
-	if ( (info = glkm->intern_jacobian(x,jac,qld->fdwork)) != NO_ERROR){
-	    LOG_ERROR(info,"intern_jacobian")
-		return R_NaN;
-	}
-
-	/* quasi-score */
-	if( (info = intern_cvError(x)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_cvError")
-		 return R_NaN;
-	}
-
-	varMatrix(x,glkm->krigr[0]->sig2,qld->vmat,info);
-	if(info>0) {
-		LOG_ERROR(info,"varMatrix")
-		return R_NaN;
-	}
-
-	if( (info = intern_quasiScore(jac,score)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_quasiScore")
-		 return R_NaN;
-	}
-	/*! unfortunately transpose jac  and calculate matrix A */
-	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov,info);
-	if(info>0){
-	  WRR("`NaN` detected in `mat_trans`.")
-      return R_NaN;
-	}
-
-	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
+double ql_model_s::intern_wlogdetMahal(double *x, double w) {
+	double val = intern_mahalanobis(x);
 	if(info != NO_ERROR){
-	  LOG_ERROR(info,"gsiSolve");
-	  return R_NaN;
+	 WRR("`NaN` detected in `intern_mahalValue`.")
+	 return R_NaN;
 	}
-	/* this actually computes the variance of quasi-score */
-	if( (info = intern_varScore(qimat)) != NO_ERROR) {
-		 LOG_ERROR(info,"intern_varScore")
-		 return R_NaN;
+
+	/* log determinant of modified quasi-info */
+	double sum = logdet(qimat, dx, 1, info);
+	if(info != NO_ERROR) {
+	  WRR("`NaN` detected in `logdet`.")
+	  LOG_ERROR(info,"intern_wlogdetMahal")
+	  return info;
 	}
-	return qfValue(score,qimat);
+
+	return (w*sum - (1.0-w)*val);
 }
 
 /**
@@ -1186,21 +892,29 @@ double ql_model_s::qfValue(double *score, double *varS) {
 	return sum;
 }
 
-
+/*
+ * IN:
+ * 	jac  = dE[T(X)]/dTheta ( dimension = dx (rows) * nCov (cols) )
+ * 	Atmp = Sigma_{Theta}^{-1} %*% jac = B
+ *
+ * OUT:
+ * 	qimat = t(B) %*% (Sigma_{Theta} + hat{Sigma}_k) %*% B
+ *
+ */
 int ql_model_s::intern_quasiInfo(double *jac, double *qimat) {
-	/*! unfortunately transpose jac */
-	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov,info);
-	if(info > 0){
-	  WRR("`NaN` dtected in `mat_trans`.")
-      return R_NaN;
+	/* refers to kriging type of statistics */
+	if(glkm->krigType) {
+	  info = add2diag(qld->vmat,nCov,glkm->krigr[0]->sig2);
+	  if(info != NO_ERROR){
+	    WRR("`NaN` detected in `add2diag` adding kriging variances to variance matrix approximation.")
+	    return R_NaN;
+	  }
+	  matmult_trans(qld->Atmp,nCov,dx,qld->vmat,nCov,nCov,qld->jactmp,info);
+	  matmult(qld->jactmp,dx,nCov,qld->Atmp,nCov,dx,qimat,info);
+	} else {
+	  matmult(jac,dx,nCov,qld->Atmp,nCov,dx,qimat,info);
 	}
-	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
 	if(info != NO_ERROR){
-		LOG_ERROR(info,"gsiSolve");
-		return info;
-	}
-	matmult(jac,dx,nCov,qld->Atmp,nCov,dx,qimat,info);
-	if(info > 0){
 	  WRR("`NaN` detected in `matmult`.")
 	  return R_NaN;
 	}
@@ -1208,18 +922,25 @@ int ql_model_s::intern_quasiInfo(double *jac, double *qimat) {
 }
 
 
+/* computes Atmp=B (see above) first */
 void ql_model_s::quasiScore(double *mean, double *jac, double *vmat, double *score, int &err) {
 	for(int i=0; i<nCov; i++)
 	  qld->qtheta[i]=qld->obs[i]-mean[i];
-
-	gsiSolve(vmat,nCov,qld->qtheta,ONE_ELEMENT,qlsolve.vmat,err,Chol);
-	if(err != NO_ERROR){
-	  LOG_ERROR(err,"gsiSolve");
+	mat_trans(qld->Atmp,nCov,jac,dx,dx,nCov,info);
+	if(info > 0){
+	  WRR("`NaN` detected in `mat_trans`.")
 	  return;
 	}
-	matmult(jac,dx,nCov,qld->qtheta,nCov,ONE_ELEMENT,score,err);
-	if(err > 0)
+	gsiSolve(qld->vmat,nCov,qld->Atmp,dx,qlsolve.vmat,info,Chol);
+	if(info != NO_ERROR){
+	  LOG_ERROR(info,"gsiSolve");
+	  return;
+	}
+	matmult(qld->qtheta,ONE_ELEMENT,nCov,qld->Atmp,nCov,dx,score,err);
+	if(err != NO_ERROR){
 	  WRR("`NaN` detected in `matmult`.")
+	  return;
+	}
 }
 
 
@@ -1249,12 +970,12 @@ wrap_intern_quasiScore(double *x, void *data, double *score, int &err ) {
    }
 
    if(!qld->qlopts.useSigma) {
-     if(glkm->krigType && qld->qlopts.useCV){
+     if(qld->qlopts.useCV){
        qlm->cvmod->cvError(x,glkm->km,krig_tmp->sig2,err);
        if(err != NO_ERROR)
          LOG_ERROR(err," cvError");
      }
-     qlm->varMatrix(x,krig_tmp->sig2,qld->vmat_work,err);
+     qlm->varMatrix(x,qld->vmat_work,err);
      if(err != NO_ERROR){
     	 LOG_ERROR(err,"varMatrix")
     	 return;
@@ -1284,7 +1005,7 @@ wrap_intern_kriging(double *x, void *data, double *mean, int &err) {
 }
 
 void
-ql_model_s::varMatrix(double *x, double *s, double *vmat, int &err) {
+ql_model_s::varMatrix(double *x, double *vmat, int &err) {
 	/* kriging prediction variances */
 	if(qld->qlopts.varType == KRIG) {
 	   if(varkm == NULL)
@@ -1298,8 +1019,8 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat, int &err) {
 	   if(err != NO_ERROR) return;
 
 	   /* use kriging variances of variance matrix kriging models */
-	   if(glkm->krigType) {
-		double *s2 = varkm->krigr[0]->sig2, *vm = qld->vmat_work;
+	   double *s2 = varkm->krigr[0]->sig2,
+			  *vm = qld->vmat_work;
 
 		int k = 0;
 		double tmp = 0.0;
@@ -1323,19 +1044,11 @@ ql_model_s::varMatrix(double *x, double *s, double *vmat, int &err) {
 	    for(k = 0; k < nCov2; k++)
 		 vmat[k] += vm[k];
 
-	    /* add kriging variance of statistics to variance matrix */
-	    //err = add2diag(vmat,nCov,s);
-
-	   }
-
 #ifdef DEBUG
-	    printVector("s",s,&nCov);
 	    printVector("varkm->mean",varkm->krigr[0]->mean,&nCov);
 	    printMatrix("vmat",vmat,&nCov,&nCov);
 #endif
 
-	} else if(glkm->krigType) {
-		 err = addVar(s,nCov,vmat,qld->work);
 	}
 }
 
@@ -1346,6 +1059,24 @@ int ql_model_s::intern_quasiObs(double *x, double *score, double *qiobs) {
    return info;
 }
 
+/* variance of quasi-score vector:
+ * kriging variances as diagonal matrix hat{Sigma}_k */
+int ql_model_s::intern_varScore(double *vars){
+	 matmult_diag_sqrt(qld->Atmp,nCov,dx,glkm->krigr[0]->sig2,info);
+	 if(info > 0)
+		LOG_WARNING(info, "`NaN` detected in `matmult_diag_sqrt`.")
+	 matmult_trans(qld->Atmp,nCov,dx,qld->Atmp,nCov,dx,vars,info);
+	 if(info > 0)
+		LOG_WARNING(info," `NaN` detected in `matmult_trans`.")
+
+#if DEBUG
+	printMatrix("Atmp (1)",qld->Atmp,&nCov,&dx);
+	printVector("sig2",glkm->krigr[0]->sig2,&nCov);
+	printMatrix("vars",vars,&dx,&dx);
+#endif
+
+	return info;
+}
 
 /** @brief Allocate storage for a kriging model
  *
@@ -1376,7 +1107,7 @@ krig_model_s::alloc() {
   CALLOCX(Cmat,lx * lx, double);
 
   /** allocate for inverse covariance matrix */
-  if(krigtype == VARIANCE) {
+  if(krigType == VARIANCE) {
 	  if( (ks = new(std::nothrow) krig_storage_s(lx,fddim))==NULL)
 	      MEM_ERR(1,krig_storage_s);
 
@@ -1415,7 +1146,7 @@ krig_model_s::setup(double *_data)
 	  }
 
 	  // init matrices
-	  if(krigtype == VARIANCE) {
+	  if(krigType == VARIANCE) {
 		 //printMatrix("C",Cmat,&lx,&lx);
 		 invMatrix(Cmat,lx,Cinv,info,Chol);
 		 if(info != NO_ERROR){
@@ -1504,7 +1235,7 @@ void cv_model_s::set(SEXP R_Xmat, SEXP R_data, SEXP R_cm) {
 			   Xmatp[lx*j+m] = Xmat[np*j+i];
 			 ++m;
 		}
-		if( (cm[k] = new(std::nothrow) glkrig_models_s(R_covList,Xmatp,datap,lx,dx,krigType)) == NULL)
+		if( (cm[k] = new(std::nothrow) glkrig_models_s(R_covList,Xmatp,datap,lx,dx,VARIANCE)) == NULL)
 			MEM_ERR(1,glkrig_models_s);
 
 		// free memory

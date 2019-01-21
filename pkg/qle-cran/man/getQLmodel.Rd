@@ -4,8 +4,7 @@
 \alias{getQLmodel}
 \title{Setup the quasi-likelihood approximation model all at once}
 \usage{
-getQLmodel(runs, lb, ub, obs, X = NULL, useVar = TRUE,
-  criterion = "qle", ...)
+getQLmodel(runs, lb, ub, obs, X = NULL, criterion = "qle", ...)
 }
 \arguments{
 \item{runs}{object of class \code{simQL}, simulation results from \code{\link{simQLdata}}}
@@ -17,8 +16,6 @@ getQLmodel(runs, lb, ub, obs, X = NULL, useVar = TRUE,
 \item{obs}{numeric vector of observed statistics}
 
 \item{X}{matrix of sample locations (model parameters)}
-
-\item{useVar}{logical, \code{TRUE} (default), whether to use prediction variances of any kind}
 
 \item{criterion}{name of criterion function to be minimized for QL estimation (see \code{\link{qle}})}
 

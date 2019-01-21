@@ -545,7 +545,6 @@ fitCov <- function(models, Xs, data, control = list(),
 #' 						parameters are re-estimated and otherwise only re-used 
 #' @param cv.fit 		logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
 #' @param var.type  	name of the variance approximation method (see \code{\link{covarTx}})
-#' @param useVar    	logical, \code{TRUE} (default), whether to use prediction variances (see details)
 #' @param criterion 	global criterion function for sampling and minimization, either "\code{qle}" or "\code{mahal}"				    	
 #' @param verbose       logical, \code{FALSE} (default), whether to give intermediate output 
 #' 
@@ -557,10 +556,7 @@ fitCov <- function(models, Xs, data, control = list(),
 #'   function \code{\link{qle}}, stores the fitted covariance models of the sample means of the statistics and the type of variance
 #'   matrix approximation. For an advanced setup of the estimation procedure and more involved statistical models this function
 #'   explicitly offers the data structure to construct individual covariance models for each statistic, see \code{\link{setCovModel}}.
-#'   The user has the choice whether or not to make use of kriging prediction variances by `\code{useVar}` to account for the simulation
-#' 	 error when constructing the approximation of the variance matrix and the quasi-score function. If \code{useVar=TRUE}, then a kriging
-#'   procedure including the computation of prediction variances based on kriging is automatically used. Otherwise the so-called
-#'   \emph{dual} approach is employed which has some computational advantage if prediction variances are not required. 
+#' 	 The kriging procedure includes the computation of prediction variances based on kriging. 
 #' 
 #' @examples 
 #' 
@@ -582,7 +578,7 @@ fitCov <- function(models, Xs, data, control = list(),
 #' @export 
 QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 		    var.type = c("wcholMean","cholMean","wlogMean","logMean","kriging","const"),
-				useVar = TRUE, criterion = c("qle","mahal"), verbose = FALSE)
+			 criterion = c("qle","mahal"), verbose = FALSE)
 {	
 	if(!inherits(qldata,"QLdata"))
 	 stop("expected argument `qldata` of class `QLdata`.")
@@ -645,7 +641,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 			 "covL" = covL,			
 			 "obs" = obs,		 
 			 "var.type" = var.type,			 
-			 "krig.type" = if(useVar) "var" else "dual",
+			 "krig.type" =  "var",
 			 "criterion" = criterion,			 
 			 "minN" = minN,
 			 "nfit" = nfit,
@@ -897,7 +893,6 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 #' @param ub 		upper bounds defining the (hyper)box of the parameter domain for QL estimation
 #' @param obs		numeric vector of observed statistics
 #' @param X   		matrix of sample locations (model parameters)
-#' @param useVar   	logical, \code{TRUE} (default), whether to use prediction variances of any kind
 #' @param criterion name of criterion function to be minimized for QL estimation (see \code{\link{qle}})
 #' @param ...		arguments passed to \code{\link{fitSIRFk}}, \code{\link{setQLdata}}, \code{\link{setCovModel}} 
 #'  				and \code{\link{QLmodel}} for REML estimation of all covariance models
@@ -931,7 +926,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 #' @author M. Baaske
 #' @rdname getQLmodel
 #' @export
-getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "qle", ...)
+getQLmodel <- function(runs, lb, ub, obs, X = NULL, criterion = "qle", ...)
 {	
 	args <- list(...)
 	verbose <- isTRUE(args$verbose)
@@ -980,7 +975,6 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, useVar = TRUE, criterion = "
 					lb,ub,
 			  	    obs,
 				    mods,				    
-					useVar=useVar,
 				    criterion=criterion),
 		     args))
 		

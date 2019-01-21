@@ -20,6 +20,7 @@ pred2 <- estim(qsd$covT,x0,Xs,Tstat,krig.type="dual")[[1]]
 
 # compute quasi-deviance with use of kriging variances
 D <- quasiDeviance(x0,qsd,verbose=TRUE)[[1]]
+
 # and without use of kriging variances,
 # then no modified QD can be computed including no variances
 # of the quasi-score vector
@@ -31,34 +32,33 @@ qsd$krig.type <- "var"
 # quasi-score
 S <- attr(D,"Sigma")
 invS <- solve(S)
-B <- D$jac%*%invS
+B <- invS%*%t(D$jac)
 
 # prediction variances
 # of sample mean of statistic Z=E[T(X)]
 stopifnot(D$sig2==pred$sigma2)
 D$score
-t(qs <- B%*%(qsd$obs-pred$mean))
+(qs <- (qsd$obs-pred$mean)%*%B)
 
 # quasi-information
 D$I
-B%*%S%*%t(B)
+t(B)%*%(S+diag(D$sig2))%*%B
 
 # variance quasi-score vector
 D$varS
-(C <- B%*%diag(D$sig2)%*%t(B))
+(C <- t(B)%*%diag(D$sig2)%*%B)
 
 # variance matrix of statistics Var(T(X))
 print(S)
-#debug(covarTx)
 covarTx(qsd,theta=x0,useVar=TRUE)
 
 # value quasi-deviance
 D$value
-t(qs)%*%solve(D$I)%*%qs
+qs%*%solve(D$I)%*%t(qs)
 
 # modified quasi-information: Mahalanobis distance of quasi-score
 D$qval
-t(qs)%*%solve(C)%*%qs
+qs%*%solve(C)%*%t(qs)
 
 ### test Variance Matrix approximation
 #chol2var <- function(Xs) {
