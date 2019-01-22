@@ -11,21 +11,19 @@
 library(qle)
 data(normal)
 
-# these options are usually
-# set when constructing the
-# QL data object `qsd`
+# options set when during initilization of `qsd`
 qsd$var.type <- "cholMean"
 qsd$criterion <- "mahal"
 
-# some parameters
+# some parameters of the statistical model for evaluation
 theta <- c("mu"=2,"sigma"=0.95) 
 
-# criterion function values
+# compare criterion functions
 MD <- mahalDist(theta,qsd)
 QD <- quasiDeviance(theta,qsd)
 
 # must be equal due to the same
-# number of parameters and statistics
+# number of parameters (q) and statistics (p)
 all.equal(MD[[1]]$value,QD[[1]]$value)
 
 # least-squares (constant variance)
