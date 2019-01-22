@@ -54,6 +54,7 @@ crit <- function(qd,w=0.5) {
 }
 
 crit(MD[[1]],w=.5)
+qsd$var.type <- "wcholMean"
 mahalDist(theta,qsd,w=0.5,verbose=TRUE,value.only=2L)
 
 # first term
