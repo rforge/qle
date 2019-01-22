@@ -26,7 +26,7 @@ X <- multiDimLHS(N=9,lb=lb,ub=ub,
 sim <- simQLdata(sim=simfn,cond=cond,nsim=nsim,X=X)
 
 qsd <- getQLmodel(sim, lb, ub, obs=c("N"=1),
-		var.type="wlogMean",verbose=TRUE)
+		var.type="wcholMean",verbose=TRUE)
 
 S0 <- qscoring(qsd,x0=c("rho"=0.8),
 		opts=list("pl"=10),verbose=TRUE)
