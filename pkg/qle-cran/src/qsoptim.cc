@@ -154,6 +154,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     MEMCPY(REAL(R_S),qlm.score,xdim);
     MEMCPY(REAL(R_I),qlm.qimat,xdim*xdim);
     MEMCPY(REAL(R_jac),qlm.jac,xdim*qlm.nCov);
+
     if(qfs.doIobs){
     	/* observed quasi-information matrix
     	 * as the Jacobian of the quasi-score vector (not scaled) */

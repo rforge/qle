@@ -534,6 +534,11 @@ double ql_model_s::mahalDist(double *x, double *jac, double *score, double *qima
 	  }
 
 	  if(qld->qlopts.useSigma) {
+
+		 /* constant 'Sigma'
+		  * no prediction variances at all
+		  */
+
 		  for(int k = 0; k < nCov; ++k)
 		  	qld->tmp[k] = qld->qtheta[k] = qld->obs[k] - krig->mean[k];
 
@@ -587,7 +592,8 @@ double ql_model_s::mahalDist(double *x, double *jac, double *score, double *qima
 		  }
 		  for(int k = 0; k < nCov; ++k)
 	  	  	qld->tmp[k] = qld->qtheta[k];
-		  gsiSolve(qld->vmat,nCov,qld->tmp,ONE_ELEMENT,qlsolve.vmat,info,Chol);
+		  /* 'vmat_work' contains additional kriging variances as diagonal terms */
+		  gsiSolve(qld->vmat_work,nCov,qld->tmp,ONE_ELEMENT,qlsolve.vmat,info,Chol);
 		  if(info != NO_ERROR){
 			LOG_ERROR(info,"gsiSolve")
 			return R_NaN;
@@ -639,12 +645,19 @@ double ql_model_s::intern_mahalValue(double *x) {
 	  	LOG_ERROR(info,"varMatrix")
 		return R_NaN;
 	  }
-	  info = add2diag(qld->vmat,nCov,glkm->krigr[0]->sig2);
+	  /* use restored diagonal terms plus kriging variances
+	   * for average approximation of variance matrix */
+	  if(qld->qlopts.varType == MEAN) {
+	  	 info = addVar(glkm->krigr[0]->sig2,nCov,qld->vmat_work,qld->work);
+	  } else {
+		 MEMCPY(qld->vmat_work,qld->vmat,nCov2);
+		 info = add2diag(qld->vmat_work,nCov,glkm->krigr[0]->sig2);
+	  }
 	  if(info != NO_ERROR){
 		 WRR("`NaN` detected in `add2diag` adding kriging variances to variance matrix approximation.")
 		 return R_NaN;
 	  }
-	  gsiSolve(qld->vmat,nCov,qld->tmp,ONE_ELEMENT,qlsolve.vmat,info,Chol);
+	  gsiSolve(qld->vmat_work,nCov,qld->tmp,ONE_ELEMENT,qlsolve.vmat,info,Chol);
 	  if(info != NO_ERROR){
 		LOG_ERROR(info,"gsiSolve")
 		return R_NaN;
@@ -910,19 +923,25 @@ double ql_model_s::qfValue(double *score, double *varS) {
 int ql_model_s::intern_quasiInfo(double *jac, double *qimat) {
 	/* refers to kriging type of statistics */
 	if(glkm->krigType) {
-	  info = add2diag(qld->vmat,nCov,glkm->krigr[0]->sig2);
+		/* use restored diagonal terms plus kriging variances
+		* for average approximation of variance matrix */
+	  if(qld->qlopts.varType == MEAN) {
+  		 info = addVar(glkm->krigr[0]->sig2,nCov,qld->vmat_work,qld->work);
+  	  } else {
+		 MEMCPY(qld->vmat_work,qld->vmat,nCov2);
+		 info = add2diag(qld->vmat_work,nCov,glkm->krigr[0]->sig2);
+  	  }
 	  if(info != NO_ERROR){
 	    WRR("`NaN` detected in `add2diag` adding kriging variances to variance matrix approximation.")
-	    return R_NaN;
+	    return info;
 	  }
-	  matmult_trans(qld->Atmp,nCov,dx,qld->vmat,nCov,nCov,qld->jactmp,info);
+	  matmult_trans(qld->Atmp,nCov,dx,qld->vmat_work,nCov,nCov,qld->jactmp,info);
 	  matmult(qld->jactmp,dx,nCov,qld->Atmp,nCov,dx,qimat,info);
 	} else {
 	  matmult(jac,dx,nCov,qld->Atmp,nCov,dx,qimat,info);
 	}
 	if(info != NO_ERROR){
 	  WRR("`NaN` detected in `matmult`.")
-	  return R_NaN;
 	}
 	return info;
 }
