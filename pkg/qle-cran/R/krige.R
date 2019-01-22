@@ -605,12 +605,12 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 	}
 	# Unless Sigma is given always continuously update variance matrix.
 	# If using W, theta or Sigma for average approximation, then
-	# at least update prediction variances at each point.
+	# at least update added kriging prediction variances at each point.
 	tryCatch({
-		# use `Sigma` but add prediction variances
+		# use `Sigma` but add prediction variances when used with criterion 'qle'
 		useSigma <- (qsd$var.type == "const")
 		if(all(qsd$var.type != c("kriging")) && !useSigma){
-			# Here: `Sigma` is inverted at C level
+			# 'Sigma' is inverted at C level because of added predictino variances
 			Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX
 		}
 		if(useSigma && is.null(Sigma))
@@ -624,7 +624,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 		# (for a cluster) parallized version of quasiDeviance
 		
 		ret <-
-		  if(length(points) > 1999 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
+		  if(length(points) > 999 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
 				m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)		
 				M <- .splitList(points, m)
 				names(M) <- NULL
@@ -770,6 +770,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 		   } else if(useSigma && !inverted){
 				# Only for constant Sigma, which is used as is!
 				inverted <- TRUE
+				# now try to invert
 				Sigma <- try(gsiInv(Sigma),silent=TRUE)
 				if(inherits(Sigma,"try-error")) {
 				  msg <- paste0("Inversion of constant variance matrix failed.")
@@ -784,7 +785,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 						   "useCV"=!is.null(cvm),
 						   "useSigma"=useSigma)  			# use as constant Sigma 
 		   ret <-
-		    if(length(points) > 1999 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
+		    if(length(points) > 999 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
 			   m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)			   				
 			   M <- .splitList(points, m)
 			   names(M) <- NULL

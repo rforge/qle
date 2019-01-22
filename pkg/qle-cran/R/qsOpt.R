@@ -569,8 +569,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
     }
    	if(!is.null(x0)) {
 	    if(!is.numeric(x0) || anyNA(x0))
-		  stop("Starting point must be numeric vector.")
-		
+		  stop("Starting point must be numeric vector.")		
 		# bounds checks
 		if( length(qsd$lower)!=length(x0) || length(qsd$upper)!=length(x0))
 			stop("Length of 'x0' does not match 'lower' or 'upper' bounds length.")	
@@ -582,7 +581,7 @@ prefitCV <- function(qsd, reduce = TRUE, type = c("cv","max"),
 		if(nrow(Sigma)!=length(qsd$covT) )
 		 stop("Dimensions of `Sigma` must match the number of statistics.\n")
 		if(qsd$var.type == "const" && qsd$criterion == "qle")
-			stop("`Sigma` cannot be used as a constant variance matrix for criterion `qle`.")			
+			warning("'Sigma' is not really constant since prediction variances of the statistics are added when applied to criterion 'qle'.")			
 				
 	} else if(qsd$var.type == "kriging" && is.null(qsd$covL))
 		stop("Covariance models for kriging variance matrix must be given, see function `setQLdata`.")	
