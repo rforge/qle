@@ -29,7 +29,7 @@ used as constant variance matrix only}
 
 \item{w}{numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion}
 
-\item{value.only}{only return the value of the MD}
+\item{value.only}{integer, \code{=0} (default), return the value of the MD only if \code{=1} and the criterion sampling value if \code{=2}}
 
 \item{na.rm}{logical, if \code{TRUE} (default) remove `Na` values from the results}
 
@@ -46,10 +46,10 @@ Either a vector of MD values or a list of lists, where each contains the followi
 \item{jac}{ Jacobian of sample mean values of statistics}
 \item{varS}{ estimated variance matrix of `\code{score}`}
 
-and, if applicable, the following attributes:
+and the following attributes:
 
-\item{Sigma}{ estimate of variance matrix (if `\code{Sigma}` is computed or was set as a constant matrix)}
-\item{inverted}{ whether `\code{Sigma}` was inverted }
+\item{Sigma}{ estimate of variance matrix}
+\item{inverted}{ whether `\code{Sigma}` was inverted}
 }
 \description{
 Compute the Mahalanobis distance (MD) based on the kriging models of statistics
@@ -68,17 +68,15 @@ The function computes the Mahalanobis distance of the given statistics \eqn{T(X)
  \deqn{\bar{V}=\frac{1}{n}\sum_{i=1}^n V_i  }
  based on the simulated variance matrices \eqn{V_i=V(\theta_i)} of statistics over all sample points
  \eqn{\theta_1,...,\theta_n} (see vignette).
- Unless `\code{qsd$var.type}` equals "\code{const}" additional prediction variances are added as diagonal terms to
- account for the kriging approximation error of the statistics using kriging with calculation of kriging variances
- if `\code{qsd$krig.type}` equal to "\code{var}". Otherwise no additional variances are added. A weighted version of
- these average approximation types is also available (see \code{\link{covarTx}}).
+ Unless `\code{qsd$var.type}` equals "\code{const}" additional prediction variances are added as diagonal terms in order
+ to account for the kriging approximation error of the statistics using kriging. A weighted version of these average approximation
+ types is also available (see \code{\link{covarTx}}).
  
- As a continuous version of variance approximation we use a kriging approach (see [1]). Then
- \deqn{\Sigma(\theta) = Var_{\theta}(T(X))}
+ As a continuous variance approximation we use a kriging approach (see [1]). Then \deqn{\Sigma(\theta) = Var_{\theta}(T(X))}
  denotes the variance matrix which depends on the parameter \eqn{\theta\in R^q} and corresponds to the
  formal function argument `\code{points}`. Each time a value of the criterion function is calculated at any parameter
- `\code{points}` the variance matrix is estimated by the correpsonding approach either with or
- without using prediction variances as explained above. Note that in this case the argument `\code{Sigma}` is ignored.
+ `\code{points}` the variance matrix is estimated by the correpsonding approach with added prediction variances as explained above.
+ Note that in this case the argument `\code{Sigma}` is ignored.
 }
 \examples{
  data(normal)

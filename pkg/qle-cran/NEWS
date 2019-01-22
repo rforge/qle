@@ -85,6 +85,25 @@ Changes with 0.18.6
 and added; kriging variance of the statistics is added as diagonal terms (as before) only for (weighted) mean approximations of the variance matrix as done
 by 'cholMean', 'logMean', etc.
 
+
+Changes with 0.2 (major update) 
+-------------------------------
+
+
+1) new sampling criterion 'logdet' to select best candidate points
+
+2) kriging variance matrix now includes its own prediction variances 
+
+3) quasi-score vector does not include kriging variances of the statistics anymore,
+   uncertainty of quasi-score and quasi-information approximations are now accounted for
+   through additional diagonal terms (kriging variances of statistics) of the variance matrix
+   approximation within the approximated quasi-information matrix only
+   
+4) for 'qle' estimation kriging variances are always computed (no difference by "dual" and "var" type kriging) 
+   for parameter estimation anymore opposed to the kriging procedures of statistics as its own function where it
+   is still possible
+
+
 Current known issues
 --------------------
 	o flip of sign in quasi-score vector (qscoring)	  

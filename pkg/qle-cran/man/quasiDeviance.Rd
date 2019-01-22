@@ -25,7 +25,7 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 
-\item{w}{numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion}
+\item{w}{numeric value, \code{=0.5} (default) as scalar weight, \code{0<=w<=1}, for evaluation of candidate points}
 
 \item{value.only}{if \code{TRUE} only the values of the QD are returned}
 
@@ -61,7 +61,8 @@ The function calculates the QD (see [1]). It is the primary function criterion t
   and quasi-information matrix at a particular parameter. From a statistical point of view, the QD can be seen as
   a generalization to the \emph{efficient score statistic} (see [3] and the vignette) and is used as a decision
   rule in the estimation function \code{\link{qle}} in order to hypothesise about the true model parameter. A modified value of
-  the QD, using the inverse of the variance of the quasi-score (as a weight matrix) is stored in the result `\code{qval}`.
+  the QD, using the inverse of the variance of the quasi-score w.r.t. the kriging approximation models of the statistics 
+  is stored in the result `\code{qval}`.
    
   Quasi-deviance values which are relatively small (compared to the empirical quantiles of its approximate chi-squared
   distribution) suggest a solution to the quasi-score equation and hence could identify the unknown model parameter
@@ -69,26 +70,25 @@ The function calculates the QD (see [1]). It is the primary function criterion t
   a MC goodness-of-fit test, see \code{\link{qleTest}}.
 
   Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}}),
-  then the QD value is calculated rather locally w.r.t. to an estimated parameter `\code{theta}`. Note that, opposed to the MD,
-  a constant variance matrix is not applicable to the computation of the QD. However, if supplied, `\code{Sigma}` is used
-  as a first estimate and in case of `\code{qsd$krig.type}`="\code{var}" prediction variances of the involved statistics at
-  `\code{points}` are added as diagonal terms (see also \code{\link{mahalDist}}).    
+  then the QD value is calculated rather locally w.r.t. to an estimated parameter `\code{theta}`. A constant variance
+  matrix is also applicable to the computation of the QD. However, if supplied, `\code{Sigma}` is used
+  as is with kriging variances added at the `\code{points}` as diagonal terms (see also \code{\link{mahalDist}}).    
 
 	 \subsection{Use of prediction variances}{ 
 	 In order to not only account for the simulation variance but additionally for the approximation error of the
   quasi-score vector we include the prediction variances of the involved statistics either based on
-  a cross-validation or kriging approach unless `\code{qsd$krig.type}` equals "\code{dual}". If `\code{cvm}` is not given, then
-  the prediction variances are obtained based on the kriging procedure applied to the statistics. Using prediction variances the
-  variance matrix `\code{varS}` of the quasi-score vector is part of the return list and omitted otherwise. Besides the quasi-information
-  matrix the observed quasi-information matrix (as a numerically derived Jacobian, given by `\code{Iobs}`, of the quasi-score vector)
-  is also returned. A good match between those two matrices suggests an approximate root if the corresponding
-  QD value is relatively small. This can be further investigated using the function \code{\link{checkMultRoot}}.
+  a cross-validation or kriging approach. If `\code{cvm}` is not given, then the prediction variances are obtained based
+  on the kriging procedure applied to the statistics. The variance matrix `\code{varS}` of the
+  quasi-score vector is part of the return list. Besides the quasi-information matrix the observed quasi-information matrix
+ (as a numerically derived Jacobian, given by `\code{Iobs}`, of the quasi-score vector) is also returned. A good match between
+  those two matrices suggests an approximate root if the corresponding QD value is relatively small. This can be further investigated
+  using the function \code{\link{checkMultRoot}}.
 
   Alternatively, also CV-based prediction variances (which involve additional covariance models given by `\code{cvm}` for each left out
   sample point) for each single statistic can be used to produce relatively robust parameter estimation results but for the price of
-  much higher computational costs. In practice this might overcome the general tendency inherent to kriging to underestimate
-  the prediction variances of the sample means of the statistics and should be used if one decides using kriging for the approximation of
-  the variance matrix. 
+  much higher computational costs. In practice this might overcome the general tendency inherent to the plug-in kriging predictor underestimating
+  the prediction variances of the sample means of the statistics. In particular, the CV approach is recommended in case one favours kriging type for
+  the approximation of the variance matrix. 
   }
 }
 \examples{

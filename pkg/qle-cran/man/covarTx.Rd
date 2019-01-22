@@ -40,13 +40,9 @@ The function estimates the variance matrix of statistics at some (unsampled) poi
  different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}",
  "\code{kriging}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
  defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
- the approximation type. Depending on the type of kriging for the statistics, `\code{qsd$krig.type}`, prediction variances
- \eqn{\sigma(\theta)} of the sample mean of statistics at `\code{theta}` are added. If `\code{qsd$krig.type}` equals
- "\code{dual}", see \code{\link{QLmodel}}, then no prediction variances are used at all and thus the variance matrix estimate of
- the statistics only includes the variances due to simulation replications and not the ones due to the use of kriging approximations
- of the statistics. Otherwise, including the prediction variances, the mean variance matrix estimate is given by
- \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} 
-	where \eqn{\hat{V}} denotes one of the above variance approximation types.
+ the approximation type. If `\code{theta}` is not given, then no prediction variances are included and thus the variance matrix estimate of the statistics only refers to the variances due to simulation replications
+ and not the ones due to the use of kriging approximations of the statistics. Otherwise, the mean variance matrix estimate is given by
+ \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} where \eqn{\hat{V}} denotes one of the above variance approximation types.
 
  The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
  cross-validation (CV) approach, see vignette for details.

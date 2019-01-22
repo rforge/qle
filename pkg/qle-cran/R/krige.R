@@ -261,13 +261,9 @@ varLOGdecomp <- function(L) {
 #'  different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}",
 #'  "\code{kriging}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
 #'  defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
-#'  the approximation type. Depending on the type of kriging for the statistics, `\code{qsd$krig.type}`, prediction variances
-#'  \eqn{\sigma(\theta)} of the sample mean of statistics at `\code{theta}` are added. If `\code{qsd$krig.type}` equals
-#'  "\code{dual}", see \code{\link{QLmodel}}, then no prediction variances are used at all and thus the variance matrix estimate of
-#'  the statistics only includes the variances due to simulation replications and not the ones due to the use of kriging approximations
-#'  of the statistics. Otherwise, including the prediction variances, the mean variance matrix estimate is given by
-#'  \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} 
-#' 	where \eqn{\hat{V}} denotes one of the above variance approximation types.
+#'  the approximation type. If `\code{theta}` is not given, then no prediction variances are included and thus the variance matrix estimate of the statistics only refers to the variances due to simulation replications
+#'  and not the ones due to the use of kriging approximations of the statistics. Otherwise, the mean variance matrix estimate is given by
+#'  \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} where \eqn{\hat{V}} denotes one of the above variance approximation types.
 #' 
 #'  The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
 #'  cross-validation (CV) approach, see vignette for details.
@@ -517,7 +513,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param cvm			list of cross-validation models (see \code{\link{prefitCV}})
 #' @param obs	 	    numeric vector of observed statistics, this overwrites `\code{qsd$obs}`, if supplied
 #' @param inverted 		logical, \code{FALSE} (default), currently ignored
-#' @param w			    numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion
+#' @param w			    numeric value, \code{=0.5} (default) as scalar weight, \code{0<=w<=1}, for evaluation of candidate points
 #' @param check			logical, \code{TRUE} (default), whether to check input arguments
 #' @param value.only  	if \code{TRUE} only the values of the QD are returned
 #' @param na.rm 		logical, if \code{TRUE} (default) remove `Na`s from the result
@@ -544,7 +540,8 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #'   and quasi-information matrix at a particular parameter. From a statistical point of view, the QD can be seen as
 #'   a generalization to the \emph{efficient score statistic} (see [3] and the vignette) and is used as a decision
 #'   rule in the estimation function \code{\link{qle}} in order to hypothesise about the true model parameter. A modified value of
-#'   the QD, using the inverse of the variance of the quasi-score (as a weight matrix) is stored in the result `\code{qval}`.
+#'   the QD, using the inverse of the variance of the quasi-score w.r.t. the kriging approximation models of the statistics 
+#'   is stored in the result `\code{qval}`.
 #'    
 #'   Quasi-deviance values which are relatively small (compared to the empirical quantiles of its approximate chi-squared
 #'   distribution) suggest a solution to the quasi-score equation and hence could identify the unknown model parameter
@@ -552,26 +549,25 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #'   a MC goodness-of-fit test, see \code{\link{qleTest}}.
 #' 
 #'   Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}}),
-#'   then the QD value is calculated rather locally w.r.t. to an estimated parameter `\code{theta}`. Note that, opposed to the MD,
-#'   a constant variance matrix is not applicable to the computation of the QD. However, if supplied, `\code{Sigma}` is used
-#'   as a first estimate and in case of `\code{qsd$krig.type}`="\code{var}" prediction variances of the involved statistics at
-#'   `\code{points}` are added as diagonal terms (see also \code{\link{mahalDist}}).    
+#'   then the QD value is calculated rather locally w.r.t. to an estimated parameter `\code{theta}`. A constant variance
+#'   matrix is also applicable to the computation of the QD. However, if supplied, `\code{Sigma}` is used
+#'   as is with kriging variances added at the `\code{points}` as diagonal terms (see also \code{\link{mahalDist}}).    
 #' 
 #' 	 \subsection{Use of prediction variances}{ 
 #' 	 In order to not only account for the simulation variance but additionally for the approximation error of the
 #'   quasi-score vector we include the prediction variances of the involved statistics either based on
-#'   a cross-validation or kriging approach unless `\code{qsd$krig.type}` equals "\code{dual}". If `\code{cvm}` is not given, then
-#'   the prediction variances are obtained based on the kriging procedure applied to the statistics. Using prediction variances the
-#'   variance matrix `\code{varS}` of the quasi-score vector is part of the return list and omitted otherwise. Besides the quasi-information
-#'   matrix the observed quasi-information matrix (as a numerically derived Jacobian, given by `\code{Iobs}`, of the quasi-score vector)
-#'   is also returned. A good match between those two matrices suggests an approximate root if the corresponding
-#'   QD value is relatively small. This can be further investigated using the function \code{\link{checkMultRoot}}.
+#'   a cross-validation or kriging approach. If `\code{cvm}` is not given, then the prediction variances are obtained based
+#'   on the kriging procedure applied to the statistics. The variance matrix `\code{varS}` of the
+#'   quasi-score vector is part of the return list. Besides the quasi-information matrix the observed quasi-information matrix
+#'  (as a numerically derived Jacobian, given by `\code{Iobs}`, of the quasi-score vector) is also returned. A good match between
+#'   those two matrices suggests an approximate root if the corresponding QD value is relatively small. This can be further investigated
+#'   using the function \code{\link{checkMultRoot}}.
 #' 
 #'   Alternatively, also CV-based prediction variances (which involve additional covariance models given by `\code{cvm}` for each left out
 #'   sample point) for each single statistic can be used to produce relatively robust parameter estimation results but for the price of
-#'   much higher computational costs. In practice this might overcome the general tendency inherent to kriging to underestimate
-#'   the prediction variances of the sample means of the statistics and should be used if one decides using kriging for the approximation of
-#'   the variance matrix. 
+#'   much higher computational costs. In practice this might overcome the general tendency inherent to the plug-in kriging predictor underestimating
+#'   the prediction variances of the sample means of the statistics. In particular, the CV approach is recommended in case one favours kriging type for
+#'   the approximation of the variance matrix. 
 #'   }
 #' 
 #' 
@@ -680,7 +676,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' 					  used as constant variance matrix only
 #' @param check       logical, \code{TRUE} (default), whether to check all input arguments
 #' @param w			  numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion 
-#' @param value.only  only return the value of the MD 
+#' @param value.only  integer, \code{=0} (default), return the value of the MD only if \code{=1} and the criterion sampling value if \code{=2}
 #' @param na.rm   	  logical, if \code{TRUE} (default) remove `Na` values from the results
 #' @param cl		  cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
 #' @param verbose     if \code{TRUE}, then print intermediate output
@@ -693,10 +689,10 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #' \item{jac}{ Jacobian of sample mean values of statistics}
 #' \item{varS}{ estimated variance matrix of `\code{score}`}
 #' 
-#' and, if applicable, the following attributes:
+#' and the following attributes:
 #' 
-#' \item{Sigma}{ estimate of variance matrix (if `\code{Sigma}` is computed or was set as a constant matrix)}
-#' \item{inverted}{ whether `\code{Sigma}` was inverted } 
+#' \item{Sigma}{ estimate of variance matrix}
+#' \item{inverted}{ whether `\code{Sigma}` was inverted} 
 #'  
 #' @details	The function computes the Mahalanobis distance of the given statistics \eqn{T(X)\in R^p} with different options
 #'  for the approximation type of the variance matrix. The Mahalanobis distance can be used as an alternative criterion function
@@ -711,17 +707,15 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #'  \deqn{\bar{V}=\frac{1}{n}\sum_{i=1}^n V_i  }
 #'  based on the simulated variance matrices \eqn{V_i=V(\theta_i)} of statistics over all sample points
 #'  \eqn{\theta_1,...,\theta_n} (see vignette).
-#'  Unless `\code{qsd$var.type}` equals "\code{const}" additional prediction variances are added as diagonal terms to
-#'  account for the kriging approximation error of the statistics using kriging with calculation of kriging variances
-#'  if `\code{qsd$krig.type}` equal to "\code{var}". Otherwise no additional variances are added. A weighted version of
-#'  these average approximation types is also available (see \code{\link{covarTx}}).
+#'  Unless `\code{qsd$var.type}` equals "\code{const}" additional prediction variances are added as diagonal terms in order
+#'  to account for the kriging approximation error of the statistics using kriging. A weighted version of these average approximation
+#'  types is also available (see \code{\link{covarTx}}).
 #'  
-#'  As a continuous version of variance approximation we use a kriging approach (see [1]). Then
-#'  \deqn{\Sigma(\theta) = Var_{\theta}(T(X))}
+#'  As a continuous variance approximation we use a kriging approach (see [1]). Then \deqn{\Sigma(\theta) = Var_{\theta}(T(X))}
 #'  denotes the variance matrix which depends on the parameter \eqn{\theta\in R^q} and corresponds to the
 #'  formal function argument `\code{points}`. Each time a value of the criterion function is calculated at any parameter
-#'  `\code{points}` the variance matrix is estimated by the correpsonding approach either with or
-#'  without using prediction variances as explained above. Note that in this case the argument `\code{Sigma}` is ignored.
+#'  `\code{points}` the variance matrix is estimated by the correpsonding approach with added prediction variances as explained above.
+#'  Note that in this case the argument `\code{Sigma}` is ignored.
 #' 
 #' @examples
 #'  data(normal)
