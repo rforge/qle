@@ -781,8 +781,8 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 									directL(fn, lower=qsd$lower, upper=qsd$upper, control=control)
 								},
 								"lbfgs" = {									
-									if(qsd$criterion != "mahal" || qsd$var.type == "kriging")
-									  stop("`lbfgs` only for criterion `mahal` using a constant `Sigma` or an average variance approximation.")
+									if(qsd$criterion != "mahal" || qsd$var.type != "const")
+									  stop("`lbfgs` only for criterion `mahal` using a constant `Sigma`. Note that, in this case only the quasi-score vector is the gradient of the criterion function 'mahal'.")
 									lbfgs(x0,
 										  fn = function(x) {
 												 val <- fn(x)
@@ -1760,7 +1760,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 									     "score" = {							
 											  # normalized distances
 											  dw <- if(abs(dmax-dmin) < EPS) 1 else (dmax-dists)/(dmax-dmin)
-											  fval <- criterionFun(Y,W=I,theta=xt,value.only=2L)
+											  fval <- criterionFun(Y,W=I,theta=xt,value.only=1L)
 											  if(.isError(fval))
 												stop("Criterion function 'score' evaluation failed.")
 											  else if(any(!is.finite(fval))) {
@@ -1769,38 +1769,32 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 												  fval <- fval[-hasNA]
 												  message(paste0("A total of ",length(hasNA)," of criterion function evaluations has NA values."))												 
 											  }
-											  smin <- min(fval)
-											  smax <- max(fval)
-											  sw <- if(abs(smax-smin) < EPS) 1 else (fval-smin)/(smax-smin)											  
-											  which.min( w*sw + (1-w)*dw )								
+											  if(length(fval) == 0L){
+												  message("All criterion values contain 'NA'.")
+												  integer(0) # the index of sample candiate Y
+											  } else {
+											  	smin <- min(fval)
+												smax <- max(fval)
+												sw <- if(abs(smax-smin) < EPS) 1 else (fval-smin)/(smax-smin)											  
+												which.min( w*sw + (1-w)*dw )								
+										  	  }
 										  },										 
-										  "logdet" = {		
-											  ## !!!
-											  ## TODO:
-											  ## !!!
-											  
-											  ## put to C level for faster computation (see below)
-											  qd <- criterionFun(Y,W=I,theta=xt)	
-										  	  # fval <- try(sapply(qd,function(x) w*log(det(x$varS))+(1-w)*x$qval),silent=TRUE)
-											  # fval <- try(sapply(qd,function(x) w*log(det(x$I))-(1-w)*max(diag(x$varS))),silent=TRUE)
-											  # fval <- try(sapply(qd,function(x) w*log(det(x$varS))-(1-w)*x$qval),silent=TRUE)
-											  fval <- try(sapply(qd,
-												function(x) {													
-													B <- x$jac%*%gsiInv(attr(x,"Sigma"))													
-													varS <- B%*%(attr(x,"Sigma")+diag(x$sig2))%*%t(B)
-													w*log(det(varS))-(1-w)*t(x$score)%*%gsiInv(varS)%*%x$score
-							                     }),
-										 		silent=TRUE)
-#											  
-											  #fval <- criterionFun(Y,W=I,theta=xt,w=w,value.only=3L)			
-#											  if(.isError(fval))
-#												  stop("Criterion function evaluation for 'logdet' failed.")
-#											  else if(any(!is.finite(fval))) {
-#												  hasNA <- which(!is.finite(fval))
-#												  fval <- fval[-hasNA]
-#												  message(paste0("A total of ",length(hasNA)," of criterion function evaluations has NA values."))												 
-#											  }					
-											  which.max(fval)											 							  
+										  "logdet" = {											
+											  ## put to C level for faster computation (see below)									  
+											  fval <- criterionFun(Y,W=I,theta=xt,w=w,value.only=2L)			
+											  if(.isError(fval))
+											    stop("Criterion function evaluation for 'logdet' failed.")
+											  else if(any(!is.finite(fval))) {
+												  hasNA <- which(!is.finite(fval))
+												  fval <- fval[-hasNA]												  
+												  message(paste0("A total of ",length(hasNA)," of criterion function evaluations contains 'NA's."))												 
+											  }													
+											  if(length(fval) == 0L){
+												  message("All criterion values contain 'NA'.")
+												  integer(0) # the index of sample candiate Y
+											  }	else {						
+											     which.max(fval)											 							  
+										  	  }
 										  }
 										) 
 										
@@ -1851,13 +1845,16 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 							# from last successful local minimizer
 							fval <- criterionFun(Y,W=W,theta=theta,value.only=TRUE)									  																		
 							if(.isError(fval)){
-							  stop("Criterion function evaluation failed (global phase).")
+							  stop("Criterion function evaluation failed during global phase.")
 							} else if(any(!is.finite(fval))) {
 								hasNA <- which(!is.finite(fval))
 								fval <- fval[-hasNA]
 								dists <- dists[-hasNA]								
 								message(paste0("A total of ",length(hasNA)," of criterion function evaluations has NA values."))
 							}
+							if(length(fval) == 0L){
+							 stop("All criterion values contain 'NA' after global sampling. Cannot continue.")								
+							}	
 							# next sampling location							
 							fmin <- min(fval)
 							fmax <- max(fval)

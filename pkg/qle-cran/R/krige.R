@@ -805,8 +805,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 			# if it is computed by W, theta
 			# or the constant Sigma passed
 			if(useSigma) {			 
-				attr(Sigma,"inverted") <- inverted
-				attr(ret,"Sigma") <- Sigma			  
+			 attr(Sigma,"inverted") <- inverted					  
 	 		}
 			# check for NAs/NaNs
 			if(na.rm){

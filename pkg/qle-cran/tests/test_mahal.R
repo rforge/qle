@@ -30,10 +30,15 @@ all.equal(MD[[1]]$value,QD[[1]]$value)
 qsd$var.type <- "const"
 qsd$criterion <- "mahal"
 LQ <- mahalDist(theta,qsd,Sigma=diag(2))
-S <- attr(LQ,"Sigma") # actually already inverted
+(S <- attr(LQ,"Sigma")) # actually already inverted
 Xs <- as.matrix(qsd$qldata[c(1,2)])
 Tstat <- qsd$qldata[c(3,4)]
-pred <- estim(qsd$covT,theta,Xs,Tstat,krig.type="var")[[1]]
+pred <- estim(qsd$covT,theta,Xs,Tstat)[[1]]
 # criterion value
 t(qsd$obs-pred$mean)%*%S%*%(qsd$obs-pred$mean)
 LQ[[1]]$value
+
+# same but now use Sigma with prediction variances
+LQ2 <- quasiDeviance(theta,qsd,Sigma=diag(2))
+LQ2[[1]]$value
+attr(LQ2[[1]],"Sigma")

@@ -35,10 +35,11 @@ qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean",
 		model="sirfk", criterion="mahal", verbose=TRUE)
 
 # force only global searches and testing
+#debug(qle)
 OPT <- qle(qsd,simfunc,nsim=10,
 		global.opts=list("stopval"=0,"maxeval"=3),
 		local.opts=list("ftol_abs"=0),
-		method=c("bobyqa","cobyla","direct"),pl=10)
+		method=c("bobyqa","cobyla","direct"),pl=2)
 
 OPT$final
 OPT$why
