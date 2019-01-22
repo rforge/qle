@@ -27,7 +27,7 @@ pred <- estim(qsd$covT,x0,Xs,Tstat,krig.type="var")[[1]]
 D <- quasiDeviance(x0,qsd,verbose=TRUE)[[1]]
 
 # remove kriging variances from variance matrix approximation
-S <- attr(D,"Sigma") - diag(pred$sigma2)
+S <- attr(D,"Sigma") #- diag(pred$sigma2)
 invS <- solve(S)
 B <- invS%*%t(D$jac)
 
@@ -67,8 +67,8 @@ quasiDeviance(x0,qsd,verbose=TRUE,value.only=TRUE)
 # pf model parameter 'theta' and prediction error of the
 # quasi-score vector (second term)
 crit <- function(qd,w=0.5) {													
-	B <- solve(attr(qd,"Sigma")-diag(qd$sig2))%*%t(qd$jac)												
-	I <- t(B)%*%(attr(qd,"Sigma"))%*%B
+	B <- solve(attr(qd,"Sigma"))%*%t(qd$jac)												
+	I <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
 	w*log(det(I))-(1-w)*t(qd$score)%*%solve(I)%*%qd$score
 }
 crit(D,w=.5)
@@ -78,5 +78,5 @@ quasiDeviance(x0,qsd,w=0.5,verbose=TRUE,value.only=2L)
 crit(D,w=1.0)
 log(det(D$I))
 # second term
-crit(D,w=0.0)
--D$value
+-crit(D,w=0.0)
+D$value
