@@ -58,3 +58,25 @@ qs%*%solve(D$I)%*%t(qs)
 # modified quasi-deviance value based on kriging errot of quasi-score
 D$qval
 qs%*%solve(C)%*%t(qs)
+
+# return the value of the modified quasi-deviance only 
+quasiDeviance(x0,qsd,verbose=TRUE,value.only=TRUE)
+
+# return the value of the sampling criterion 'logdet'. 
+# A combination of minimizing estimation error (first term)
+# pf model parameter 'theta' and prediction error of the
+# quasi-score vector (second term)
+crit <- function(qd,w=0.5) {													
+	B <- solve(attr(qd,"Sigma")-diag(qd$sig2))%*%t(qd$jac)												
+	I <- t(B)%*%(attr(qd,"Sigma"))%*%B
+	w*log(det(I))-(1-w)*t(qd$score)%*%solve(I)%*%qd$score
+}
+crit(D,w=.5)
+quasiDeviance(x0,qsd,w=0.5,verbose=TRUE,value.only=2L)
+
+# first term
+crit(D,w=1.0)
+log(det(D$I))
+# second term
+crit(D,w=0.0)
+-D$value
