@@ -465,6 +465,11 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 		  SEXP R_nT = getListElement( R_qsd, "obs" );
 		  SET_DIMNAMES_MATRIX2(R_dimT,R_nI,R_nT)
 
+		  // names variance matrix
+ 		  SEXP R_VmatNames = R_NilValue;
+		  PROTECT(R_VmatNames = allocVector(VECSXP,2));
+		  SET_DIMNAMES_MATRIX(R_VmatNames,R_nT)
+
 	 	  int nprotect = 5;
 		  int &info = qlm.info;
 		  double fval = 0, qval = 0;
@@ -506,11 +511,12 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			 SET_VECTOR_ELT(R_ans, 6, R_varS);
 			 SET_VECTOR_ELT(R_ans, 7, ScalarReal(qval));
 
+			 setVmatAttrib(&qlm, R_VmatNames, R_ans);
 			 SET_VECTOR_ELT(R_ret, i, R_ans);
 			 UNPROTECT(6);
 		  }
 
-		  UNPROTECT(3);
+		  UNPROTECT(4);
 		  return R_ret;
 	}
 }
