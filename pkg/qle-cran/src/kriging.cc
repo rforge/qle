@@ -418,15 +418,13 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 {
 	int i = 0, np = LENGTH(R_points);
 	value_type type = (value_type) asInteger(AS_INTEGER(R_qdValue));
+
 	/* init model storage */
 	ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, type);
-
 	GLKM glkm = qlm.glkm;
-	ql_data qld = qlm.qld;
 
 	int dx = glkm->dx,
 	  nCov = glkm->nCov;
-
 
 	if(type > COPY_ZERO) {														/* only return scalar values */
  		  SEXP R_ret = R_NilValue;
@@ -702,7 +700,6 @@ SEXP quasiDeviance(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vm
     	  np = LENGTH(R_points);
 
       value_type type = (value_type) asInteger(AS_INTEGER(R_qdValue));
-
       ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, type);
 
       if(type > COPY_ZERO) {
