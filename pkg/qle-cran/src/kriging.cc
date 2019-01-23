@@ -423,7 +423,6 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 
 	GLKM glkm = qlm.glkm;
 	ql_data qld = qlm.qld;
-	ql_options opts = &qld->qlopts;
 
 	int dx = glkm->dx,
 	  nCov = glkm->nCov;
@@ -567,8 +566,8 @@ double ql_model_s::mahalDist(double *x, double *jac, double *score, double *qima
 	  } else {
 
 		  /* continuously update variance matrix in any way
-		   * with calculation of quasi-score and quasi-information
-		  /* might use prediction variances or CV errors */
+		     with calculation of quasi-score and quasi-information
+		     might use prediction variances or CV errors */
 
 		  if ( (info = intern_cvError(x)) != NO_ERROR){
 		  	LOG_ERROR(info,"intern_cvError")
