@@ -15,7 +15,7 @@
 /** typedefs */
 typedef enum { MEAN = 0, KRIG = 1} var_type;
 typedef enum { DUAL = 0, VARIANCE = 1, BOTH = 2} krig_type;
-typedef enum { COPY_ZERO = 0, COPY_ONE = 1, COPY_MOD = 2} value_type;
+typedef enum { COPY_ZERO = 0, COPY_ONE = 1, COPY_MOD = 2, COPY_HIGHER = 3} value_type;
 
 typedef struct krig_storage_s {
 	double *Qwork,
@@ -422,6 +422,7 @@ typedef struct ql_model_s {
     ql_storage_t qlsolve;	/* general storage for solving kriging equations */
 
 	double *qimat,  /* expected Quasi-Information */
+		   *varS,	/* modified Quasi-Information */
 		   *score,  /* quasi score vector */
 		   *jac,    /* gradient statistics */
 		   *qiobs;  /* observed Quasi-Information = dS/dtheta by FD */
@@ -483,6 +484,7 @@ typedef struct ql_model_s {
 		 CALLOCX(score,dx,double);
 		 CALLOCX(qiobs,dxdx,double);
 		 CALLOCX(qimat,dxdx,double);
+		 CALLOCX(varS,dxdx,double);
 		 CALLOCX(jac,dx*nCov,double);
 
 		 /* ql storage for solving */
@@ -501,6 +503,7 @@ typedef struct ql_model_s {
 
 	  FREE(qiobs)
 	  FREE(qimat)
+	  FREE(varS)
 	  FREE(jac)
 	  FREE(score)
 
@@ -521,7 +524,7 @@ typedef struct ql_model_s {
     }
 
 	/* variance of quasi-score within the approximating kriging models */
-	int intern_varScore(double *vars);
+	int intern_varScore(double *jac, double *vars);
 
 	/* observed quasi-information matrix (FD approximation of quasiscore vector) */
 	int intern_quasiObs(double *x, double *score, double *qiobs);
@@ -535,10 +538,10 @@ typedef struct ql_model_s {
     double intern_wlogdetMahal(double *x, double w);
 
     double qfValue(double *score, double *varS);
-    int intern_qfScore(double *x){ return qfScore(x,jac,score,qimat); }
+    int intern_qfScore(double *x){ return qfScore(x,jac,score,varS); }
 
-    inline double intern_qfValue() { return qfValue(score,qimat); }
-    inline double intern_qfScoreStat(double *x) { return qfScoreStat(x,jac,score,qimat); }
+    inline double intern_qfValue() { return qfValue(score,varS); }
+    inline double intern_qfScoreStat(double *x) { return qfScoreStat(x,jac,score,varS); }
 
 	void varMatrix(double *x, double *vmat, int &err);
 

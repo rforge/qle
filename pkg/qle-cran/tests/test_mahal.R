@@ -34,6 +34,7 @@ LQ <- mahalDist(theta,qsd,Sigma=diag(2))[[1]]
 Xs <- as.matrix(qsd$qldata[c(1,2)])
 Tstat <- qsd$qldata[c(3,4)]
 pred <- estim(qsd$covT,theta,Xs,Tstat)[[1]]
+
 # criterion value
 t(qsd$obs-pred$mean)%*%S%*%(qsd$obs-pred$mean)
 LQ$value
@@ -49,8 +50,8 @@ attr(LQ2,"Sigma")
 # quasi-score vector (second term)
 crit <- function(qd,w=0.5) {													
 	B <- solve(attr(qd,"Sigma"))%*%t(qd$jac)												
-	I <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
-	w*log(det(I))-(1-w)*t(qd$score)%*%solve(I)%*%qd$score
+	varS <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
+	w*log(det(qd$I))-(1-w)*t(qd$score)%*%solve(varS)%*%qd$score
 }
 
 crit(MD[[1]],w=.5)

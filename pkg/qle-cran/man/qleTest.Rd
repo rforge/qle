@@ -4,7 +4,7 @@
 \alias{qleTest}
 \title{Monte Carlo testing}
 \usage{
-qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = NULL,
+qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = "qle",
   nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05,
   multi.start = 0L, na.rm = TRUE, cores = 1L, cl = NULL,
   iseed = NULL, verbose = FALSE)

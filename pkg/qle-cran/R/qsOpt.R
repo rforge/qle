@@ -980,7 +980,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 			 } else return(.qleError(message=msg,call=match.call(),error=Xs))
 		 }
 		 if(verbose)
-		   cat(paste("Multistart local search from",nstart,"starting points."),"\n")
+		   cat(paste("Multistart search using",nstart,"randomly chosen starting parameters."),"\n")
 	     RES <- do.call(doInParallel,
 				 c(list(X=Xs,
 					FUN=function(x,...){
@@ -991,11 +991,13 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
    	
 	} else { RES <- list(S0) }	
 	
-	if(.isError(RES))
-	  return(RES)
+	if(.isError(RES)) {			
+		return(RES)
+    }
  	# do not evaluate solution for just a single parameter
-    if(length(RES) == 1L)
-      return (RES[[1]])
+    if(length(RES) == 1L) return (RES[[1]])
+	
+	## TODO: hinzufügen von S0 (first run!)
 	
 	# check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L))	
@@ -1720,11 +1722,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 									dists <- dists[-idx]
 								}
 								# sampling might cause switch to global phase
-								if(status[["global"]] < 2L){									
-									dmin <- min(dists)
-									dmax <- max(dists)									 
-									nlocal <- nlocal + 1L
-									
+								if(status[["global"]] < 2L)
+								{					 
+									nlocal <- nlocal + 1L								
 									# use user defined weights
 									if(locals$useWeights) {										
 										k <- nlocal %% mWeights
@@ -1757,7 +1757,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 									id <- 
 									  switch(
 									    locals$nextSample,
-									     "score" = {							
+									     "score" = {
+											  dmin <- min(dists)
+											  dmax <- max(dists)			
 											  # normalized distances
 											  dw <- if(abs(dmax-dmin) < EPS) 1 else (dmax-dists)/(dmax-dmin)
 											  fval <- criterionFun(Y,W=I,theta=xt,value.only=1L)
@@ -1771,7 +1773,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 											  }
 											  if(length(fval) == 0L){
 												  message("All criterion values contain 'NA'.")
-												  integer(0) # the index of sample candiate Y
+												  integer(0) 									# signals a sampling error
 											  } else {
 											  	smin <- min(fval)
 												smax <- max(fval)
@@ -1779,21 +1781,22 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 												which.min( w*sw + (1-w)*dw )								
 										  	  }
 										  },										 
-										  "logdet" = {											
-											  ## put to C level for faster computation (see below)									  
+										  "logdet" = {			
+											  # return max index of criterion values									  
 											  fval <- criterionFun(Y,W=I,theta=xt,w=w,value.only=2L)			
 											  if(.isError(fval))
 											    stop("Criterion function evaluation for 'logdet' failed.")
-											  else if(any(!is.finite(fval))) {
+											  if(any(!is.finite(fval))) {												  												  
 												  hasNA <- which(!is.finite(fval))
-												  fval <- fval[-hasNA]												  
-												  message(paste0("A total of ",length(hasNA)," of criterion function evaluations contains 'NA's."))												 
-											  }													
+												  dw <- dw[-hasNA]
+												  fval <- fval[-hasNA]
+												  message(paste0("A total of ", length(hasNA)," of criterion function evaluations contains 'NA's."))
+											  }
 											  if(length(fval) == 0L){
 												  message("All criterion values contain 'NA'.")
-												  integer(0) # the index of sample candiate Y
-											  }	else {						
-											     which.max(fval)											 							  
+												  integer(0) 									# signals a sampling error
+											  } else {
+												which.min(fval)	  								        
 										  	  }
 										  }
 										) 
@@ -1832,7 +1835,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 							dists <- .min.distXY(X,Y)									# check for minimum distance between sample points
 							idx <- which(dists < eps)
 							if(length(idx) > 0L)	{
-								Y <- Y[-idx,,drop=FALSE]
+								Y <- Y[-idx,,drop=FALSE]								
 								if(nrow(Y) < floor(0.1*length(dists))) {										
 							 	   message(.makeMessage("Number of candidates ",nrow(Y)," is not enough to proceed sampling."))									 											
 								   break;
@@ -1932,7 +1935,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 							
 				# generalized EVD (either based on CV or Kriging variances)
 				ctls["lam_max","tmp"] <- ctls["lam_max","val"]
-				ctls["lam_max","val"] <- max(geneigen(varS,I,only.values=TRUE), na.rm=TRUE)
+				ctls["lam_max","val"] <- max(geneigen(varS,I,only.values=TRUE)-1.0, na.rm=TRUE)
 				
 				# generalized eigenvalues
 				if( ctls["lam_max","val"] < ctls["lam_max","cond"]) {
@@ -1975,7 +1978,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 						}
 					} else ctls["maxeval","stop"] <- 1L 
 				}
-				
+												
 				# stop or continue
 				if(any(ctls[,"stop"] >= ctls[,"count"])){					
 					break										# stop main loop
@@ -1995,11 +1998,13 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 						}
 					}					
 				}
+
 				# next number of simulations
 				# knowing the code we could easily define rule to increase `nsim` 
 				environment(Fnsim) <- environment()
 				nsim <- try(eval(Fnsim),silent=TRUE)
-				stopifnot(is.numeric(nsim))
+				if(!is.numeric(nsim))
+					stop("Number of model simulations is not numeric. Cannot continue.")
 				
 				# simulate at new locations, qsd$nsim (default)
 				newSim <-
@@ -2016,7 +2021,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 					stop(msg)					
 				}
 
-				# update QL
+				# update QL model
 				qsd <-
 				 if(status[["global"]] > 0L && locals$test &&
 					 !.isError(Stest) && !.isError(newObs)) {				
@@ -2028,7 +2033,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 				 } else {
 					  updateQLmodel(qsd, Snext$par, newSim, fit=TRUE,
 						cl=if(isTRUE(use.cluster)) cl, verbose=verbose)
-				 }
+				}
 									
 				# check results of kriging
 				if(.isError(qsd)){
@@ -2039,22 +2044,38 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 					  msg <- c(msg, conditionMessage(e))
 					stop(msg)
 				}					
+				# reset
 				Stest <- NULL
 				# update X sample			
 				X <- as.matrix(qsd$qldata[seq(xdim)])				
 			
 			}  # end main loop		
 			
+			# check for 'consistency of found root
+			# this might trigger a final global search			
+			if(status[["global"]] < 2L) {				
+				mroots <- try(.evalRoots(list(S0),opts=c(locals,qscore.opts)),silent=TRUE)	
+				if(.isError(mroots))
+				 message(.makeMessage("Failed to check final solution."))					
+				else if(!attr(mroots,"valid")) {
+				  status[["global"]] <- 2L
+				  cat("Could not find any valid solution accordong to the user-defined tolerances. Try final global search.","\n")
+				}
+			}
+
 			# Last iteration was done at global phase, so try to minimize again
 			# either from the last sample point since it this most local supposed to
 			# small for high (global) weights or by a multistart approach.
-					
-			if(status[["global"]] == 2L){
-				# always multistart and include last (global) sample point `Snext$par` as a starting point
+
+			if(status[["global"]] == 2L)
+			{
+			   # always multistart and include last (global) sample point
+			   # `Snext$par` as a new starting point
 				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts,
 						control=control, Sigma=Sigma, W=W, theta=theta, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
-						  multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl, pl=pl, verbose=verbose)
+						  optInfo = TRUE, multi.start=TRUE, cl=if(isTRUE(use.cluster)) cl,
+						   pl=pl, verbose=verbose)
 				
 				# overwrite last sample point if local minimization was successful
 				if(!.isError(S0) && S0$convergence >= 0L){					
@@ -2069,8 +2090,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 				}
 				# store local minimization results as these are overwritten now
 				# where `Snext` does not change anymore, however, add it
-				tracklist <- c(tracklist,
-						list("S0"=S0,"Snext"=Snext,"status"=list(status)))
+				tracklist <- c(tracklist, list("S0"=S0,"Snext"=Snext,"status"=list(status)))
 				
 				# show results (update) 
 				.printInfo()
@@ -2078,8 +2098,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			}
 			
 		}, error = function(e) {
-			msg <- .makeMessage("Current iteration stopped unexpectedly: ",
-					  conditionMessage(e))
+			msg <- .makeMessage("Current iteration stopped unexpectedly: ", conditionMessage(e))
 			message(msg)
 			structure(
 				list("par"=xt,
@@ -2089,7 +2108,8 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 					 "cvm"=cvm,
 					 "why"=NULL,					 
 					 "final"=S0,															# local results
-					 "convergence"=FALSE),				
+					 "convergence"=FALSE,
+					 "message"=msg),				
 				tracklist = tracklist,				
 				optInfo = list("x0"=x0,
 							   "W"=W,														# QI at xt if last iteration was at local phase

@@ -24,6 +24,10 @@ pred <- estim(qsd$covT,x0,Xs,Tstat,krig.type="var")[[1]]
 # pred2 <- estim(qsd$covT,x0,Xs,Tstat,krig.type="dual")[[1]]
 
 # compute quasi-deviance with use of kriging variances
+#X <- rbind(x0,x0+c(0.1,0.2),x0+c(1,1))
+#quasiDeviance(X,qsd,value.only=2,verbose=TRUE)
+#quasiDeviance(X,qsd,value.only=3,verbose=TRUE)
+
 D <- quasiDeviance(x0,qsd,verbose=TRUE)[[1]]
 
 # remove kriging variances from variance matrix approximation
@@ -38,26 +42,23 @@ stopifnot(D$sig2==pred$sigma2)
 D$score
 (qs <- (qsd$obs-pred$mean)%*%B)
 
-# quasi-information
+# (original) quasi-information
 D$I
-t(B)%*%(S+diag(D$sig2))%*%B
+(D$jac)%*%invS%*%t(D$jac)
+t(B)%*%(S)%*%B
 
-# variance of quasi-score vector (only within the kriging model)
+# variance of quasi-score vector as modified quasi-information
 D$varS
-(C <- t(B)%*%diag(D$sig2)%*%B)
+(C <- t(B)%*%(S+diag(D$sig2))%*%B)
 
-# variance matrix of statistics Var(T(X))
+# variance matrix of statistics Var_{\theta}(T(X))
 print(S)
 covarTx(qsd)			# no added kriging variances
 covarTx(qsd,theta=x0)   # adding kriging variances at theta
 
 # modified quasi-deviance value based on modified quasi-information matrix
 D$value
-qs%*%solve(D$I)%*%t(qs)
-
-# modified quasi-deviance value based on kriging errot of quasi-score
-D$qval
-qs%*%solve(C)%*%t(qs)
+qs%*%solve(D$varS)%*%t(qs)
 
 # return the value of the modified quasi-deviance only 
 quasiDeviance(x0,qsd,verbose=TRUE,value.only=TRUE)
@@ -68,9 +69,10 @@ quasiDeviance(x0,qsd,verbose=TRUE,value.only=TRUE)
 # quasi-score vector (second term)
 crit <- function(qd,w=0.5) {													
 	B <- solve(attr(qd,"Sigma"))%*%t(qd$jac)												
-	I <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
-	w*log(det(I))-(1-w)*t(qd$score)%*%solve(I)%*%qd$score
+	varS <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
+	w*log(det(qd$I))-(1-w)*t(qd$score)%*%solve(varS)%*%qd$score
 }
+
 crit(D,w=.5)
 quasiDeviance(x0,qsd,w=0.5,verbose=TRUE,value.only=2L)
 

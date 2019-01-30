@@ -17,11 +17,10 @@ checkMultRoot(est, par = NULL, opts = NULL, verbose = FALSE)
 }
 \value{
 A data frame with columns named corresponding to each component of the investigated parameter,
- `\code{value}`, `\code{minor}`, `\code{det}`, `\code{max}`,
- `\code{trace}` and `\code{score_max}` (see vignette). The second column shows the leading minor of
-  the observed QI matrix which is not positive definite. If so, then the corresponding parameter estimate
-  cannot be consistent at least in theory. The rows show the corresponding values for each parameter passed by
-  `\code{par}`.
+ `\code{minor}`, `\code{det}`, `\code{value}`, `\code{score_max}`, `\code{logdetI}`, `\code{lamI_min}`,
+ `\code{lamIm_max}` and `\code{varS_trace}` (see vignette for details). The first column shows the leading minor of
+  the observed QI matrix which is not positive definite. Estimated model parameters for which the observed QI matrix
+  is not positive definite are excluded from further root selection.
 }
 \description{
 Check out and compare estimated roots of the quasi-score vector
@@ -30,9 +29,7 @@ Check out and compare estimated roots of the quasi-score vector
 Only for the quasi-likelihood approach the function inspects the (numerical) consistency of the found
  parameters in `\code{par}` by comparing each observed quasi-information matrix with the expected one.
  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
- and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
- are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}` for the maximum of any of
- the components of the quasi-score vector.
+ and the parameter for which these are smallest is chosen.
 }
 \examples{
  data(qleresult)

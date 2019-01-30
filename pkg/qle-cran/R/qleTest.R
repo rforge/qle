@@ -44,48 +44,50 @@
 .evalBestRoot <- function(dm, opts)
 {
 	stopifnot(is.data.frame(dm))	
-	notNa <- !(apply(dm,1,anyNA))
-	
+	# remove all rows of criteria wher any NA can be found
+	notNa <- !(apply(dm,1,anyNA))	
 	if(sum(notNa) < nrow(dm)){		
-	  message("`NA` values removed from estimated parameters.")
+	  message("`NA`s removed from quasi-score solutions.")
 	} else if(sum(notNa) == 0L) {
-	  warning("Cannot find best root. All rows in data frame of estimated parameters contain `NA`s.")
-	  return( structure(row.names(dm),"id"=NA))
-    }
-	
+	  warning("Cannot select a best solution. All rows in data frame of estimated parameters contain `NA`s.")
+	  return( structure(row.names(dm),"id"=NA,"valid"=FALSE))
+    }	
+	# matrix to check the parameter at least being a plausible root
 	A <- matrix(FALSE,nrow(dm),3)
-	A[notNa,] <- cbind(as.numeric(dm[notNa,"minor"]) == 0, 
-		  as.numeric(dm[notNa,"value"]) < opts$ftol_abs,
-		  as.numeric(dm[notNa,"|score_max|"]) < opts$score_tol)
+	A[notNa,] <-
+	 cbind(as.numeric(dm[notNa,"minor"]) == 0, 
+		   as.numeric(dm[notNa,"value"]) < opts$ftol_abs,
+		   as.numeric(dm[notNa,"|score_max|"]) < opts$score_tol)
 	
-  	ok <-which(A[,1]==TRUE & apply(A[,2:3],1,any))
-  	if(length(ok) == 0L){
-	    message(.makeMessage("`Stopping conditions ('ftol_abs' or 'score_tol') cannot be reached."))
-		id <- try(which.min(dm[,"value"]),silent=TRUE)		
-		if(!inherits(id,"try-error") && length(id)>0L)
-		  dimnames(dm)[[1]][id] <- paste0(c(row.names(dm)[id],"*"),collapse=" ")
-		else {
-		   id <- NA
-		   warning("Cannot find best root. All estimated criterion values contain `NA`s.")
-		}
-	  	return( structure(row.names(dm),"id"=id))
-    }
-    
-	stopifnot(length(ok)>0L)
-	nm <- apply(dm[ok,-1],2,which.min)	
+	ki <- 1L 
+	ok <- which(A[,1]==TRUE) 										# all where 'Iobs' pos.def. 
+  	if(!is.numeric(ok) || length(ok) == 0L){
+	  ki <- c(ki,2L)												# exclude 'minor' and 'det' 
+	  ok <- which(notNa==TRUE)
+	  message(.makeMessage("'Observed quasi-information is not positive definite so cannot use it."))	  
+    }   
+	notOk <- which(!apply(A[ok,2:3,drop=FALSE],1,all))
+	if(is.numeric(notOk) && length(notOk)>0L){
+		if(length(notOk) < length(ok)) {
+			ok <- ok[-notOk]				
+		} else { message(.makeMessage("Conditions 'ftol_abs' and 'score_tol' cannot be met.")) }
+	}
+		
+	nm <- apply(dm[ok,-ki,drop=FALSE],2,which.min)							# 'minor' and 'det' removed as criteria because Iobs not pos. def.
 	id <- sapply(1:length(nm),function(x) sum(nm[1:x] == nm[x]))
 	maxid <- cbind(nm, id)[,2]
 	id <- as.numeric(nm[which(maxid == max(maxid),arr.ind=TRUE)])
 	if(length(id) > 1L){
 		for(i in id)		  	
 		 dimnames(dm)[[1]][ok[i]] <- paste0(c(row.names(dm)[ok[i]],"*"),collapse=" ")	   
-		mi <- which.min(dm[ok[id],length(dm)])
+		
+	 	mi <- which.min(dm[ok[id],"value"])									# index of id best roots
 		dimnames(dm)[[1]][ok[id[mi]]] <- paste0(c(row.names(dm)[ok[id[mi]]],"*"),collapse="")
 	} else {
 		mi <- 1L
 		dimnames(dm)[[1]][ok[id]] <- paste0(c(row.names(dm)[ok[id]],"*"),collapse=" ")
 	}	
-	return( structure(row.names(dm),"id"=ok[id[mi]]) )
+	return( structure(row.names(dm), "id"=ok[id[mi]], "valid"=all((A[mi,])))) 
 }
 
 .evalRoots <- function(QD, par = NULL, opts = NULL)
@@ -106,74 +108,64 @@
 	if(is.null(par)){
 	   par <- try(do.call(rbind,lapply(QD,"[[","par")),silent=TRUE)
 	   stopifnot(is.matrix(par))
-    } 
-	xdim <- ncol(par)
-	X <- try(
-	      lapply(QD,
+    }
+		
+	# some criteria for selection of the 'best' root
+	# select the root for which most of the criteria below are minimized
+	X <- lapply(QD,
 			function(qd) {
-				if(.isError(qd)) 
-				  return (qd)
-			  								
-				ret <- c("minor"=0,									# if not pos. def. then this root is excluded
-						 "value"=qd$value,							
-						 "|score_max|"=max(abs(qd$score)))
-				
-				if(!is.null(qd$Iobs)){								# computed only for criterion `qle` not `mahal`					
-					ret[1] <- .isPosDef(qd$Iobs)					# check pos. def. for criterion `qle`
-					qIinv <- try(gsiInv(qd$I),silent=TRUE)			
-					if(!is.numeric(qIinv) || anyNA(qIinv) || .isError(qIinv) ) {		
-						message(.makeMessage("Failed to invert quasi-information."))
-						return(ret)						
-					}					
-					M <- qIinv %*% qd$Iobs
-					ret <-
-					 c(ret,
-						"|det|"=abs(1-det(M)),
-						"|max|"=max(abs(diag(M)-rep(1,xdim))),
-						"|trace|"=abs(1-sum(diag(M))/xdim))					
-				}
-				ret
-			}),silent=TRUE)
+			   if(.isError(qd)) return (qd)			  								
+			   try(
+			    c("minor"=.isPosDef(qd$Iobs) || as.integer(!all(sign(qd$Iobs) == sign(qd$I))),
+				  "det"= abs(1-det(qd$I)/det(qd$Iobs)), 
+				  "value"=-log(det(qd$I))+qd$value,			  
+				  "|score_max|"=max(abs(qd$score),na.rm=TRUE),				
+				  "lamI_min"=-min(eigen(qd$I)$values),
+				  "lamIm_max"=abs(max(geneigen(qd$varS,qd$I,only.values=TRUE),na.rm=TRUE)-1)
+  				  ), silent=TRUE)
+			})
 	
-	if(inherits(X,"try-error"))
-	  return(.qleError(message=.makeMessage("Could not compute consistency checks."),
-				call=sys.call(),error=X))
-	
-	ok <- which(sapply(X,function(x) !.isError(x) && is.numeric(x)))	
+	ok <- which(sapply(X, function(x) !.isError(x) ))	
 	if(length(ok) == 0L){
-		msg <- .makeMessage("Could not compute consistency checks.")
+		msg <- .makeMessage("Cannot find or compare plausible solutions.")
 		message(msg)
 		return(.qleError(message=msg,call=sys.call(),error=X))
   	}		
+	id <- 1L
+	dm <- NULL
+	M <- as.data.frame(do.call(rbind,X[ok]))
+	row.names(M) <- if(!is.null(par)) row.names(par)	      		   
 	
-	try({		
-	   id <- 1L
-	   dm <- NULL
-	   M <- as.data.frame(do.call(rbind,X[ok]))
-	   row.names(M) <- if(!is.null(par)) row.names(par)
-	   if(nrow(M)>1L) {		   
-	   	   dm <- cbind(par[ok,,drop=FALSE],M)
-		   nms <- .evalBestRoot(M,opts)
-		   id <- attr(nms,"id")
-		   row.names(dm) <- nms		   
-	   } else {		   
-		   dm <- cbind(par[ok,,drop=FALSE],M)		   
-	   }
-	   attr(dm,"id") <- id
- 	 }, silent=TRUE)
-		
+	# return data frame of X[ok]
+	dm <- cbind(par[ok,,drop=FALSE],M)
 	isErr <- which(!(1:length(X) %in% ok))
 	if(length(isErr)>0L) {
-	 attr(dm,"X") <- X[isErr]
-	 attr(dm,"isErr") <- isErr
- 	}
+		attr(dm,"X") <- X[isErr]
+		attr(dm,"isErr") <- isErr
+	}
+	
+	nms <- try(.evalBestRoot(M,opts),silent=TRUE)
+	if(!.isError(nms)){
+		row.names(dm) <- nms
+		id <- attr(nms,"id")
+		attr(dm,"id") <- id 
+		attr(dm,"valid") <- attr(nms,"valid")		
+	} else {
+		attr(dm,"par") <- par[1L,]
+		msg <- .makeMessage("Failed to select best solution.")
+		message(msg)
+		attr(dm,"error") <- structure(list(message = msg, call = match.call()), id=id, nms=nms)
+		return (dm)
+	}   	
+	
 	if(anyNA(id) || length(id) != 1L){	 
 	 msg <- .makeMessage("Cannot select any parameter as a root of quasi-score.")
 	 message(msg)
-	 attr(dm,"par") <- par[1,]
+	 attr(dm,"par") <- par[1L,]
 	 attr(dm,"error") <- structure(list(message = msg, call = match.call()),id=id)
- 	} else	attr(dm,"par") <- par[id,]
-	
+ 	} else	{
+		attr(dm,"par") <- par[id,]
+	}	
 	return (dm)	  
 }
 
@@ -190,18 +182,15 @@
 #' @param verbose   logical, \code{TRUE} for intermediate output
 #' 
 #' @return A data frame with columns named corresponding to each component of the investigated parameter,
-#'  `\code{value}`, `\code{minor}`, `\code{det}`, `\code{max}`,
-#'  `\code{trace}` and `\code{score_max}` (see vignette). The second column shows the leading minor of
-#'   the observed QI matrix which is not positive definite. If so, then the corresponding parameter estimate
-#'   cannot be consistent at least in theory. The rows show the corresponding values for each parameter passed by
-#'   `\code{par}`. 
+#'  `\code{minor}`, `\code{det}`, `\code{value}`, `\code{score_max}`, `\code{logdetI}`, `\code{lamI_min}`,
+#'  `\code{lamIm_max}` and `\code{varS_trace}` (see vignette for details). The first column shows the leading minor of
+#'   the observed QI matrix which is not positive definite. Estimated model parameters for which the observed QI matrix
+#'   is not positive definite are excluded from further root selection. 
 #' 
 #' @details Only for the quasi-likelihood approach the function inspects the (numerical) consistency of the found
 #'  parameters in `\code{par}` by comparing each observed quasi-information matrix with the expected one.
 #'  The degree of dissimilarity of both matrices is measured by certain scalar equivalent criteria (see vignette)
-#'  and the parameter for which these are smallest is chosen. The numerical upper bounds to determine a root of the quasi-score
-#'  are as follows: `\code{ftol_abs}` for the quasi-deviance criterion value and `\code{score_tol}` for the maximum of any of
-#'  the components of the quasi-score vector. 
+#'  and the parameter for which these are smallest is chosen. 
 #'  
 #' @examples 
 #'  data(qleresult)
@@ -471,7 +460,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 #' @author M. Baaske
 #' @rdname qleTest
 #' @export
-qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
+qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle",
 		             nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05, multi.start = 0L,
 					  na.rm = TRUE, cores = 1L, cl = NULL, iseed = NULL, verbose = FALSE)
 {				  
@@ -495,12 +484,13 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 	  else {
 		  stop("Expected numeric value or an object of class `call` in argument `nsim`.")
 	 }
-    args <- list(...)
+    args <- list(...)	
 	# basic checks
 	stopifnot(class(est) == "qle")
   	stopifnot(class(est$qsd)=="QLmodel")
-	Npoints <- nrow(est$qsd$qldata)						# number of multi-start points
-	xdim <- attr(est$qsd$qldata,"xdim")					# dimension of the parameter
+	Npoints <- nrow(est$qsd$qldata)							# number of multi-start points
+	xdim <- attr(est$qsd$qldata,"xdim")						# dimension of the parameter
+	criterion <- match.arg(criterion,c("qle","mahal"))  	# test statistic 
 			
 	# check arguments for local searches
 	id <- pmatch(names(args),names(formals(searchMinimizer)))
@@ -515,10 +505,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 	info <- attr(est,"optInfo")
 	if(est$qsd$var.type != "kriging")		
 	  opt.args <- c(opt.args,list(W=info$W,theta=info$theta))
-    # optional: overwrite last criterion (from estimation result)
-  	if(!is.null(criterion))
-	  est$qsd$criterion  <- criterion
-  
+     
 	# test at estimated parameter: simply overwrite `est$final`
 	# with something of class QSResult for testing another parameter
 	if(is.null(par0)){		
@@ -532,9 +519,11 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 		# a different test statistic, i.e. "mahal" or "qle" (set by `criterion`),
 		# is used as before for estimation!
 	  	par0 <- local$par
-    } else {
-		stopifnot(length(par0) == xdim)		
-	    # check input observed statistics
+    }
+		
+	if(est$qsd$criterion != criterion) {	
+		est$qsd$criterion <- criterion
+		# check input observed statistics
 		# default: use original data (statistics)
 	    if(!is.null(obs0)){
 		  obs0 <- unlist(obs0)
@@ -566,7 +555,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 			 message(paste0("Cannot continue testing due to ",local$message))
 			 return(local)
 		 }			
-	} 
+	}
 		
     # MC simulation of observed statistics
 	# if no observations supplied	
@@ -625,7 +614,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 					cl=cl), opt.args))
 	} else {																			# never multi-start but restart if provided another routine
 		if(verbose)
-			cat("Re-estimate parameters:","\n")
+		 cat("Re-estimate parameters:","\n")
 		#including restart if more than one method is given
 		do.call(doInParallel,
 			  c(list(X=obs[[1]],
@@ -648,7 +637,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = NULL,
 		warning(msg)
 		return(.qleError(message=msg,call=match.call(),error=RES))	   
 	} else if(length(ok) < length(RES))
-		message("Errors in re-estimating the parameters. Check attribute `optRes` and `info`.")
+		message("A total of ",length(ok), " failures in re-estimating the parameters. Check attribute `optRes` and `info`.")
   
 	# also check H_0?
 	# because sampling MC theta

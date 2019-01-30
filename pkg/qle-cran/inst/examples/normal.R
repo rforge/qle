@@ -39,20 +39,38 @@ obs <- structure(c("T1"=2,"T2"=1), class="simQL")
 qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean")
 
 # quasi scoring first try
-QS <- qscoring(qsd, x0=c("mu"=5,"sigma"=3.0))
+QS <- qscoring(qsd, x0=c("mu"=5,"sigma"=3.0),opts=list("pl"=10))
 print(QS)
+
+D <- quasiDeviance(QS$par,qsd,value.only=FALSE,verbose=TRUE)[[1]]
+
+# the following matrices should all be equal
+# original (unmodified) Quasi-Information
+D$I
+QS$I
+# observed Quasi-information
+D$Iobs
+QS$Iobs
+# modified Quasi-information
+D$varS
+QS$varS
 
 # force only global searches and testing
 options(mc.cores=8L)
 options(qle.multicore="mclapply")
 
+#debug(qle)
 OPT <- qle(qsd,
 		simfunc,		
 		nsim=10,
-		global.opts=list("maxeval"=25),
-		local.opts=list("lam_max"=1e-3,"useWeights"=TRUE,"test"=TRUE),
+		global.opts=list("maxeval"=30),
+		local.opts=list("lam_max"=1e-3,
+				"weights"=c(0.5),
+				"nextSample"="logdet",
+				"test"=FALSE),
 		pl=5L, cl=cl, plot=TRUE)
 
+qsd <- OPT$qsd
 print(OPT)
 
 OPT$final

@@ -41,7 +41,7 @@ void fnQS(double *x, qfs_options qfs, double &f, int fntype, int &info) {
   	 info=qlm->info;
   	 return;
   }
-  if(fntype){
+  if(fntype) {
     f=qlm->intern_qfValue();								// no scaling for quasi-deviance
     info=qlm->info;
     if(info != NO_ERROR){
@@ -80,7 +80,7 @@ void fnGrad(qfs_options qfs, double *g, double *d, int fntype, int &info){
 	      d[i] = typf[i]*score[i];				// scaled d is used to compute Newton direction
 	      q[i] = -typf[i]*d[i]; 				// gradient of norm^2 of quasi-score
 	  }
-	  matmult(qlm->qimat,n,n,q,n,1,g,info);
+	  matmult(qlm->varS,n,n,q,n,1,g,info);
 	  if(info > 0){
 	    LOG_WARNING(info,"matmult")
  	    WRR("`NaN` detected in gradient function 'fnGrad'.")
@@ -118,14 +118,14 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     qfs_options_t qfs(&qlm,R_opt);
 
     /* scoring iteration */
-    double fval=R_PosInf, qnorm=R_PosInf, qval=R_PosInf;
+    double fval=R_PosInf, qnorm=R_PosInf;
     qfs_result status = qfscoring(xsol,xdim,fval,fntype,&qfs);
 
     /* return objects */
-    SEXP R_S, R_jac, R_I, R_Iobs=R_NilValue;
+    SEXP R_S, R_jac, R_I, R_varS, R_Iobs;
     PROTECT(R_S = allocVector(REALSXP,xdim));
     ++nProtected;
-    PROTECT(R_I = allocMatrix(REALSXP,xdim,xdim));
+    PROTECT(R_varS = allocMatrix(REALSXP,xdim,xdim));
     ++nProtected;
     PROTECT(R_jac = allocMatrix(REALSXP,xdim,qlm.nCov));
     ++nProtected;
@@ -147,14 +147,19 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 		qnorm = 0.5*sum;
 	} else {
 		qnorm = fval;									/* switch values: fval as norm^2 of scaled quasi-score */
-		fval = qlm.qfValue(qlm.score,qlm.qimat);		/* always quasi-deviance here */
+		fval = qlm.qfValue(qlm.score,qlm.varS);			/* always (modified) quasi-deviance here */
 	}
 
     /* copy results  */
     MEMCPY(REAL(R_S),qlm.score,xdim);
-    MEMCPY(REAL(R_I),qlm.qimat,xdim*xdim);
     MEMCPY(REAL(R_jac),qlm.jac,xdim*qlm.nCov);
+    MEMCPY(REAL(R_varS),qlm.varS,xdim*xdim);
 
+    /* variance quasi-score */
+	PROTECT(R_I = allocMatrix(REALSXP,qlm.dx,qlm.dx)); ++nProtected;
+	qlm.intern_quasiInfo(qlm.jac,REAL(R_I));
+
+	// Iobs must be called as the last statement
     if(qfs.doIobs){
     	/* observed quasi-information matrix
     	 * as the Jacobian of the quasi-score vector (not scaled) */
@@ -165,9 +170,6 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
        	  XWRR( info, "inter_quasiObs")
     }
 
-    /* add prediction variances to return list */
-    SEXP R_sig2 = R_NilValue, R_varS = R_NilValue;
-
     // names variance matrix
     SEXP R_VmatNames;
     PROTECT(R_VmatNames = allocVector(VECSXP,2));
@@ -176,26 +178,22 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     SET_DIMNAMES_MATRIX(R_VmatNames,R_obs)
 
     // not for dual kriging: prediction variances would not be available
+    /* add prediction variances to return list */
+    SEXP R_sig2 = R_NilValue;
     if(qlm.glkm->krigType) {
       	PROTECT(R_sig2 = allocVector(REALSXP,qlm.nCov));
       	++nProtected;
       	MEMCPY(REAL(R_sig2),qlm.glkm->krigr[0]->sig2,qlm.nCov);
        	setAttrib(R_sig2,R_NamesSymbol,getAttrib(R_obs,R_NamesSymbol));
-
-       	/* variance quasi-score */
-       	PROTECT(R_varS = allocMatrix(REALSXP,qlm.dx,qlm.dx));
-       	++nProtected;
-       	qlm.intern_varScore(REAL(R_varS));
-       	qval = qlm.qfValue(REAL(R_S),REAL(R_varS));
     }
 
 #ifdef DEBUG
     Rprintf("value: %f \n", fval);
     Rprintf("Qnorm: %f \n", qnorm);
-    Rprintf("qval: %f \n", qval);
     printMatrix("vmat",qlm.qld->vmat, &xdim,&xdim);
     printMatrix("jac",REAL(R_jac), &xdim,&qlm.nCov);
     printMatrix("I",REAL(R_I), &xdim,&xdim);
+    printMatrix("varS",REAL(R_varS), &xdim,&xdim);
     printVector("start:", xsol, &xdim);
     printVector("score:", REAL(R_S), &xdim);
 #endif
@@ -205,12 +203,13 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     ++nProtected;
     SET_DIMNAMES_MATRIX(R_dimnames,R_start)
     setAttrib(R_I, R_DimNamesSymbol, R_dimnames);
+    setAttrib(R_varS, R_DimNamesSymbol, R_dimnames);
     setAttrib(R_sol, R_NamesSymbol, getAttrib(R_start,R_NamesSymbol));
 
     static const char *nms[] =
      {"convergence", "message", "iter", "value", "par",
      "score", "sig2", "I", "Iobs", "varS", "start", "bounds", "Qnorm",
-	 "qval", "method", "criterion", ""};
+	 "method", "criterion", ""};
 
     SEXP R_ret = R_NilValue;
     PROTECT(R_ret = mkNamed(VECSXP, nms));
@@ -229,9 +228,8 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     SET_VECTOR_ELT(R_ret, 10, R_start);
     SET_VECTOR_ELT(R_ret, 11, ScalarInteger(qfs.bounds));
     SET_VECTOR_ELT(R_ret, 12, ScalarReal(qnorm));
-    SET_VECTOR_ELT(R_ret, 13, ScalarReal(qval));
-    SET_VECTOR_ELT(R_ret, 14, mkString("qscoring"));
-    SET_VECTOR_ELT(R_ret, 15, mkString("qle"));
+    SET_VECTOR_ELT(R_ret, 13, mkString("qscoring"));
+    SET_VECTOR_ELT(R_ret, 14, mkString("qle"));
 
     setVmatAttrib(&qlm, R_VmatNames, R_ret);
     SET_CLASS_NAME(R_ret,"QSResult")
@@ -279,7 +277,7 @@ qfs_result qfscoring(double *x,			 	/* start */
 		  delta=1.0, slope=0.0, den=0.0, rellen=0.0,
 		  *d=0, *xstart=0, *xold=0, *g=0, stepmin=1e-12,
 		  *typx=qfs->typx, *typf=qfs->typf,				/* already inverted (see Dennis & Schnabel) */
-		  *qimat=qlm->qimat, *score=qlm->score;
+		  *varS=qlm->varS, *score=qlm->score;
 
    CALLOCX(g,n,double);
    CALLOCX(d,n,double);
@@ -327,13 +325,13 @@ qfs_result qfscoring(double *x,			 	/* start */
 
    fold=f;
    for (i=0;i<n;i++) xstart[i]=xold[i]=x[i];
-   double *qlqimat = qlm->qlsolve.qimat;
+   double *qlvarS = qlm->qlsolve.varS;
    qfs_result status = QFS_CONVERGENCE;
 
    /*! optimization loop */
    for(niter=0; niter < Nmax; ++niter) {
 	     /* solve for direction d = I^{-1} Q */
-	     gsiSolve(qimat,n,d,1,qlqimat,info,Chol);
+	     gsiSolve(varS,n,d,1,qlvarS,info,Chol);
          if(info != 0){
         	 FREE_WORK
         	 PRINT_MSG("Cannot compute quasi-score correction vector.")
