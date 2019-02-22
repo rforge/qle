@@ -373,7 +373,7 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 			VTX <- varCHOLmerge(Lm,NULL,var.type,doInvert,Tnames)		
 			lapply(seq_len(NROW(Lm)),
 				function(i) {
-					Sig2 <- try(.chol2var(as.numeric(3.0*Lsig[i,])),silent=TRUE)
+					Sig2 <- try(.chol2var(as.numeric(Lsig[i,])),silent=TRUE)
 					if(inherits(Sig2,"try-error")){
 					    msg <- paste0("'chol2var' failed to compute the kriging variance of (kriging) variance matrix models.")
 						message(msg)
@@ -383,8 +383,8 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 					res <- 
 					 structure(
 					  list("VTX"=V$VTX,
-						   "var"=V$VTX+Sig2, 			# with kriging variance of statistics mean 'sig2'				   				  
-						   "sig2"=Sig2)					# a matrix: kriging variances of variance matrix models
+						   "var"=V$VTX+diag(diag(Sig2),nstat), 	# with kriging variance of statistics mean 'sig2'				   				  
+						   "sig2"=diag(Sig2))									# a matrix: kriging variances of variance matrix models
 		   			  )					  
 					  if(doInvert) {
 						  res$inv <- try(do.call("gsiInv",list(res$var)),silent=TRUE)
@@ -620,7 +620,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 		# (for a cluster) parallized version of quasiDeviance
 		
 		ret <-
-		  if(length(points) > 999 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
+		  if(length(points) >= 100 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
 				m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)		
 				M <- .splitList(points, m)
 				names(M) <- NULL
@@ -779,7 +779,7 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 						   "useCV"=!is.null(cvm),
 						   "useSigma"=useSigma)  			# use as constant Sigma 
 		   ret <-
-		    if(length(points) > 999 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
+		    if(length(points) >= 100 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
 			   m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)			   				
 			   M <- .splitList(points, m)
 			   names(M) <- NULL

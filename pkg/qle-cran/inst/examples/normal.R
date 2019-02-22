@@ -10,10 +10,9 @@ clusterSetRNGStream(cl,1234)
 # options(qle.multicore="mclapply")
 # options(mc.cores=2L) 
 
-# define a statistical model bysimulation function
 simfunc <- function(pars) {	
 	x <- rnorm(10,mean=pars["mu"],sd=pars["sigma"])    
-	c("T1"=median(x),"T2"=mad(x))	
+	c("T1"=mean(x),"T2"=var(x))	
 }
 
 # box contraints defining the parameter space
@@ -25,7 +24,7 @@ theta0 <- c("mu"=2,"sigma"=1)
 
 # simulate model at a minimum of required design points
 sim <- simQLdata(sim=simfunc,nsim=10,N=12,
-		method="maximinLHS",lb=lb,ub=ub)	 
+		method="maximinLHS",lb=lb,ub=ub)
 
 # set number of simulations manually
 # since otherwise only `nsim` would be used to 
@@ -42,60 +41,9 @@ qsd <- getQLmodel(sim,lb,ub,obs,var.type="wcholMean")
 QS <- qscoring(qsd, x0=c("mu"=5,"sigma"=3.0),opts=list("pl"=10))
 print(QS)
 
-D <- quasiDeviance(QS$par,qsd,value.only=FALSE,verbose=TRUE)[[1]]
-
-# the following matrices should all be equal
-# original (unmodified) Quasi-Information
-D$I
-QS$I
-# observed Quasi-information
-D$Iobs
-QS$Iobs
-# modified Quasi-information
-D$varS
-QS$varS
-
-# force only global searches and testing
-options(mc.cores=8L)
-options(qle.multicore="mclapply")
-
-#debug(qle)
-OPT <- qle(qsd,
-		simfunc,		
-		nsim=10,
-		global.opts=list("maxeval"=30),
-		local.opts=list("lam_max"=1e-3,
-				"weights"=c(0.5),
-				"nextSample"="logdet",
-				"test"=FALSE),
-		pl=5L, cl=cl, plot=TRUE)
-
-qsd <- OPT$qsd
-print(OPT)
+OPT <- qle(qsd,	simfunc, nsim=10, global.opts=list("maxiter"=10,"maxeval"=25),
+		local.opts=list("lam_max"=1e-3), pl=2L, cl=cl)
 
 OPT$final
 OPT$why
 OPT$ctls
-
-## testing with criterion `mahal`
-## here: no Iobs for best root selection
-S0 <- multiSearch(theta0, qsd=OPT$qsd, method=c("bobyqa","cobyla","direct"),
-		 nstart=25,	multi.start=TRUE, optInfo=TRUE, pl=10, verbose=TRUE)
- 
-## found roots are all the same up to 
-## numerical precision
-attr(S0,"roots")
-
-# compare estimated variance matrix of statistics
-obs0 <- simQLdata(simfunc,X=OPT$par,nsim=1000,mode="matrix")[[1]]
-var(obs0)
-attr(OPT$final,"Sigma")
-
-stopCluster(cl)
-
-#qsd$QS <- QS
-#qsd$OPT <- OPT
-#qsd$sim <- sim
-#qsd$simfn <- simfunc
-
-#save(qsd,file="normal.rda")

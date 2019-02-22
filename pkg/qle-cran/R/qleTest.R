@@ -12,13 +12,18 @@
 # collect test results
 .qleTest <- function(obj,alpha = 0.05) {	
 	sb <- attr(obj,"sb")
-	Sb <- attr(obj,"Sb")	
+	Sb <- attr(obj,"Sb")
 	pb <- (1+sum(Sb>=sb))/(length(Sb)+1)  # similar to : 1-ecdf(Sb)(sb)
 	qt <- try(quantile(Sb,1-alpha,na.rm=TRUE),silent=TRUE)
 	if(inherits(qt,"try-error"))
 	 stop("Could not compute quantiles of test statistic.")	
+ 	
+    # local quantiles of quasi-deviance test statistic for obs0
+    qSt <- try(quantile(attr(obj,"St"),1-alpha,na.rm=TRUE),silent=TRUE)
+ 	if(inherits(qSt,"try-error"))
+	 stop("Could not compute quantiles of test statistic.")
 	
-	ans <- list()
+    ans <- list()
 	ans$param <- cbind(obj[c("par","se","rmse","bias","mean")])
 	dimnames(ans$param) <- list(row.names(obj),
 			c("Estimate", "Std. Error", "RMSE", "Bias", "Mean"))
@@ -30,6 +35,7 @@
 	ans$tname <- tname
 	attr(ans$test,"Sb") <- Sb
 	attr(ans$test,"qt") <- qt
+	attr(ans$test,"qSt") <- qSt
 	attr(ans$test,"passed") <- (sb < qt)
 	
 	return(
@@ -66,7 +72,7 @@
 	  ok <- which(notNa==TRUE)
 	  message(.makeMessage("'Observed quasi-information is not positive definite so cannot use it."))	  
     }   
-	notOk <- which(!apply(A[ok,2:3,drop=FALSE],1,all))
+	notOk <- which(!apply(A[ok,2:3,drop=FALSE],1,any))
 	if(is.numeric(notOk) && length(notOk)>0L){
 		if(length(notOk) < length(ok)) {
 			ok <- ok[-notOk]				
@@ -118,7 +124,7 @@
 			   try(
 			    c("minor"=.isPosDef(qd$Iobs) || as.integer(!all(sign(qd$Iobs) == sign(qd$I))),
 				  "det"= abs(1-det(qd$I)/det(qd$Iobs)), 
-				  "value"=-log(det(qd$I))+qd$value,			  
+				  "value"=0.5*(log(det(qd$varS))+qd$value),			  
 				  "|score_max|"=max(abs(qd$score),na.rm=TRUE),				
 				  "lamI_min"=-min(eigen(qd$I)$values),
 				  "lamIm_max"=abs(max(geneigen(qd$varS,qd$I,only.values=TRUE),na.rm=TRUE)-1)
@@ -245,20 +251,26 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 }
 
 # intern use only:'value' is modified QD/Mahalanobis distance as test statistic
-.rootTest <- function(par, value, I, obs, alpha, test, ...,
+.rootTest <- function(par, value, I, obs, alpha, criterion, ...,
 		       			multi.start = 0L, Npoints = 10, cl = NULL,
 			   			  na.rm = TRUE, pl = 0L, verbose = FALSE){	
 	aiqm <- NULL
 	mScore <- NULL	
 	xdim <- length(par)
-	opt.args <- list(...)
+	
+	args <- list(...)
 	hasError <- integer(0)	
 	stopifnot(is.numeric(value))
+		
+	# check arguments for local searches
+	id <- pmatch(names(args),names(formals(searchMinimizer)))
+	# check `searchMinimizer' args 
+	opt.args <- args[which(!is.na(id))]	
 	
 	RES <- 
 	 if(multi.start > 0L){
 		if(verbose)
-		   cat("Re-estimate parameters (possibly use multi-start approach):","\n")
+		   cat("Re-estimate parameters (possibly use multi-start approach):","\n")	  
 		# multi start root finding, no nested parallel execution
 		# including restart if more than one method is given 
 		if(is.null(opt.args$nstart))
@@ -290,9 +302,9 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
     # check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L))
 	if(length(ok) == 0L){
-		stop(.makeMessage("All re-estimations failed or did not converge.","\n"))						
+		stop(.makeMessage("All re-estimations of model parameters failed.","\n"))						
 	} else if(length(ok) < length(RES)){
-		message(paste0("A total of ",length(RES)-length(ok)," re-estimations failed or did not converge."))							
+		message(paste0("A total of ",length(RES)-length(ok)," re-estimations failed."))							
 	}	
 	# average inverse QI
 	invI <- 
@@ -321,11 +333,11 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	mScore <- do.call(rbind,lapply(RES[ok],function(x) x$score))
 	has.na <- (rowSums(is.na(cbind(mScore,mpars))) > 0L)	
 	
-	if(na.rm && any(has.na)) {
+	if(any(has.na) && na.rm) {		
 		ok <- ok[-which(has.na)]
 		mpars <- mpars[ok,,drop=FALSE]
 		mScore <- mScore[ok,,drop=FALSE]
-		warning("Removed `NA` values from quasi-scores.")
+		warning("Removed `NA` values from quasi-score vectors.")
 	}
 	# average quasi-score
 	mScore <- try(colMeans(mScore),silent=TRUE)
@@ -339,6 +351,25 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	qi <- try(gsiInv(I),silent=TRUE)
 	if(inherits(qi,"try-error") || anyNA(qi))
 		message("Inversion of quasi-information matrix failed")
+		 	
+	St <-
+	 tryCatch({			
+		if(criterion == "qle"){		
+			id <- pmatch(names(args),names(formals(quasiDeviance)))			
+			fargs <- args[which(!is.na(id))]	
+			do.call(quasiDeviance,c(list(mpars,value.only=TRUE,cl=cl,verbose=verbose),fargs))									 
+		} else {
+			id <- pmatch(names(args),names(formals(mahalDist)))			
+			fargs <- args[which(!is.na(id))]
+			do.call(mahalDist,c(list(mpars,inverted=TRUE,value.only=TRUE,cl=cl,verbose=verbose),fargs))			
+		}
+	}, error = function(e) {
+		msg <- .makeMessage("Error in criterion function evaluation due to ",conditionMessage(e))				 
+		.qleError(message=msg,call=sys.call(),error=e)		
+	})
+	if(.isError(St)){
+	  message(paste0("Cannot continue testing for an approximate solution: ",St$message))	
+	}
 	
 	# get efficient score test (with MC parameters)
 	B <- structure(
@@ -348,11 +379,11 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 						  "rmse"=sqrt(diag(msem)),
 						  "bias"=colMeans(t(t(mpars)-par)),
 						  "mean"=colMeans(mpars))),
-			"sb"=value, "Sb"=tvals,
-			"test"=test)
+			"sb"=value, "Sb"=tvals, "St"=St, "test"=criterion)
 	
 	relEF <-
 	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {
+		 ## TODO: which one is better?
 		 #try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
 		  try(abs(1 - sqrt(diag(qi))/sqrt(diag(msem))),silent=TRUE)
 	} else {
@@ -363,9 +394,11 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	# had errors
 	hasError <- which(!(1:length(RES) %in% ok))
 	if(length(hasError) > 0L)	
-		message(paste0("A total of ",length(hasError)," re-estimations failed."))
+	 message(paste0("A total of ",length(hasError)," re-estimations failed in testing local minimizer."))
 		
-	res <- .qleTest(B,alpha)					# test results
+	res <- try(.qleTest(B,alpha),silent=TRUE)					# test results
+	if(inherits(res,"try-error"))
+	 message(paste0('Test result has errors.'))
 	res$par <- par
 	
 	# results
@@ -375,12 +408,14 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 			qi=qi,								# inverse QI at estimated theta
 			relEF=relEF,
 			obs=NULL,							# (MC) observations
+			optRes=RES[ok],							# all optimization results
 			mean.score=mScore,					# average score/gradient
-			criterion=test,
-		info=list(badInv=which(badInv), 			# inversion errors
-					hasNa=which(has.na), 			# indices of NA parameters 
-					hasError=hasError,
-					iseed=NULL),																
+			mpars=mpars,						# re-estimated parameters excluding errors
+			criterion=criterion,
+		info=list(badInv=which(badInv), 		# inversion errors
+				  hasNa=which(has.na), 			# indices of NA parameters 
+				  hasError=hasError,
+				  iseed=NULL),																
 	class=c("qleTest"))	
 }
 
@@ -670,7 +705,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle",
 	mpars <- do.call(rbind,lapply(RES[ok],function(x) x$par))
 	mScore <- do.call(rbind,lapply(RES[ok],function(x) x$score))	
 	has.na <- (rowSums(is.na(cbind(mScore,mpars))) > 0L)	
-	if(na.rm && any(has.na)) {
+	if(any(has.na) && na.rm) {
 		ok <- ok[-which(has.na)]
 		mpars <- mpars[ok,,drop=FALSE]
 		mScore <- mScore[ok,,drop=FALSE]
@@ -683,7 +718,11 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle",
  	# some (empirical) measures	
 	msem <- .MSE(mpars,local$par)
 		
-	# value of test statistic at re-estimated parameters			
+	## TESTING: value of test statistic at re-estimated parameters			
+	#tvals <- sapply(RES[ok],function(x) as.numeric(t(x$score)%*%gsiSolve(x$varS-x$I)%*%x$score)) 
+	#local$value <- as.numeric(t(local$score)%*%gsiSolve(local$varS-local$I)%*%local$score)
+	
+	## value of test statistic at re-estimated parameters
 	tvals <- sapply(RES[ok],"[[","value")	
 	stopifnot(is.numeric(c(local$value,tvals)))
 	
@@ -717,6 +756,8 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle",
 		NA
 	 }
 	res <- .qleTest(B,alpha)					# test results
+	if(inherits(res,"try-error"))
+		message(paste0('Test result has errors.'))
 	res$par <- est$par
 	
 	# results
@@ -726,8 +767,9 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle",
 			qi=qi,								# inverse QI at estimated theta
 	    	relEF=relEF,
 			obs=if(verbose) obs else NULL,		# (MC) observations
-	    	optRes=if(verbose) RES else NULL,	# optimization results
+	    	optRes=if(verbose) RES else NULL,	# all optimization results
 			mean.score=mScore,					# average score/gradient
+			mpars=mpars,						# re-estimated parameters
 			criterion=est$qsd$criterion,			
 	  info=list(badInv=which(badInv), 			# inversion errors
 			  	hasNa=which(has.na), 			# indices of NA parameters 

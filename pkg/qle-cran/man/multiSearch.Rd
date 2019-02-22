@@ -5,8 +5,8 @@
 \title{A multistart version of local searches for parameter estimation}
 \usage{
 multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
-  multi.start = FALSE, cores = 1L, cl = NULL, pl = 0L,
-  verbose = FALSE)
+  multi.start = FALSE, isLocal = FALSE, cores = 1L, cl = NULL,
+  pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{x0}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
@@ -20,6 +20,8 @@ multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 \item{optInfo}{logical, \code{FALSE} (default), whether to store original local search results}
 
 \item{multi.start}{logical, \code{FALSE} (default), whether to perform a multistart local search always otherwise only if first local search did not converge}
+
+\item{isLocal}{logical, \code{FALSE} (default), whether to perform a multistart local search if found solution seems to be invalid}
 
 \item{cores}{integer, number of local CPU cores used, default is \code{options(mc.cores,1L)}}
 

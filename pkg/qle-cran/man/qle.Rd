@@ -216,7 +216,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
   \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
-  \item{\code{nextSample}:}{ either "\code{score}" (default) or "\code{logdet}" (see details)} 
+  \item{\code{nextSample}:}{ either "\code{LQS}" (default) or "\code{WQD}" (see details)} 
   }
 
  The following controls `\code{global.opts}` for the global search phase are available:   
@@ -229,7 +229,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
         The algorithm terminates	its value drops below after a number of `\code{global.opts$NmaxCV}` 
         consecutive iterations.}
 	 \item{\code{xtol_rel}:}{ relative change of found minimizer of the criterion function or root of quasi-score.}
-	 \item{xscale}{ scaling factors for `\code{x0}`, default set to \code{rep(1,length(x0))}, i.e. typical magnitude of parameter components}	
+	 \item{\code{ftol_rel}:}{ relative change of the criterion function value.}
  \item{\code{maxiter}:}{ maximum allowed global phase iterations }
 	 \item{\code{maxeval}:}{ maximum allowed global and local iterations }
 	 \item{\code{sampleTol}:}{ minimum allowed distance between sampled locations at global phase}	

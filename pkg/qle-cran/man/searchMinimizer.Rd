@@ -6,8 +6,8 @@
 \usage{
 searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
   opts = list(), control = list(), ..., obs = NULL,
-  optInfo = FALSE, check = TRUE, restart = TRUE, pl = 0L,
-  verbose = FALSE)
+  optInfo = FALSE, check = TRUE, minimize = TRUE, restart = TRUE,
+  pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{x0}{(named) numeric vector, the starting point}
@@ -27,6 +27,8 @@ searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
 \item{optInfo}{logical, \code{FALSE} (default), not yet used argument (ignored)}
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
+
+\item{minimize}{logical, \code{TRUE} (defualt), unless \code{method} is not "\code{qscoring}", whether to minimize or maximize the quasi-deviance}
 
 \item{restart}{logical, \code{TRUE} (default), whether to restart optimization in case of non convergence}
 

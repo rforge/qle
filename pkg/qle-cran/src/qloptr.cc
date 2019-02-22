@@ -37,6 +37,8 @@ static R_CallMethodDef CallEntries[] = {
     CALLDEF(finalizeQL,0),
     CALLDEF(qDValue,1),
 	CALLDEF(mahalValue,1),
+	CALLDEF(internQD,1),
+	CALLDEF(internMD,1),
 	CALLDEF(mahalanobis,8),
 	CALLDEF(quasiDeviance,8),
     CALLDEF(covMatrix,2),

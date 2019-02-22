@@ -355,6 +355,86 @@ SEXP qDValue(SEXP R_point) {
   return ScalarReal(qlm_global->intern_qfScoreStat(REAL(AS_NUMERIC(R_point))));
 }
 
+SEXP internQD(SEXP R_point) {
+  if(!qlm_global)
+    ERR("Pointer to `qldata` object not set (NULL).");
+
+  int info = 0, dx = qlm_global->dx,  nCov = qlm_global->nCov;
+  SEXP R_sig2, R_Iobs, R_S, R_jac, R_I, R_varS;
+  PROTECT(R_S = allocVector(REALSXP,dx));
+  PROTECT(R_sig2 = allocVector(REALSXP,nCov));
+  PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
+  PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
+  PROTECT(R_varS = allocMatrix(REALSXP,dx,dx));
+  PROTECT(R_Iobs = allocMatrix(REALSXP,dx,dx));
+
+  double *x = REAL(R_point);
+  double fval = qlm_global->qfScoreStat(x,REAL(R_jac),REAL(R_S),REAL(R_varS));
+
+  if( (info = qlm_global->intern_quasiInfo(REAL(R_jac),REAL(R_I))) != NO_ERROR)
+   XWRR(info, "intern_quasiInfo")
+
+  if( (info = qlm_global->intern_quasiObs(x,REAL(R_S),REAL(R_Iobs))) != NO_ERROR)
+   XWRR(info, "intern_quasiObs")
+
+  /* copy prediction variance */
+  MEMCPY(REAL(R_sig2),qlm_global->glkm->krigr[0]->sig2,nCov);
+
+  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac","varS", "Iobs", ""};
+  SEXP R_ans = R_NilValue;
+  PROTECT(R_ans = mkNamed(VECSXP, nms));
+  SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
+  SET_VECTOR_ELT(R_ans, 1, R_point);
+  SET_VECTOR_ELT(R_ans, 2, R_I);
+  SET_VECTOR_ELT(R_ans, 3, R_S);
+  SET_VECTOR_ELT(R_ans, 4, R_sig2);
+  SET_VECTOR_ELT(R_ans, 5, R_jac);
+  SET_VECTOR_ELT(R_ans, 6, R_varS);
+  SET_VECTOR_ELT(R_ans, 7, R_Iobs);
+
+  UNPROTECT(7);
+  return R_ans;
+}
+
+SEXP internMD(SEXP R_point) {
+  if(!qlm_global)
+     ERR("Pointer to `qldata` object not set (NULL).");
+
+  int info = 0, dx = qlm_global->dx,  nCov = qlm_global->nCov;
+  SEXP R_sig2, R_Iobs, R_S, R_jac, R_I, R_varS;
+  PROTECT(R_S = allocVector(REALSXP,dx));
+  PROTECT(R_sig2 = allocVector(REALSXP,nCov));
+  PROTECT(R_I = allocMatrix(REALSXP,dx,dx));
+  PROTECT(R_jac = allocMatrix(REALSXP,dx,nCov));
+  PROTECT(R_varS = allocMatrix(REALSXP,dx,dx));
+  PROTECT(R_Iobs = allocMatrix(REALSXP,dx,dx));
+
+  double *x = REAL(R_point);
+  double fval = qlm_global->mahalDist(x,REAL(R_jac),REAL(R_S),REAL(R_I));
+
+  if( (info = qlm_global->intern_varScore(REAL(R_jac),REAL(R_varS))) != NO_ERROR)
+    XWRR(info,"intern_varScore")
+
+  if( (info = qlm_global->intern_quasiObs(x,REAL(R_S),REAL(R_Iobs))) != NO_ERROR)
+ 	XWRR(info,"intern_quasiObs")
+  /* copy prediction variance */
+  MEMCPY(REAL(R_sig2),qlm_global->glkm->krigr[0]->sig2,nCov);
+
+  const char *nms[] = {"value", "par", "I", "score", "sig2", "jac", "varS", "Iobs", ""};
+  SEXP R_ans = R_NilValue;
+  PROTECT(R_ans = mkNamed(VECSXP, nms));
+  SET_VECTOR_ELT(R_ans, 0, ScalarReal(fval));
+  SET_VECTOR_ELT(R_ans, 1, R_point);
+  SET_VECTOR_ELT(R_ans, 2, R_I);
+  SET_VECTOR_ELT(R_ans, 3, R_S);
+  SET_VECTOR_ELT(R_ans, 4, R_sig2);
+  SET_VECTOR_ELT(R_ans, 5, R_jac);
+  SET_VECTOR_ELT(R_ans, 6, R_varS);
+  SET_VECTOR_ELT(R_ans, 7, R_Iobs);
+
+  UNPROTECT(7);
+  return R_ans;
+}
 
 /**
  * \brief
@@ -593,6 +673,7 @@ double ql_model_s::mahalDist(double *x, double *jac, double *score, double *qima
 		  }
 		  for(int k = 0; k < nCov; ++k)
 	  	  	qld->tmp[k] = qld->qtheta[k];
+
 		  /* use restored diagonal terms plus kriging variances
 		   * for average approximation of variance matrix */
 		  if(qld->qlopts.varType == MEAN) {
@@ -870,18 +951,13 @@ double ql_model_s::intern_wlogdet(double *x, double w) {
 	  WRR("`NaN` detected in `intern_qfScoreStat`.")
 	  return R_NaN;
 	}
-	if ( (info = intern_quasiInfo(jac,qimat)) != NO_ERROR){
-		 LOG_ERROR(info,"intern_quasiInfo")
-		 return info;
-	}
-	double sum = logdet(qimat, dx, 1, info);
+	double sum = logdet(varS, dx, 1, info);
 	if(info != NO_ERROR) {
 	  WRR("`NaN` detected in `logdet`.")
 	  LOG_ERROR(info,"intern_wlogdet")
 	  return R_NaN;
 	}
-
-	return w*sum - (1.0-w)*std::log(val);
+	return w*sum + (1.0-w)*val;
 }
 
 double ql_model_s::intern_wlogdetMahal(double *x, double w) {
@@ -892,18 +968,18 @@ double ql_model_s::intern_wlogdetMahal(double *x, double w) {
 	}
 
 	/* log determinant of modified quasi-info */
-	double sum = logdet(qimat, dx, 1, info);
+	double sum = logdet(varS, dx, 1, info);
 	if(info != NO_ERROR) {
 	  WRR("`NaN` detected in `logdet`.")
 	  LOG_ERROR(info,"intern_wlogdetMahal")
 	  return info;
 	}
 
-	return w*sum - (1.0-w)*std::log(val);
+	return w*sum + (1.0-w)*val;
 }
 
 /**
- * (Originally) for computation of modified quasi-deviance.
+ * Computation of modified quasi-deviance.
  * Use variance of quasi-score (varS) as weighting matrix instead of QI.
  */
 double ql_model_s::qfValue(double *score, double *varS) {
@@ -1047,7 +1123,7 @@ wrap_intern_quasiScore(double *x, void *data, double *score, int &err ) {
    qlm->quasiScore(krig_tmp->mean,qld->jactmp,qld->vmat_work,score,err);
 
    if(err != NO_ERROR)
-	 LOG_ERROR(err,"quasiScore");
+	 LOG_ERROR(err,"wrap_intern_quasiScore");
 }
 
 /** \brief Wrapper function: intern_kriging
@@ -1084,7 +1160,7 @@ ql_model_s::varMatrix(double *x, double *vmat, int &err) {
 		   return;
 	   }
 
-	   /* use kriging variances of variance matrix kriging models */
+	   // use kriging variances of variance matrix kriging models
 	   double *s2 = varkm->krigr[0]->sig2,
 			  *vm = qld->vmat_work;
 
@@ -1093,7 +1169,7 @@ ql_model_s::varMatrix(double *x, double *vmat, int &err) {
 	    for(k = 0; k < varkm->nCov; k++) {
 		   tmp = std::sqrt(s2[k]);
 		   if(R_FINITE(tmp)) {
-			 s2[k] = 3.0*tmp;
+			 s2[k] = tmp;
 		   } else {
 			   WRR("`NaN` values detected in `varMatrix`.")
 			   err = NaN_ERROR;
@@ -1107,8 +1183,16 @@ ql_model_s::varMatrix(double *x, double *vmat, int &err) {
 	    if(err != NO_ERROR) return;
 
 	    // add back transformed variances (for each component of the matrix)
-	    for(k = 0; k < nCov2; k++)
-		 vmat[k] += vm[k];
+	    //for(k = 0; k < nCov2; k++)
+		// vmat[k] += vm[k];
+
+	    // only diagonal components
+	    err = addMatrixDiag(vmat, nCov, vm);
+	    if(err != NO_ERROR) {
+	    	err = NaN_ERROR;
+	        LOG_ERROR(err,"addMatrixDiag");
+	    	return;
+	    }
 
 #ifdef DEBUG
 	    printVector("varkm->mean",varkm->krigr[0]->mean,&nCov);

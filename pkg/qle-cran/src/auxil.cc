@@ -276,6 +276,19 @@ int addVar(double *sig2, int nc, double *vmat, double *work) {
   return have_na;
 }
 
+int addMatrixDiag(double *vmat, int nx, double *w) {
+  int have_na=0;
+  double *pq = vmat;
+  for(int k=0;k<nx; ++k,pq+=nx+1){
+	  *pq += w[k*nx+k];
+	  if(!R_FINITE(*pq))
+	     { have_na=1; break;}
+  }
+  if(have_na>0)
+ 	WRR("`NaN` detected in `add2diag`.")
+  return have_na;
+}
+
 /** \brief Get diagonal of matrix
  *
  * @param x  Matrix

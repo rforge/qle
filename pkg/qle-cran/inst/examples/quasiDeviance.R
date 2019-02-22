@@ -29,53 +29,34 @@ qsd$var.type <- "wcholMean"
 (QD3 <- quasiDeviance(x,qsd,W=W,theta=c(2,1),cvm=cvm))
 
 ############################################################
-## 3D plot of quasi-deviance, with kriged variance matrix
-## and added CV prediction variances, requires package `rgl`
+## 2D plot of quasi-deviance, contour plot
+############################################################
+
+x <- seq(qsd$lower[1],qsd$upper[1],by=0.025)
+y <- seq(qsd$lower[2],qsd$upper[2],by=0.025)
+points <- as.matrix(expand.grid(x,y))
+X <- as.matrix(qsd$qldata[,1:2])
+Xp <- quasiDeviance(X,qsd,cvm=cvm,value.only=1)
+D <- quasiDeviance(points,qsd,cvm=cvm,value.only=1)
+
+## contour plot
+dev.new()
+z1 <- matrix(D,ncol=length(y))
+plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
+contour(x, y, z1, col = "black", lty = "solid",
+		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
+try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
+
+############################################################
+## 3D plot of quasi-deviance, requires package `rgl`
 ############################################################
 
 #library(rgl)
-#cvm <- NULL
-#x <- seq(qsd$lower[1],qsd$upper[1],by=0.05)
-#y <- seq(qsd$lower[2],qsd$upper[2],by=0.05)
-#points <- as.matrix(expand.grid(x,y))
-#X <- as.matrix(qsd$qldata[,1:2])
-#Xp <- quasiDeviance(X,qsd,cvm=cvm,value.only=TRUE)
-#D <- quasiDeviance(points,qsd,cvm=cvm,value.only=TRUE)
-#
-##z <- matrix(D,ncol=length(y))
-##persp3d(x,y,z,col="red", alpha=0.3, axes=TRUE)
-##cnt <- contourLines(x,y,z,
-##	      lev=seq(range(z)[1],range(z)[2],
-##		  by=dist(range(z))/100))
-##for (i in 1:length(cnt))
-## with(cnt[[i]], lines3d(x, y, level, col="darkred"))
-##points3d(X[,1],X[,2], Xp, size=3, col="red",add=TRUE)
-#
-## contour plot
-#dev.new()
-#z1 <- matrix(D,ncol=length(y))
-#plot(x = 0, y = 0, type = "n", xlim=,range(x), ylim=range(y),xlab = "", ylab = "")
-#contour(x, y, z1, col = "black", lty = "solid",
-#		nlevels = 50, add = TRUE,vfont = c("sans serif", "plain"))
-#try(points(X,pch=23,cex=0.8,bg="black"),silent=TRUE)
-##
-### sample points
-#local <- OPT$final
-#sqrt(diag(solve(local$I)))
-#sqrt(diag(solve(local$varS)))
-#sqrt(diag(solve(QS$I)))
-#sqrt(diag(solve(QS$varS)))
-#det(local$Iobs%*%solve(local$I))
-#
-#Z <- nextLOCsample(solve(local$varS), OPT$par, 10000, lb, ub, pmin = 0.05, invert = FALSE)
-#points(Z,pch=2,cex=0.2,col="lightblue")
-#
-#ZI <- nextLOCsample(solve(local$I), OPT$par, 10000, lb, ub, pmin = 0.05, invert = FALSE)
-#points(ZI,pch=2,cex=0.2,col="blue")
-#
-#fval <- quasiDeviance(ZI,qsd,cvm=cvm,value.only=2L)
-#i <- which.min(fval)
-#fval[i]
-#xy <- ZI[i,]
-#try(points(rbind(xy),pch=23,cex=0.8,bg="magenta"),silent=TRUE)
-
+#z <- matrix(D,ncol=length(y))
+#persp3d(x,y,z,col="red", alpha=0.3, axes=TRUE)
+#cnt <- contourLines(x,y,z,
+#	      lev=seq(range(z)[1],range(z)[2],
+#		  by=dist(range(z))/100))
+#for (i in 1:length(cnt))
+# with(cnt[[i]], lines3d(x, y, level, col="darkred"))
+#points3d(X[,1],X[,2], Xp, size=3, col="red",add=TRUE)

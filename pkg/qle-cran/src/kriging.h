@@ -558,13 +558,18 @@ typedef struct ql_model_s {
 
 } ql_model_t, *ql_model;
 
+int addMatrixDiag(double *vmat, int nx, double *w);
+int addVar(double *sig2, int nc, double *vmat, double *work);
+
 //////////////////////////// wrapper ///////////////////////////////////////////////////////
-int  addVar(double *sig2, int nc, double *vmat, double *work);
 void wrap_intern_kriging(double *x, void *data,  double *mean, int *err);
 void wrap_intern_quasiScore(double *x, void *data, double *score, int *err);
+
+//////////////////////////// attributes setting ////////////////////////////////////////////
+
 void setVmatAttrib(ql_model qlm, SEXP R_VmatNames, SEXP R_ans);
 
-///////////////////// KRIGING /////////////////////////////////////////////////////////////////////////////////////
+///////////////////// KRIGING //////////////////////////////////////////////////////////////
 
 SEXP kriging(SEXP R_Xmat, SEXP R_data, SEXP R_points, SEXP R_CovT, SEXP R_krigType);
 
@@ -574,7 +579,7 @@ SEXP estimateJacobian(SEXP R_Xmat, SEXP R_data, SEXP R_points, SEXP R_covList, S
 
 SEXP getDualKrigingWeights(SEXP R_Cmat, SEXP R_Fmat, SEXP R_data);
 
-///////////////////// QUASI_LIKELIHOOD  ///////////////////////////////////////////////////////////////////////////
+///////////////////// QUASI_LIKELIHOOD  ////////////////////////////////////////////////////
 
 SEXP finalizeQL();
 
@@ -587,6 +592,9 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 SEXP qDValue(SEXP R_point);
 
 SEXP mahalValue(SEXP R_point);
+
+SEXP internQD(SEXP R_point);
+SEXP internMD(SEXP R_point);
 
 //SEXP cvError(SEXP R_point, SEXP R_Xmat, SEXP R_data, SEXP R_covT, SEXP R_krigType, SEXP R_cm);
 
