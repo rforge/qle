@@ -90,7 +90,7 @@ Changes with 0.2 (major update)
 -------------------------------
 
 
-1) new sampling criterion 'logdet' to select best candidate points
+1) new sampling criterion 'LQS' to select best candidate points besides old one 'WQS' (former 'score' criterion)
 
 2) kriging variance matrix now includes its own prediction variances 
 
@@ -103,6 +103,7 @@ Changes with 0.2 (major update)
    for parameter estimation anymore opposed to the kriging procedures of statistics as its own function where it
    is still possible
 
+5) continuous optimization of local and global selection criteria available besides discrete (grid) versions 
 
 Current known issues
 --------------------
