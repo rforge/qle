@@ -70,7 +70,7 @@ quasiDeviance(x0,qsd,verbose=TRUE,value.only=TRUE)
 crit <- function(qd,w=0.5) {													
 	B <- solve(attr(qd,"Sigma"))%*%t(qd$jac)												
 	varS <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
-	w*log(det(qd$I))-(1-w)*t(qd$score)%*%solve(varS)%*%qd$score
+	w*log(det(varS))-(1-w)*log(t(qd$score)%*%solve(varS)%*%qd$score)
 }
 
 crit(D,w=.5)
