@@ -179,6 +179,10 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 
     // not for dual kriging: prediction variances would not be available
     /* add prediction variances to return list */
+    SEXP R_stats = R_NilValue;
+    PROTECT(R_stats = allocVector(REALSXP,qlm.nCov)); ++nProtected;
+    MEMCPY(REAL(R_stats),qlm.glkm->krigr[0]->mean,qlm.nCov);
+    /* prediction variances */
     SEXP R_sig2 = R_NilValue;
     if(qlm.glkm->krigType) {
       	PROTECT(R_sig2 = allocVector(REALSXP,qlm.nCov));
@@ -208,7 +212,7 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
 
     static const char *nms[] =
      {"convergence", "message", "iter", "value", "par",
-     "score", "sig2", "I", "Iobs", "varS", "start", "bounds", "Qnorm",
+     "score", "sig2", "stats", "I", "Iobs", "varS", "start", "bounds", "Qnorm",
 	 "method", "criterion", ""};
 
     SEXP R_ret = R_NilValue;
@@ -222,14 +226,15 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     SET_VECTOR_ELT(R_ret, 4, R_sol);
     SET_VECTOR_ELT(R_ret, 5, R_S);
     SET_VECTOR_ELT(R_ret, 6, R_sig2);
-    SET_VECTOR_ELT(R_ret, 7, R_I);
-    SET_VECTOR_ELT(R_ret, 8, R_Iobs);
-    SET_VECTOR_ELT(R_ret, 9, R_varS);
-    SET_VECTOR_ELT(R_ret, 10, R_start);
-    SET_VECTOR_ELT(R_ret, 11, ScalarInteger(qfs.bounds));
-    SET_VECTOR_ELT(R_ret, 12, ScalarReal(qnorm));
-    SET_VECTOR_ELT(R_ret, 13, mkString("qscoring"));
-    SET_VECTOR_ELT(R_ret, 14, mkString("qle"));
+    SET_VECTOR_ELT(R_ret, 7, R_stats);
+    SET_VECTOR_ELT(R_ret, 8, R_I);
+    SET_VECTOR_ELT(R_ret, 9, R_Iobs);
+    SET_VECTOR_ELT(R_ret, 10, R_varS);
+    SET_VECTOR_ELT(R_ret, 11, R_start);
+    SET_VECTOR_ELT(R_ret, 12, ScalarInteger(qfs.bounds));
+    SET_VECTOR_ELT(R_ret, 13, ScalarReal(qnorm));
+    SET_VECTOR_ELT(R_ret, 14, mkString("qscoring"));
+    SET_VECTOR_ELT(R_ret, 15, mkString("qle"));
 
     setVmatAttrib(&qlm, R_VmatNames, R_ret);
     SET_CLASS_NAME(R_ret,"QSResult")

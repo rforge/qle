@@ -13,7 +13,7 @@
 #include "covariance.h"
 
 /** typedefs */
-typedef enum { MEAN = 0, KRIG = 1} var_type;
+typedef enum { CONST = 0, MEAN = 1, KRIG = 2} var_type;
 typedef enum { DUAL = 0, VARIANCE = 1, BOTH = 2} krig_type;
 typedef enum { COPY_ZERO = 0, COPY_ONE = 1, COPY_MOD = 2, COPY_HIGHER = 3} value_type;
 
@@ -82,20 +82,21 @@ typedef struct krig_result_s {
 } krig_result_t, *krig_result;
 
 typedef struct ql_options_s {
-  var_type varType;
-  Rboolean useCV, useSigma;
+	Rboolean useCV;
+	var_type varType;
+
 
   ql_options_s(SEXP R_opts)  {
 	  useCV    = (Rboolean) asLogical(getListElement(R_opts, "useCV"));
-	  useSigma = (Rboolean) asLogical(getListElement(R_opts, "useSigma"));
-
 	  SEXP R_varType = getListElement(R_opts, "varType");
 	  if(!isString(R_varType))
 	    Rf_error(_("Variance interpolation type should be a string: varType"));
 	  const char *var_type = translateChar(asChar(R_varType));
-	  if( !strcmp("kriging",var_type) ) {
+	  if(!strcmp("const",var_type)) {
+		  varType = CONST;
+	  } else if( !strcmp("kriging",var_type) ) {
 		  varType = KRIG;
-	  } else varType = MEAN;
+	  } else  varType = MEAN;
   }
 } ql_options_t, *ql_options;
 
@@ -341,11 +342,11 @@ typedef struct ql_data_s {
 		 *vmat_work,    /* variance matrix of statistics */
 		 *work,	        /* copy of diagonal terms of variance matrix of statistics */
 		 *workx,		/* for kriging the variance matrix */
-		 *jactmp, 		/* transpose of jac or simply temporary storage */
+		 *jactmp,*fdjac,/* jac working array */
 		 *fdwork,		/* working array for FD approxmiation ETX/dtheta (length: number of statistics) */
 		 *fdscore,		/* working array for FD approxmiation   Q/dtheta (length: number of parameters) */
 		 *Atmp, 	    /* temporary working matrix */
-  	  	 *tmp;
+  	  	 *tmp;			/* working array with length number of statistics */
 
   ql_options_t qlopts;
 
@@ -354,7 +355,7 @@ typedef struct ql_data_s {
   // alloc and init
   ql_data_s(SEXP R_obs, SEXP R_Vmat, SEXP R_qlopts, int _nCov, int *_dims) :
 		  obs(0), qtheta(0), vmat(0), vmat_work(0), work(0),
-		  workx(0), jactmp(0), fdwork(0), fdscore(0), Atmp(0), tmp(0), qlopts(R_qlopts),
+		  workx(0), jactmp(0), fdjac(0), fdwork(0), fdscore(0), Atmp(0), tmp(0), qlopts(R_qlopts),
 		  dx(_dims[1]), lx(_dims[0]), nCov(_nCov)
   {
 	 int nCov2 = SQR(nCov);
@@ -366,18 +367,19 @@ typedef struct ql_data_s {
 	 CALLOCX(obs,nCov,double);
 	 CALLOCX(tmp,nCov,double);
 	 CALLOCX(jactmp,dx*nCov,double);
+	 CALLOCX(fdjac,dx*nCov,double);
 	 CALLOCX(vmat,nCov2,double);
 	 CALLOCX(vmat_work,nCov2,double);
 
 	 for(int i=0;i<dx*nCov;i++)
-		jactmp[i]=Atmp[i]=0;
+		 fdjac[i]=jactmp[i]=Atmp[i]=0;
 
 	 double *_obs = REAL(AS_NUMERIC(R_obs));
 	 for(int i=0;i<nCov;i++) {
 		 tmp[i]=obs[i]=_obs[i];
 	 }
 
-	 if(qlopts.useSigma || qlopts.varType == MEAN) {
+	 if(qlopts.varType < KRIG) {
 		if(isNull(R_Vmat) || !isMatrix(R_Vmat))
 		  ERR("Variance `R_Vmat` is either NULL or not a matrix.");
 		double *_vmat = REAL(R_Vmat);
@@ -396,6 +398,7 @@ typedef struct ql_data_s {
 
   ~ql_data_s() {
 	  FREE(jactmp)
+	  FREE(fdjac)
 	  FREE(fdwork)
 	  FREE(fdscore)
 	  FREE(tmp)
@@ -463,10 +466,9 @@ typedef struct ql_model_s {
 		dxdx = SQR(dx);
 		nCov2 = SQR(nCov);
 
-		 if(!qld->qlopts.useSigma && qld->qlopts.varType)
-		 {
+		 if(qld->qlopts.varType == KRIG){
 			 if(isNull(R_covL))
-			   ERR("Covariance model for kriging variance matrix is not set (Null).");
+			   ERR("Covariance model for kriging variance matrix was not set.");
 
 			 int idx = dx+2*nCov;
 			 // always use VARIANCE as krigType for kriging variance matrix of statistics
@@ -515,10 +517,12 @@ typedef struct ql_model_s {
 	}
 
 	inline int intern_cvError(double *x) {
-	  if(qld->qlopts.useCV) {
-		 cvmod->cvError(x,glkm->km,glkm->krigr[0]->sig2,info);
-		 if(info != NO_ERROR)
-		   LOG_ERROR(info,"cvError")
+	  if(qld->qlopts.varType != CONST) {
+		  if(qld->qlopts.useCV) {
+			 cvmod->cvError(x,glkm->km,glkm->krigr[0]->sig2,info);
+			 if(info != NO_ERROR)
+			   LOG_ERROR(info,"cvError")
+		  }
 	  }
 	  return info;
     }
@@ -545,6 +549,9 @@ typedef struct ql_model_s {
 
 	void varMatrix(double *x, double *vmat, int &err);
 
+	int varScore(double *x, double *varS);
+	double trVarScore(double *x);
+
 	int qfScore(double *x, double *jac, double *score, double *qimat);
 	double qfScoreStat(double *x, double *jac, double *score, double *qimat);
 
@@ -554,7 +561,7 @@ typedef struct ql_model_s {
 	double intern_mahalValue(double *x);
 
     double mahalDist(double *x,double *jac,double *score,double *qimat);
-	double intern_mahalanobis(double *x) { return mahalDist(x,jac,score,qimat); }
+	double intern_mahalanobis(double *x) { return mahalDist(x,jac,score,varS); }
 
 } ql_model_t, *ql_model;
 
