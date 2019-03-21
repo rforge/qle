@@ -502,7 +502,7 @@ fitCov <- function(models, Xs, data, control = list(),
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
 					"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",										
 					 					"xtol_rel" = 1.0e-6, "maxeval" = 1000),
-					 "maxeval" = 200, "xtol_rel" = 1.0e-4, "population"=0)	
+					 "maxeval" = 200, "xtol_rel" = 1.0e-4)	
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
@@ -597,6 +597,12 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 	  stop("Argument `obs` must be a (named) numeric vector or list.")
   	stopifnot(!is.null(mods$covT))
 	stopifnot(class(mods)=="QLFit")
+	# names of statistics should match all
+	# otherwise overwrite names of observed statistics
+	Tnames <- names(qldata[grep("^mean[.]",names(qldata))])
+	Tnames <- sapply(strsplit(Tnames, ".", fixed = TRUE),"[[",2)
+	if(any(Tnames != names(obs))) 
+	 names(obs) <- Tnames
 	
 	if(length(mods$covT) != length(obs))
 	  stop("Number of covariance models `covT` and length of observations vector `obs` must equal.")
@@ -624,7 +630,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 									"ftol_abs" = .Machine$double.eps,
 									"ftol_rel" = .Machine$double.eps^0.5,
 									"xtol_rel" = 1.0e-6, "maxeval" = 1000),
-				"maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6, "population"=0)			  
+				"maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6)			  
 	}
 	# minimum required sample size
 	minN <- ifelse(min(sapply(covT,	function(x) x$trend)) < 2, dx+2, (dx+1)*(dx+2)/2+1)
@@ -846,7 +852,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 opts <- list("algorithm" = "NLOPT_GN_MLSL",
 				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",									
 					 				  "xtol_rel" = 1.0e-6, "maxeval" = 1000),
-				  "maxeval" = 200, "xtol_rel" = 1.0e-4, "population"=0)		  
+				  "maxeval" = 200, "xtol_rel" = 1.0e-4)		  
 	 }
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)

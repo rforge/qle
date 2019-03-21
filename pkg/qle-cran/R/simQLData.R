@@ -12,7 +12,7 @@
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 					cores = getOption("mc.cores",1L), 						# force sequential processing if cores=1L
 					  cache = getOption("qle.cache",FALSE),
-			  		   	  fun = getOption("qle.multicore","lapply"))
+			  		   	 fun = getOption("qle.multicore","lapply"))
 {
 	SIM <- if(cache) {
 			for(i in 1:length(X))
@@ -255,7 +255,7 @@ varCHOLdecomp <- function(matList) {
 	lapply(1:length(matList),doIt,x=matList)
 }
 
-
+# resample variances for bootstrapped fourth moments
 .resampleCov <- function(T,num){
 	n <- nrow(T)
 	apply(
@@ -269,6 +269,96 @@ varCHOLdecomp <- function(matList) {
 	  ),1,var)
 }
 
+# Conduct next simulations and update covariance models
+.updateQLmodel <- function(qsd, Xnew, newSim, fit = TRUE, cl = NULL, pl = 0L, verbose = FALSE ){	
+	if(verbose)
+	 cat("Setup next data...\n")
+	stopifnot(nrow(Xnew)==length(newSim))
+	nextData <-
+		tryCatch(
+				setQLdata(newSim,
+						Xnew,
+						qsd$var.type,
+						attr(qsd$qldata,"Nb"),
+						verbose=verbose),
+				error = function(e) {
+					msg <- .makeMessage("Construction of quasi-likelihood data failed: ",
+							conditionMessage(e))				
+					.qleError(message=msg,call=match.call(),error=e)
+				}
+		)
+	if(.isError(nextData))
+	 return(nextData)
+	# combine to new data and update
+	if(verbose)
+	 cat("Update covariance models...\n")	
+	updateCovModels(qsd,nextData,fit,cl=cl,pl=pl,verbose=verbose)
+}
+
+# constructor function for final QL data object
+.QLdata <- function(X, res, nsim, var.type = "wcholMean", Nb = 0L, verbose = FALSE) {
+	X <- rbind(X)
+	# sample means of statistics
+	mstats <- do.call(rbind,lapply(res,"[[","mstat"))
+	# and sample variances at each location
+	mvars <- do.call(rbind,lapply(res,"[[","vars"))
+			
+	qld <- as.data.frame(cbind(X,mstats,mvars))
+	rownames(qld) <- NULL
+	
+	nms <- 
+		if(is.null(colnames(X)) | is.null(colnames(mstats)) | is.null(colnames(mvars))) {
+			c(colnames(qld[seq(ncol(X))]),
+				paste("mean.T",rep(1:NCOL(mstats)),sep=""),
+				paste("var.T",rep(1:NCOL(mvars)),sep=""))			   
+		} else {
+			c(colnames(X),
+				paste0("mean.",colnames(mstats)),
+				paste0("var.",colnames(mvars)))			   
+		}			
+	colnames(qld) <- nms	
+	Nb <- if(var.type != "kriging") 0 else Nb
+	
+	# Cholesky decompositions unless we have a constant variance matrix 	
+	if(var.type != "const") {
+		# covariance decompositions	
+		if(verbose)
+		 cat("Cholesky decompositon of covariance matrices...\n")
+		vmats <- lapply(res,"[[","V" )
+		L <- try(varCHOLdecomp(vmats),silent=TRUE)
+		if(.isError(L)) {
+			msg <- paste0("Cholseky decomposition failed: ","\n")
+			message(msg)
+			stop(.qleError(message=msg,call=match.call(),error=L))
+		}
+		ok <- which(sapply(L,function(x) !.isError(x)))
+		if(length(ok) == 0L){
+			msg <- paste0("All Cholesky decompositions failed: ","\n")
+			message(msg)
+			return(.qleError(message=msg,call=match.call(),error=L))
+		} else if(length(ok) < length(L)){
+			warning(paste0("A total of ",length(L)-length(ok), " Cholesky decomposition(s) failed."))
+			qld <- qld[ok,,drop=FALSE]
+		}
+		# Cholesky decompositions
+		cvmats <- as.data.frame(do.call(rbind, L[ok]))
+		colnames(cvmats) <- paste("L", rep(1:NCOL(cvmats)),sep="")
+		
+		# bootstrap variances of covariances 
+		# a local nugget variances
+		if(Nb > 0 && var.type == "kriging"){
+			Lb <- lapply(res,"[[","Lb")			
+			Lbmats <- as.data.frame(do.call(rbind,Lb[ok]))
+			colnames(Lbmats) <- paste("Lb", rep(1:NCOL(Lbmats)),sep="")
+			# add bootstrap variances (of variances)
+			cvmats <- cbind(cvmats,Lbmats)
+		}		
+	    stopifnot(NROW(qld)==NROW(rbind(cvmats)))
+	 	qld <- cbind(qld,data.frame(rbind(cvmats)))	
+	}
+		
+	structure(qld,xdim=ncol(X),nsim=nsim,Nb=Nb,class=c("QLdata","data.frame"))
+} 
 
 #' @name 	setQLdata
 #'
@@ -383,10 +473,8 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 		ret
 	}
 
-	res <- tryCatch(
-			  lapply(runs,.extract),
-			error = function(e) e)
-	
+	# check errors
+	res <- tryCatch(lapply(runs,.extract), error = function(e) e)	
 	if(.isError(res)){
 		msg <- .makeMessage("Extracting values of statistics failed.")
 		message(msg)
@@ -439,73 +527,62 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 					nIgnored=nIgnored,
 					error=res)
 		)
-  	}
-	# Cholesky decompositions	
-	cvmats <- 
-	 if(var.type != "const") {
-		# covariance decompositions	
-	    if(verbose)
-		 cat("Cholesky decompositon of covariance matrices...\n")
+  	}	
 	
-	 	vmats <- lapply(res[ok],"[[","V" )
-		L <- try(varCHOLdecomp(vmats),silent=TRUE)
-		if(.isError(L)) {
-			msg <- paste0("Cholseky decomposition failed: ","\n")
-			message(msg)
-			stop(.qleError(message=msg,call=match.call(),error=L))
-		}
-		ok2 <- which(sapply(L,function(x) !.isError(x)))
-		if(length(ok2) == 0L){
-			msg <- paste0("All Cholesky decompositions failed: ","\n")
-			message(msg)
-			return(.qleError(message=msg,call=match.call(),error=L))
-	 	} else if(length(ok2) < length(L))
-		   warning(paste0("A total of ",length(L)-length(ok2), " Cholesky decomposition(s) failed."))
-	    
-	    cvmats <- as.data.frame(do.call(rbind, L[ok2]))
-	    colnames(cvmats) <- paste("L", rep(1:NCOL(cvmats)),sep="")
-	   
-		# bootstrap variances of covariances 
-		# a local nugget variances
-		if(Nb > 0 && var.type == "kriging"){
-			Lb <- lapply(res[ok],"[[","Lb")			
-			Lbmats <- as.data.frame(do.call(rbind,Lb[ok2]))
-			colnames(Lbmats) <- paste("Lb", rep(1:NCOL(Lbmats)),sep="")
-			cvmats <- cbind(cvmats,Lbmats)
-		}
-		if(length(ok) != length(ok2))
-		  ok <- ok2
-	    cvmats		
-	} else NULL
-	
-	X <- X[ok,,drop=FALSE]
-	mstats <- do.call(rbind,lapply(res[ok],"[[","mstat"))
-	mvars  <- do.call(rbind,lapply(res[ok],"[[","vars"))
-	
-	qld <- as.data.frame(cbind(rbind(X),mstats,mvars))
-	nms <- 
-	 if(is.null(colnames(X)) | is.null(colnames(mstats)) | is.null(colnames(mvars))) {
-		 c(colnames(qld[seq(ncol(X))]),
-		   paste("mean.T",rep(1:NCOL(mstats)),sep=""),
-		   paste("var.T",rep(1:NCOL(mvars)),sep=""))			   
-	 } else {
-		 c(colnames(X),
-		   paste0("mean.",colnames(mstats)),
-		   paste0("var.",colnames(mvars)))			   
-	 }			
-	colnames(qld) <- nms			  
-	if(!is.null(cvmats)){
-   	 qld <- cbind(qld,data.frame(cvmats))
- 	}
+	structure(.QLdata(X[ok,,drop=FALSE],res[ok],nsim,var.type,Nb,verbose),
+	 nWarnings=nWarnings,
+	 nErrors=nErrors,
+	 nIgnored=nIgnored,
+	 message=msg,
+	 call=match.call())
+}
 
-	structure(qld,
-			  xdim=ncol(X),
-			  nsim=nsim,
-			  Nb=if(var.type != "kriging") 0 else Nb,
-			  nWarnings=nWarnings,
-			  nErrors=nErrors,
-			  nIgnored=nIgnored,
-			  message=msg,
-			  call=match.call(),
-			  class=c("QLdata","data.frame"))
+
+#' @author M. Baaske
+#' @export
+# intern only: update data for QL model
+# add at least one fuurther design point to the existing sample points
+# computes criterion function with these additinal points, updating variance
+# matrix, statistics (including new fixed (local) nuggets
+updateQLdata <- function(QD, qsd, fit = FALSE, cl = NULL, pl = 0L, verbose = FALSE)
+{		
+	nextData <-  
+	   lapply(QD,
+		 function(x) {
+		  tryCatch({
+			if(.isError(x) || !is.numeric(x$par))
+			 stop("Failed to get parameters of quasi-deviance evaluation results.")
+			VTX <- attr(x,"Sigma")			 
+			dat <- list("V"=VTX, "mstat"=x$stats,"vars"=diag(VTX),"is.pos"=0L)
+			# if variance matrix is krigedm, then use means of
+			# bootstrapped fourth moments over all previous sampled points
+			if(any(grepl("Lb", names(qsd$qldata))) && attr(qsd$qldata,"Nb")>0L) 
+			 dat <- c(dat,"Lb"=list(colMeans(qsd$qldata[grep("^Lb",names(qsd$qldata))])))		    
+		 	.QLdata(x$par,
+				 list(dat),
+				 nsim=attr(qsd$qldata,"nsim"),
+				 var.type=qsd$var.type,
+				 Nb=attr(qsd$qldata,"Nb"),
+				 verbose=verbose)
+	     }, error = function(err) {
+				 msg <- .makeMessage("Failed to construct QL data: ", conditionMessage(err))				
+	 			.qleError(message=msg,call=match.call(),error=err)		
+			 }
+		 )}
+	)	
+
+	# check for errors
+ 	if(.isError(nextData))
+	  return(nextData)
+    err <- sapply(nextData,.isError)
+ 	ok <- which(!err)
+ 	if(length(ok) == 0L){
+		msg <- .makeMessage("Construction of quasi-likelihood data failed.")				
+		message(msg)
+		.qleError(message=msg,call=match.call(),error=nextData)			
+    } else if(length(ok) < length(nextData)) {
+		message(.makeMessage("At least one construction of quasi-likelihood data failed."))
+	}
+	nextData <- do.call(rbind,nextData[ok])	
+	updateCovModels(qsd, nextData, fit=fit, cl=cl, pl=pl, verbose=verbose)
 }

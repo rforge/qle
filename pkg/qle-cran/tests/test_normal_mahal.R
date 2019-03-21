@@ -42,10 +42,9 @@ OPT <- qle(qsd,simfunc,nsim=10,
 OPT$final
 OPT$why
 
-## testing with criterion `mahal`
-## here: no Iobs for best root selection
+# testing with criterion `mahal` (no `Iobs` for best root selection for criterion `mahal`)
 S0 <- multiSearch(theta0, qsd=OPT$qsd, method=c("bobyqa","cobyla","direct"),
 		 nstart=15,	multi.start=TRUE, optInfo=TRUE, pl=10, verbose=TRUE)
  
-## found roots
+# roots found
 attr(S0,"roots")

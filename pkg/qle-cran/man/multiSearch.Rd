@@ -9,7 +9,7 @@ multiSearch(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
   pl = 0L, verbose = FALSE)
 }
 \arguments{
-\item{x0}{numeric, \code{NULL} default, list, vector or matrix of starting parameters}
+\item{x0}{numeric, \code{NULL} (default), list,  vector or matrix of starting parameters}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 

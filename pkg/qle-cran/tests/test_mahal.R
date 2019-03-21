@@ -39,7 +39,7 @@ pred <- estim(qsd$covT,theta,Xs,Tstat)[[1]]
 t(qsd$obs-pred$mean)%*%S%*%(qsd$obs-pred$mean)
 LQ$value
 
-# same but now use constant Sigma with prediction variances
+# same as above with constant Sigma (p==q)
 LQ2 <- quasiDeviance(theta,qsd,Sigma=diag(2))[[1]]
 LQ2$value
 attr(LQ2,"Sigma")
@@ -51,16 +51,25 @@ attr(LQ2,"Sigma")
 crit <- function(qd,w=0.5) {													
 	B <- solve(attr(qd,"Sigma"))%*%t(qd$jac)												
 	varS <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
-	w*log(det(varS))-(1-w)*log(t(qd$score)%*%solve(varS)%*%qd$score)
+	w*log(det(varS))+(1-w)*qd$value
 }
 
+# weighted average approximation
 crit(MD[[1]],w=.5)
 qsd$var.type <- "wcholMean"
 mahalDist(theta,qsd,w=0.5,verbose=TRUE,value.only=2L)
 
+# using a constant Sigma
+qsd$var.type <- "const"
+qd <- mahalDist(theta,qsd,Sigma=diag(2),w=0.5,verbose=TRUE,value.only=0L)[[1]]
+qd$sig2 <- rep(0,2)
+crit(qd,w=.5)
+mahalDist(theta,qsd,Sigma=diag(2),w=0.5,verbose=TRUE,value.only=2L)
+#quasiDeviance(theta,qsd,Sigma=diag(2),w=0.5,verbose=TRUE,value.only=2L)
+
 # first term
 crit(MD[[1]],w=1.0)
-log(det(MD[[1]]$I))
+log(det(MD[[1]]$varS))
 # second term
--crit(MD[[1]],w=0.0)
 MD[[1]]$value
+crit(MD[[1]],w=0.0)

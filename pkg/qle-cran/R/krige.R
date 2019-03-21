@@ -394,8 +394,8 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 					  res
 				}
 			)
-		} else {
-			stop("Unknown variance matrix type.")
+		} else {			
+			stop("Variance matrix of statistics cannot be computed.")
 		}	
 	}, error = function(e) {
 		msg <- paste0("Covariance matrix estimation failed: ", conditionMessage(e),".\n") 
@@ -595,30 +595,31 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 		if(anyNA(obs) | any(!is.finite(obs)))
 			warning("`NA` or `Inf` values detected in `obs`.")
 		if(!is.numeric(obs) || length(obs) != length(qsd$covT))
-			stop("`obs` must be a (named) `numeric` vector or list \n
-					of length equal to the given statistics in `qsd`.")
+		 stop("`obs` must be a (named) `numeric` vector or list of length equal to the given statistics in `qsd`.")
 		qsd$obs <- obs
 	}
 	# Unless Sigma is given always continuously update variance matrix.
 	# If using W, theta or Sigma for average approximation, then
 	# at least update added kriging prediction variances at each point.
-	tryCatch({
-		# use `Sigma` but add prediction variances when used with criterion 'qle'
-		useSigma <- (qsd$var.type == "const")
-		if(all(qsd$var.type != c("kriging")) && !useSigma){
-			# 'Sigma' is inverted at C level because of added predictino variances
+	tryCatch({				
+		if(!(qsd$var.type %in% c("kriging","const"))){
+			# 'Sigma' is inverted at C level because of added prediction variances
 			Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX
+		} else if(qsd$var.type=="const" && !inverted){
+			# Only for constant Sigma, which is used as is!
+			if(is.null(Sigma))
+			  stop("`Sigma` cannot be NULL if used as a constant variance matrix.")			
+			inverted <- TRUE			
+			Sigma <- try(gsiInv(Sigma),silent=TRUE)
+			if(inherits(Sigma,"try-error")) {
+				msg <- paste0("Inversion of constant variance matrix failed.")
+				message(msg)
+				return(.qleError(message = msg,error=Sigma))
+			}
 		}
-		if(useSigma && is.null(Sigma))
-		 stop("`Sigma` cannot be NULL if used as a constant variance matrix.")
 		
-	    qlopts <- list("varType"=qsd$var.type,			   
-				       "useCV"=!is.null(cvm),
-					   "useSigma"=FALSE) 			# there is no constant Sigma for quasi-deviance computation 
-
-		# somehow complicated but this is a load ballancing 
-		# (for a cluster) parallized version of quasiDeviance
-		
+	    qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm))
+					   
 		ret <-
 		  if(length(points) >= 100 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
 				m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)		
@@ -628,7 +629,7 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 				   do.call(doInParallel,
 					  c(list(X=M,
 					    FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only, w) {
-							.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only, w)	 
+							.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only,w)	 
 						}, cl=cl),
 				     list(qsd, qlopts, X, Sigma, cvm, value.only, w))),
 	             recursive = FALSE)
@@ -756,13 +757,14 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
  	  #  1. kriging approx.
 	  #  2. Average approx. computed by W and at theta; or by kriging
 	  #  3. Sigma constant
-	  tryCatch({		
-		   useSigma <- (qsd$var.type == "const")
-		   if(all(qsd$var.type != c("kriging")) && !useSigma){			   
+	  tryCatch({		   
+		   if(!(qsd$var.type %in% c("kriging","const"))) {			   
 			   # Sigma is inverted at C level
 			   Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX			   
-		   } else if(useSigma && !inverted){
-				# Only for constant Sigma, which is used as is!
+		   } else if(qsd$var.type == "const" && !inverted){
+			   if(is.null(Sigma))
+				 stop("`Sigma` cannot be NULL if used as a constant variance matrix.")	
+			   # Only for constant Sigma, which is used as is!
 				inverted <- TRUE
 				# now try to invert
 				Sigma <- try(gsiInv(Sigma),silent=TRUE)
@@ -771,13 +773,10 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 				  message(msg)
 				  return(.qleError(message = msg,error=Sigma))
 			    }
-			}
-			if(useSigma && is.null(Sigma))
-			 stop("`Sigma` cannot be NULL if used as a constant variance matrix.")
-							
-			qlopts <- list("varType"=qsd$var.type,
-						   "useCV"=!is.null(cvm),
-						   "useSigma"=useSigma)  			# use as constant Sigma 
+		   }
+			
+		   qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm)) 
+		  
 		   ret <-
 		    if(length(points) >= 100 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
 			   m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)			   				
@@ -798,9 +797,9 @@ mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 			
 			# if it is computed by W, theta
 			# or the constant Sigma passed
-			if(useSigma) {			 
+			if(qsd$var.type=="const")			 
 			 attr(Sigma,"inverted") <- inverted					  
-	 		}
+	 		
 			# check for NAs/NaNs
 			if(na.rm){
 				has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	

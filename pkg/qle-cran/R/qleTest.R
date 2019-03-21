@@ -352,25 +352,26 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	if(inherits(qi,"try-error") || anyNA(qi))
 		message("Inversion of quasi-information matrix failed")
 		 	
-	St <-
+	qD <-
 	 tryCatch({			
 		if(criterion == "qle"){		
 			id <- pmatch(names(args),names(formals(quasiDeviance)))			
 			fargs <- args[which(!is.na(id))]	
-			do.call(quasiDeviance,c(list(mpars,value.only=TRUE,cl=cl,verbose=verbose),fargs))									 
+			do.call(quasiDeviance,c(list(mpars,cl=cl,verbose=verbose),fargs))									 
 		} else {
 			id <- pmatch(names(args),names(formals(mahalDist)))			
 			fargs <- args[which(!is.na(id))]
-			do.call(mahalDist,c(list(mpars,inverted=TRUE,value.only=TRUE,cl=cl,verbose=verbose),fargs))			
+			do.call(mahalDist,c(list(mpars,inverted=TRUE,cl=cl,verbose=verbose),fargs))			
 		}
 	}, error = function(e) {
 		msg <- .makeMessage("Error in criterion function evaluation due to ",conditionMessage(e))				 
 		.qleError(message=msg,call=sys.call(),error=e)		
 	})
-	if(.isError(St)){
-	  message(paste0("Cannot continue testing for an approximate solution: ",St$message))	
+	if(.isError(qD)){
+	  message(paste0("Cannot continue testing for an approximate solution: ",qD$message))	
 	}
-	
+	# TODO: error/NaN checking!
+	St <- sapply(qD,"[[","value")
 	# get efficient score test (with MC parameters)
 	B <- structure(
 			data.frame(
@@ -411,6 +412,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 			optRes=RES[ok],							# all optimization results
 			mean.score=mScore,					# average score/gradient
 			mpars=mpars,						# re-estimated parameters excluding errors
+			qD=qD,								# criterion function evaluation with origingal data (stat0)
 			criterion=criterion,
 		info=list(badInv=which(badInv), 		# inversion errors
 				  hasNa=which(has.na), 			# indices of NA parameters 

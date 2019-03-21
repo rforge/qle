@@ -29,6 +29,7 @@ pred <- estim(qsd$covT,x0,Xs,Tstat,krig.type="var")[[1]]
 #quasiDeviance(X,qsd,value.only=3,verbose=TRUE)
 
 D <- quasiDeviance(x0,qsd,verbose=TRUE)[[1]]
+pred
 
 # remove kriging variances from variance matrix approximation
 S <- attr(D,"Sigma") #- diag(pred$sigma2)
@@ -70,7 +71,7 @@ quasiDeviance(x0,qsd,verbose=TRUE,value.only=TRUE)
 crit <- function(qd,w=0.5) {													
 	B <- solve(attr(qd,"Sigma"))%*%t(qd$jac)												
 	varS <- t(B)%*%(attr(qd,"Sigma")+diag(qd$sig2))%*%B
-	w*log(det(varS))-(1-w)*log(t(qd$score)%*%solve(varS)%*%qd$score)
+	w*log(det(varS))+(1-w)*(t(qd$score)%*%solve(varS)%*%qd$score)
 }
 
 crit(D,w=.5)
@@ -78,7 +79,8 @@ quasiDeviance(x0,qsd,w=0.5,verbose=TRUE,value.only=2L)
 
 # first term
 crit(D,w=1.0)
-log(det(D$I))
+log(det(D$varS))
 # second term
--crit(D,w=0.0)
 D$value
+crit(D,w=0.0)
+

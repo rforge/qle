@@ -204,6 +204,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 				  of the current parameter estimate due to a sparse sample or the (hyper)box constraints of the
 				  parameter space could be too restrictive.}
 	 \item{\code{nsample}:}{ sampling size of candidate locations at the local phase}
+	 \item{\code{ntotal}:}{ number of  random samples for evaluation of the integral of total prediction variance of the quasi-score vecotor at the local phase with criterion "\code{VQS}"}
 	 \item{\code{weights}:}{ vector of weights, \eqn{0\leq\code{weights}\leq 1}, for local sampling}
 	 \item{\code{useWeights}:} {logical, if \code{FALSE} (default), dynamically adjust the weights, see vignette}
  \item{\code{ftol_abs}:}{ upper bound on the function criterion: values smaller trigger the local phase
@@ -216,7 +217,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
   \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
   \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
   \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
-  \item{\code{nextSample}:}{ either "\code{LQS}" (default) or "\code{WQD}" (see details)} 
+  \item{\code{nextSample}:}{ either "\code{LQS}" (default),  "\code{WQD}" or "\code{VQS}", see details} 
   }
 
  The following controls `\code{global.opts}` for the global search phase are available:   
