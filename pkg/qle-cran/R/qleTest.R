@@ -295,10 +295,9 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 						},
 					cl=cl), opt.args))   
 	 }
-
+	# check return value
 	if(.isError(RES))
-	  return(RES)
-	
+	  return(RES)	
     # check results again
 	ok <- which(sapply(RES,function(x) !.isError(x) && x$convergence >= 0L))
 	if(length(ok) == 0L){
@@ -306,7 +305,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	} else if(length(ok) < length(RES)){
 		message(paste0("A total of ",length(RES)-length(ok)," re-estimations failed."))							
 	}	
-	# average inverse QI
+	# compute average QI^{-1}
 	invI <- 
 		lapply(RES[ok],
 			function(x) {						
@@ -409,7 +408,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 			qi=qi,								# inverse QI at estimated theta
 			relEF=relEF,
 			obs=NULL,							# (MC) observations
-			optRes=RES[ok],							# all optimization results
+			optRes=RES[ok],						# all optimization results
 			mean.score=mScore,					# average score/gradient
 			mpars=mpars,						# re-estimated parameters excluding errors
 			qD=qD,								# criterion function evaluation with origingal data (stat0)

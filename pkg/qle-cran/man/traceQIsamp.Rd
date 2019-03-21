@@ -5,8 +5,8 @@
 \title{Find new local evaluation point}
 \usage{
 traceQIsamp(x0, qsd, QD, Sig0 = NULL, nsim = 1000, type = 0L,
-  fit = FALSE, ..., optInfo = FALSE, cl = NULL, pl = 0L,
-  verbose = FALSE)
+  fit = FALSE, pmin = 0.25, ..., optInfo = FALSE, cl = NULL,
+  pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{x0}{numeric (named) vector or list as the center point of sampling region,
@@ -23,6 +23,8 @@ e.g., an estimate of the model parameter}
 \item{type}{integer, \code{type=0} (default), use uniform sampling of points, \code{type=1} multivariate normal random points}
 
 \item{fit}{logical, \code{FALSE} (default), whether to re-fit kriging covariance models of the statistics}
+
+\item{pmin}{minimum required ratio of points falling inside the overall design region (hyperbox of parameters)}
 
 \item{...}{optional, arguments passed to \code{\link{quasiDeviance}}, center point '\code{theta}' and '\code{W}' as weighting matrix for kernel estimate of covariance matrix,
 cross-validation models '\code{cvm}', see \code{\link{quasiDeviance}} for details}

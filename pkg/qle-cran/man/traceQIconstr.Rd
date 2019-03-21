@@ -2,10 +2,9 @@
 % Please edit documentation in R/qsOpt.R
 \name{traceQIconstr}
 \alias{traceQIconstr}
-\alias{traceQIcontr}
 \title{Find new local evaluation point}
 \usage{
-traceQIcontr(x0, qsd, b, method = c("nloptr"), opts = list(), ...,
+traceQIconstr(x0, qsd, b, method = c("nloptr"), opts = list(), ...,
   optInfo = FALSE, check = TRUE, pl = 0L, verbose = FALSE)
 }
 \arguments{
