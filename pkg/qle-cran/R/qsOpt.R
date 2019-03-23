@@ -17,7 +17,8 @@
 	 args <- list(...)
 	 if(length(args) > 0L && any(is.null(names(args))))
 	   stop("Additional arguments must have names.")
-		 
+	 if(!is.null(error))
+		message <- paste(message,":", error$message)
 	 structure(
 		list(message = .makeMessage(message), call = call),
 	 	 ...,
@@ -143,7 +144,8 @@
 		 "NmaxLam" = 3,
 		 "NmaxQI" = 5,	 
 		 "nstart" = 10*(xdim+1L),							# number of starting points for multistart version at global phase
-		 "nextSample" = "ITPV")					  	   		# default selection criterion
+		 "nextSample" = "ITPV",								# default selection criterion
+		 "xtol_max" = 1e-2) 
 }
 
 .getDefaultLOCoptions <- function(xdim) {
@@ -1085,6 +1087,7 @@ traceQIsamp <- function(x0, qsd, QD, Sig0 = NULL, nsim = 1000, type = 0L, fit = 
 			return(.qleError(message=msg),call=match.call(),error=Sig0)
 		}
 	}
+	
 	# no check here!
 	args <- list(...)
 	if(verbose){
@@ -1093,7 +1096,8 @@ traceQIsamp <- function(x0, qsd, QD, Sig0 = NULL, nsim = 1000, type = 0L, fit = 
 	RES <-
 		do.call(doInParallel,
 			c(list(X=QD,
-				FUN=function(qd,qsd,Sig0,x0,nsim,type,fit,...) {					
+				FUN=function(qd,qsd,Sig0,x0,nsim,type,fit,pmin,...) {					
+					options(mc.cores=1L)
 					if(.isError(qd) || anyNA(unlist(qd))){
 					 return(.qleError(message="Evaluation of criterion function failed.",error=qd))
 					}						
@@ -1118,10 +1122,9 @@ traceQIsamp <- function(x0, qsd, QD, Sig0 = NULL, nsim = 1000, type = 0L, fit = 
 					# we only need 'qle' as a criterion function
 					# since the trace of (modified) quasi-information is the same for both
 					# value.only = 3L (compute trace of modified QI)
-					# options(mc.cores=1L)
 					vals <- quasiDeviance(Y,qsd,...,check=FALSE,value.only=3L)	
 					if(.isError(vals))
-					 return(vals)
+					 return(.qleError(message="Failed to compute quasi-deviance in 'traceQIsamp'.",error=vals))
 					if(any(!is.finite(vals))) {
 						hasNA <- which(!is.finite(vals))					
 						vals <- vals[-hasNA]
@@ -1129,15 +1132,16 @@ traceQIsamp <- function(x0, qsd, QD, Sig0 = NULL, nsim = 1000, type = 0L, fit = 
 						 return(.qleError(message="NAs detected in criterion function evaluation."))			  	 
 					}	
 					vals			 						 
-				}, cl=cl, qsd=qsd, Sig0=Sig0, x0=x0, nsim=nsim, type=type, fit=fit), args))	
+				}, cl=cl, qsd=qsd, Sig0=Sig0, x0=x0, nsim=nsim, type=type, fit=fit, pmin=pmin), args))	
 
 	if(.isError(RES)){
-		msg <- paste("Evaluations of minimum prediction variances failed.")
+		msg <- .makeMessage("Evaluations of minimum prediction variances failed: ")
 		message(msg)
 		return(.qleError(message=msg,call=match.call(),error=RES))
 	}
 	# check all results
-	ok <- which(sapply(RES,function(x) !.isError(x) ))			
+	msg <- "normal completion"
+    ok <- which(sapply(RES,function(x) !.isError(x) ))			
 	if(length(ok) == 0L){
 	  msg <- paste("All evaluations of minimum prediction variances failed.")
 	  message(msg)
@@ -1146,10 +1150,12 @@ traceQIsamp <- function(x0, qsd, QD, Sig0 = NULL, nsim = 1000, type = 0L, fit = 
 		msg <- .makeMessage("A total of ",length(ok), " minimum prediction variances failed. Check attribute `optRes`.")
 		message(msg)
 	}
+	# average over all points
 	v <- sapply(RES[ok],"mean")
 	id <-  which.min(v)
-	structure(c(QD[[id]],"message"=msg),
-		"id"=id,		
+	structure(c(QD[[id]],
+		"message"=msg),
+		"id"=id,
 		"hasError"=which(!(1:length(RES) %in% ok)),
 		"optRes"=if(optInfo) RES else NULL)
 }
@@ -1260,7 +1266,7 @@ traceQIconstr <- function(x0, qsd, b, method = c("nloptr"), opts = list(), ... ,
 			 "value"=-ret$objective,		
 			 "convergence"=ret$status,
 			 "message"=ret$message),
-	 	"hasError" = integer(),
+	 	"hasError" = integer(0),
 		"optRes" = if(optInfo) ret else NULL)
 		
 }
@@ -1500,7 +1506,7 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #' 			 average approximation, if applicable, and as the predicted variance for the (local) sampling of new candidate points
 #' 			 according to a multivariate normal distribution with this variance and the current root as its mean parameter.}
 #'    \item{theta:}{ the parameter corresponding to \code{W}, typically an approximate root or local minimzer of the criterion function} 
-#' 	  \item{last.global:}{ logical, whether last iteration sampled a point globally}
+#' 	  \item{status:}{ status of `qle` optimization, whether last iteration was global, local and minimzed}
 #' 	  \item{minimized:}{ whether last local minimization was successful}
 #' 	  \item{useCV:}{ logical, whether the cross-validation approach was applied}
 #' 	  \item{method:}{ name of final search method applied}
@@ -1662,7 +1668,8 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #'   \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
 #'      and predicted error of an approximate root drops below `\code{perr_tol}`}
 #'   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
-#' 	}
+#' 	\item{\code{nextSample}:}{ name of next selection criterion of next evaluation point, "\code{ITPV}" (default) or "\code{MTPV}", see details}
+#' }
 #'  
 #' 
 #' @seealso \code{\link{mahalDist}}, \code{\link{quasiDeviance}}, \code{\link{qleTest}} 
@@ -1693,8 +1700,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		if(pl > 0L) {
 			cat("\n")
 			nmax <- nglobal+nlocal
-			if(nmax >= maxEval || nglobal >= maxIter)
-			  cat("Final results: \n\n")
+			if(nmax >= maxEval || nglobal >= maxIter){				
+				cat("++++++++++++++++++++++++++ Final results: ++++++++++++++++++++++++++++\n\n")				
+		    }
    		    cat("Total evaluations...",nmax,"\n")						
 			cat("Criterion value.....",formatC(ft, digits=6, format="e", big.mark=","),"\n")
 			cat("\n")						
@@ -1704,9 +1712,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			 sb <- as.numeric(Stest$test[1])
 			 cat(paste0("Criterion value < ",names(qt)," quantile: ",formatC(sb, digits=4, format="e", big.mark=",")))
 			 cat(paste0(" < ",formatC(qt, digits=4, format="e", big.mark=",")),"\n")			 
-			 cat("\n")
 			 cat(paste0("Criterion value < ",names(qt)," quantile: ",formatC(sb, digits=4, format="e", big.mark=",")))
-			 cat(paste0(" < ",formatC(qSt, digits=4, format="e", big.mark=",")),"\n")
+			 cat(paste0(" < ",formatC(qSt, digits=4, format="e", big.mark=",")),"(observed)","\n")
+			 cat("\n")
 		    }			
 		}		
 	}
@@ -2246,7 +2254,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													   		W=I, theta=xt, cvm=cvm, pmin=locals$pmin,
 															cl=cl, pl=pl, verbose=verbose)
 											  if(.isError(pnew)){
-												  message("Failed to compute sampling criterion 'VQS'.")
+												  message(.makeMessage("Failed to compute sampling criterion 'VQS': ",pnew$message))
 												  NA
 											  } else attr(pnew,"id")	
 										  }
@@ -2274,32 +2282,33 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 								ft <- Snext$value
 								varS <- Snext$varS															
 							} 
-							dd <- max(abs(xt-xs)/pmax(abs(xt),1.0/qscore.opts$xscale))
-							message(.makeMessage("Distance from last sample point: ",dd,"\n"))
-							
-							if(locals$test && 										# trigger testing local minimizer at global phase only if last evaluation point was minimizer of criterion function
-							   status[["last"]] == 2L &&							# global selection criterion with weighted distances
-							   attr(Snext,"weight") == max(globals$weights) &&		# must have used maximum value to guarantee very small values of criterion function 
-							   dd < 1.5e-3)											# moderate requirement that minimizer `xt` is not too far from previously sampled point for large weights 					  
-					   		{									
-								if(verbose)
-							   	 cat("Test local minimizer as potential approximate root...\n")
+																			
+							if(locals$test && ctls["xtol_rel","val"] < globals$xtol_max)			# trigger testing local minimizer at global phase only if last evaluation point was minimizer of criterion function
+							{    
+								 if(verbose)
+							   	  cat("Test local minimizer as potential approximate root...\n")
 							
 								 Stest <-
-								  tryCatch({								 
-									  # no additional simulations required for testing (use previous ones)
+								  tryCatch({					    
+									  newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=verbose)
+									  if(!.isError(newObs)){
+										  ## TODO: show message from error ? ###
+										  stop(paste(c("Could not simulate observations for testing local minimizer: \n\t ",
+											format(xt, digits=6, justify="right")),collapse = " "))
+									  }
 									  # test for an approximate root either of modifier QD or modified Mahalanobis distance								  
 								      # using multistart and selecting best root if first root finding from `xt` fails to converge
-									 .rootTest(xs, fs, Snext$I, newSim[[1]], locals$alpha, qsd$criterion,
+									 .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
 									     qsd=qsd, method=method, opts=qscore.opts, control=control, Sigma=Sigma,
-										  cvm=cvm, multi.start=1L, Npoints=nrow(X), cl=if(isTRUE(use.cluster)) cl else NULL,
-										 	pl=pl, verbose=verbose)	
+										 cvm=cvm, multi.start=1L, Npoints=nrow(X), cl=if(isTRUE(use.cluster)) cl,
+										 pl=pl, verbose=verbose)	
 									  
 								  }, error = function(e){
 									  msg <- .makeMessage("Testing approximate root failed: ",conditionMessage(e))
 									  message(msg)
 									  .qleError(message=msg,call=match.call(),error=e)
 								  })
+				  
 								  # store results in temporary list for failure analysis
 								  tmplist <- c(tmplist,list("Stest"=Stest))						  
 								  if(.isError(Stest)){
@@ -2323,35 +2332,40 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 													
 							tet <- 
 							 if(status[["global"]] == 1L) {							# still at global phase after testing option																
-								 # after successful testing
-								 res <- NULL
-								 if(globals$nextSample == "ITPV") {					# two sampling criteria available
-									 res <- traceQIsamp(xs, qsd, attr(Stest,"qD"), nsim=locals$ntotal, type=0L,  # uniform sampling to approximate integral
-									          cvm=cvm, pmin=locals$pmin, cl=cl, pl=pl, verbose=verbose)									 
-								 }
-								 # try constrained search for next evaluation point
-								 if(.isError(res) || globals$nextSample == "MTPV"){							 
-									 # maximize selection criterion with inequality constraints									 
-									 traceQIconstr(xs, qsd, b=as.numeric(attr(Stest[[2]],"qSt")),
-									   Sigma=Sigma, inverted=TRUE, cvm=cvm, check=FALSE, pl=pl, verbose=verbose)										
-								 }			
-								 # or use its discrete version
-								 if(.isError(res) || anyNA(res$par)){	
-									 message(paste0("Trying to continue using re-estimated parameters.","\n"))
-									 Y <- attr(Stest,"mpars")
-									 dmin <- .min.distXY(X,Y)
-									 trI <- unlist(lapply(attr(Stest,"optRes"),function(x) sum(diag(x$varS))))
-									 if(!is.numeric(trI) || anyNA(trI))
-										 message(paste0("Local selection criterion function value has NAs."))
-									 id <- which.max(trI*dmin)
-									 Y[id,]								 
-								 } else {
-									 if(attr(res,"hasError")>0L)
-									  message(.makeMessage("Global sampling criterion failed for some candidate points: ",res$message))
-									 res$par
-								 }
+								     res <- NULL
+									 if(globals$nextSample == "ITPV") {					# two sampling criteria available										
+										 if(verbose)
+										  cat("Minimize average total prediction variance of quasi-score...","\n")
+									 	  res <-  traceQIsamp(xt, qsd, attr(Stest,"qD"), nsim=locals$ntotal,
+												    type=0L, cvm=cvm, pmin=locals$pmin, cl=cl, pl=pl, verbose=verbose)										 					 									 
+									 }									 
+									 # try constrained search for next evaluation point
+									 if(globals$nextSample == "MTPV" || .isError(res)) {							 
+										 message(.makeMessage("Could not next sample point by `ITPV`: ",res$message))
+										 # maximize selection criterion with inequality constraints									 
+										 res <- traceQIconstr(xt, qsd, b=as.numeric(attr(Stest[[2]],"qSt")),
+												  Sigma=Sigma, inverted=TRUE, cvm=cvm, check=FALSE, pl=pl, verbose=verbose)										
+										 # use its discrete version
+										 if(.isError(res) || anyNA(res$par)){	
+											 message(.makeMessage("Continue using discrete version of sampling criterion."))
+											 Y <- attr(Stest,"mpars")
+											 dmin <- .min.distXY(X,Y)
+											 trI <- unlist(lapply(attr(Stest,"optRes"),function(x) sum(diag(x$varS))))
+											 if(!is.numeric(trI) || anyNA(trI))
+												 message(.makeMessage("Local selection criterion function value has NAs."))
+											 id <- which.max(trI*dmin)
+											 Y[id,]								 
+										 } else {
+											 if(length(attr(res,"hasError")) > 0L)
+											   message(.makeMessage("Global sampling criterion failed for some candidate points: ",res$message))
+											 res$par
+										 }										 
+									 } else {										 
+										 res$par
+									 }								 						 							 
 								 
-							 } else {													# discrete version of finding next sample point
+							 } else {
+								
 								# sampling status == 2L
 								reset.w.local <- TRUE									# next local phase re-compute sampling weights							
 								nglobal <- nglobal + 1L							
@@ -2412,7 +2426,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 						if(.isError(Spar)){
 							msg <- .makeMessage("Could not evaluate criterion function at selected candidate.")
 							message(msg)
-						 	.qleError(message=msg,call=match.call(),error=structure(Spar,"weight"=w))							
+						 	.qleError(message=msg,call=match.call(),error=structure(Spar[[1]],"weight"=w))							
 						} else {
 						 structure(Spar[[1]],"weight"=w)
 					    }
@@ -2477,17 +2491,25 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 				newSim <-
 					tryCatch(
 						simQLdata(simFun, nsim=nsim, X=Snext$par, cl=cl, verbose=verbose),
-						error = function(e) {
+					error = function(e) {
 							msg <- .makeMessage("Simulating the model failed: ",conditionMessage(e))
 					 		.qleError(message=msg,call=match.call(),error=e)
-						})		 
+					}
+				 )		 
 				if(.isError(newSim)){
 					tracklist[[length(tracklist)]]$newSim <- newSim
 					msg <- paste(c("Cannot simulate data at candidate point: \n\t ",
 					  format(Snext$par, digits=6, justify="right")),collapse = " ")
 					stop(msg)					
 				}
-
+				
+				if(status[["global"]] == 1L) {				
+					Snext$par <- rbind("xs"=Snext$par,"xt"=Stest$par) 
+					newSim <-
+					 structure(c(newSim,newObs),
+							nsim=c(nsim,locals$nobs),
+					  class="simQL")						 
+				} 
 				# update QL model
 				qsd <- .updateQLmodel(qsd, Snext$par, newSim, fit=TRUE,
 							cl=if(isTRUE(use.cluster)) cl, verbose=verbose)
@@ -2501,9 +2523,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 					  msg <- c(msg, conditionMessage(e))
 					stop(msg)
 				}					
-				# reset
+				# reset testing
 				Stest <- NULL
-				# update X sample			
+				# get new X sample			
 				X <- as.matrix(qsd$qldata[seq(xdim)])				
 			
 			}  # end main loop		
@@ -2512,10 +2534,13 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			# either from the last sample point since it this most local supposed to
 			# small for high (global) weights or by a multistart approach.
 
-			if(status[["global"]] == 2L){
+			if(status[["global"]] == 2L)
+			{			   
+			   cat("+++++++++++++++++++++ Last multistart search +++++++++++++++++++++++++\n\n")
+			 
 			   # always multistart and include last (global) sample point
 			   # `Snext$par` as a new starting point
-				S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts,
+			   S0 <- multiSearch(Snext$par, qsd=qsd, method=method, opts=qscore.opts,
 						control=control, Sigma=Sigma, inverted=TRUE, cvm=cvm,
 						 check=FALSE, nstart=max(globals$nstart,(xdim+1L)*nrow(X)),
 						  optInfo=TRUE, multi.start=TRUE, isLocal=FALSE,			# includes all found roots using multistart
@@ -2558,7 +2583,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 				optInfo = list("x0"=x0,
 							   "W"=W,														# QI at xt if last iteration was at local phase
 							   "theta"=theta,												# equals xt (see above)						   
-							   "last.global"=(status[["global"]] == 2L),
+							   "status"=status,
 							   "minimized"=status[["minimized"]],
 							   "useCV"=useCV,
 							   "method"=S0$method,
@@ -2618,7 +2643,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 		optInfo = list("x0"=x0,
 				 	   "W"=W,
 					   "theta"=theta,						   
-			    	   "last.global"=(status[["global"]]==2L),
+			    	   "status"=status,
 				  	   "minimized"=status[["minimized"]],
 				  	   "useCV"=useCV,
 				  	   "method"=S0$method,

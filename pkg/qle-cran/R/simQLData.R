@@ -183,9 +183,10 @@ simQLdata <-
 		message(msg)
 		return(.qleError(message=msg,call=match.call(),error=res))
 	}
+	# simulation error at one point (all nsim simulations has errors) 
 	errId <- which(sapply(res,function(x) .isError(x)))
 	if(length(errId) > 0L) {
-		msg <- .makeMessage("Simulation error (first error): ", res[[errId[1]]])
+		msg <- .makeMessage("First error in simulations: ", res[[errId[1]]])
 		message(msg)
 		return(.qleError(message=msg,call=match.call(),error=res))
 	}	
@@ -201,8 +202,9 @@ simQLdata <-
 				 # remove errors in results				 
 				 err <- sapply(x,.isError)
 				 ok <- which(!err)
-				 if(length(ok) == 0L)
+				 if(length(ok) == 0L){
 					return (x) 
+				 }
 				 
 				 structure(
 					 switch(mode,
@@ -234,7 +236,7 @@ simQLdata <-
 			  nsim=nsim,			 
 			  X=.LIST2ROW(X),
 			  iseed=iseed,
-		 	  error=if(length(nErr) > 0L) nErr else NULL,
+		 	  hasError=if(length(nErr) > 0L) nErr else NULL,
 	  class="simQL", call=match.call())
 	
 }
@@ -276,16 +278,16 @@ varCHOLdecomp <- function(matList) {
 	stopifnot(nrow(Xnew)==length(newSim))
 	nextData <-
 		tryCatch(
-				setQLdata(newSim,
-						Xnew,
-						qsd$var.type,
-						attr(qsd$qldata,"Nb"),
-						verbose=verbose),
-				error = function(e) {
-					msg <- .makeMessage("Construction of quasi-likelihood data failed: ",
-							conditionMessage(e))				
-					.qleError(message=msg,call=match.call(),error=e)
-				}
+			setQLdata(newSim,
+					Xnew,
+					qsd$var.type,
+					attr(qsd$qldata,"Nb"),
+					verbose=verbose),
+			error = function(e) {
+				msg <- .makeMessage("Construction of quasi-likelihood data failed: ",
+						conditionMessage(e))				
+				.qleError(message=msg,call=match.call(),error=e)
+			}
 		)
 	if(.isError(nextData))
 	 return(nextData)
@@ -541,7 +543,7 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 #' @author M. Baaske
 #' @export
 # intern only: update data for QL model
-# add at least one fuurther design point to the existing sample points
+# add at least one further design point to the existing sample points
 # computes criterion function with these additinal points, updating variance
 # matrix, statistics (including new fixed (local) nuggets
 updateQLdata <- function(QD, qsd, fit = FALSE, cl = NULL, pl = 0L, verbose = FALSE)
@@ -554,7 +556,7 @@ updateQLdata <- function(QD, qsd, fit = FALSE, cl = NULL, pl = 0L, verbose = FAL
 			 stop("Failed to get parameters of quasi-deviance evaluation results.")
 			VTX <- attr(x,"Sigma")			 
 			dat <- list("V"=VTX, "mstat"=x$stats,"vars"=diag(VTX),"is.pos"=0L)
-			# if variance matrix is krigedm, then use means of
+			# if variance matrix is kriged, then use means of
 			# bootstrapped fourth moments over all previous sampled points
 			if(any(grepl("Lb", names(qsd$qldata))) && attr(qsd$qldata,"Nb")>0L) 
 			 dat <- c(dat,"Lb"=list(colMeans(qsd$qldata[grep("^Lb",names(qsd$qldata))])))		    

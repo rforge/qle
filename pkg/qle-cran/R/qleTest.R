@@ -746,7 +746,7 @@ qleTest <- function(est, par0 = NULL, obs0=NULL, ..., sim, criterion = "qle",
 	# had errors
 	hasError <- which(!(1:length(RES) %in% ok))
 	if(length(hasError) > 0L)	
-	  message(paste0("A total of ",length(hasError)," re-estimations failed."))
+	  message(.makeMessage("A total of ",length(hasError)," re-estimations failed."))
   
 	relEF <-
 	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {
