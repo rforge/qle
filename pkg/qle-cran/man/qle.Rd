@@ -80,7 +80,7 @@ List of the following objects:
 			 average approximation, if applicable, and as the predicted variance for the (local) sampling of new candidate points
 			 according to a multivariate normal distribution with this variance and the current root as its mean parameter.}
    \item{theta:}{ the parameter corresponding to \code{W}, typically an approximate root or local minimzer of the criterion function} 
-	  \item{last.global:}{ logical, whether last iteration sampled a point globally}
+	  \item{status:}{ status of `qle` optimization, whether last iteration was global, local and minimzed}
 	  \item{minimized:}{ whether last local minimization was successful}
 	  \item{useCV:}{ logical, whether the cross-validation approach was applied}
 	  \item{method:}{ name of final search method applied}
@@ -245,7 +245,8 @@ The function sequentially estimates the unknown model parameter. Basically, the 
   \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
      and predicted error of an approximate root drops below `\code{perr_tol}`}
   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
-	}
+	\item{\code{nextSample}:}{ name of next selection criterion of next evaluation point, "\code{ITPV}" (default) or "\code{MTPV}", see details}
+}
 }
 \examples{
 data(normal)
