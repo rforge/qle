@@ -145,7 +145,7 @@
 		 "NmaxQI" = 5,	 
 		 "nstart" = 10*(xdim+1L),							# number of starting points for multistart version at global phase
 		 "nextSample" = "ITPV",								# default selection criterion
-		 "xtol_max" = 1e-2) 
+		 "xdist_tol" = 1e-3) 								# trigger testing, indicating a local minimum
 }
 
 .getDefaultLOCoptions <- function(xdim) {
@@ -1668,7 +1668,10 @@ multiSearch <- function(x0 = NULL, qsd, ..., nstart = 10, optInfo = FALSE,
 #'   \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
 #'      and predicted error of an approximate root drops below `\code{perr_tol}`}
 #'   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
-#' 	\item{\code{nextSample}:}{ name of next selection criterion of next evaluation point, "\code{ITPV}" (default) or "\code{MTPV}", see details}
+#' 	 \item{\code{nextSample}:}{ name of next selection criterion of next evaluation point, "\code{ITPV}" (default) or "\code{MTPV}", see details}
+#'   \item{\code{xdist_tol}:}{ maximum allowed distance between consecutive iterates (potential minima of the criterion function), values below
+#' 							   indicate that some local minima and trigger the testing of this parameter estimate } 
+#' 
 #' }
 #'  
 #' 
@@ -1919,7 +1922,8 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 			           "stop" = rep(0,xdim), "count" = rep(globals$NmaxQI,xdim)),
 		  row.names = paste0(xnames,"_relEF"), check.names = FALSE)
 	 } else NULL
-
+	# new simulated observations if testing enabled
+	newObs <- NULL
 	# weight factor
 	w <- 0L
 	# local weights
@@ -2053,10 +2057,9 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 				# during the global phase, eventually a sampled point 'Snext' also becomes
 				# a minimizer after a number of steps cycling through the vector of global weights								
 				if(.isError(S0) || S0$convergence < 0L) {		
-					
 					if(.isError(S0))
-					 message("Error while minimizing criterion function.")
-				    else message("Current minimzation of criterion function did not convergence.")
+					  message("Error while minimizing criterion function.")
+				    else message("Minimzation of criterion function did not convergence.")
 					status[["global"]] <- 2L										
 					status[["minimized"]] <- FALSE
 					
@@ -2283,25 +2286,35 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 								varS <- Snext$varS															
 							} 
 																			
-							if(locals$test && ctls["xtol_rel","val"] < globals$xtol_max)			# trigger testing local minimizer at global phase only if last evaluation point was minimizer of criterion function
+							if(locals$test &&
+							   abs(ft-fold)/abs(ft) < 1e-4 &&
+							   any(.check.distX(rbind(xt),xold,xTol=globals$xdist_tol)))			# trigger testing local minimizer at global phase only if last evaluation point was minimizer of criterion function
 							{    
 								 if(verbose)
 							   	  cat("Test local minimizer as potential approximate root...\n")
 							
 								 Stest <-
-								  tryCatch({					    
-									  newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt), cl=cl, verbose=verbose)
-									  if(!.isError(newObs)){
-										  ## TODO: show message from error ? ###
-										  stop(paste(c("Could not simulate observations for testing local minimizer: \n\t ",
-											format(xt, digits=6, justify="right")),collapse = " "))
-									  }
-									  # test for an approximate root either of modifier QD or modified Mahalanobis distance								  
-								      # using multistart and selecting best root if first root finding from `xt` fails to converge
-									 .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
-									     qsd=qsd, method=method, opts=qscore.opts, control=control, Sigma=Sigma,
-										 cvm=cvm, multi.start=1L, Npoints=nrow(X), cl=if(isTRUE(use.cluster)) cl,
-										 pl=pl, verbose=verbose)	
+								  tryCatch({								  
+									   if(any(.check.distX(rbind(xt),xs,xTol=eps))) {  
+										  # use previous simulations from last iteration
+										 .rootTest(xs, fs, Snext$I, newSim[[1]], locals$alpha, qsd$criterion,
+												   qsd=qsd, method=method, opts=qscore.opts, control=control, Sigma=Sigma,
+												   cvm=cvm, multi.start=1L, Npoints=nrow(X), cl=if(isTRUE(use.cluster)) cl,
+												   pl=pl, verbose=verbose)
+									   } else {
+										  newObs <- simQLdata(simFun, nsim=locals$nobs, X=rbind(xt),cl=cl, verbose=verbose)
+										  if(!.isError(newObs)){
+											  ## TODO: show message from error ? ###
+											  stop(paste(c("Could not simulate observations for testing local minimizer: \n\t ",
+													  format(xt, digits=6, justify="right")),collapse = " "))										  
+										  }
+										  # test for an approximate root either of modifier QD or modified Mahalanobis distance								  
+										  # using multistart and selecting best root if first root finding from `xt` fails to converge
+										  .rootTest(xt, ft, I, newObs[[1]], locals$alpha, qsd$criterion,
+												  qsd=qsd, method=method, opts=qscore.opts, control=control, Sigma=Sigma,
+												  cvm=cvm, multi.start=1L, Npoints=nrow(X), cl=if(isTRUE(use.cluster)) cl,
+												  pl=pl, verbose=verbose)
+									   }			  	
 									  
 								  }, error = function(e){
 									  msg <- .makeMessage("Testing approximate root failed: ",conditionMessage(e))
@@ -2377,8 +2390,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 								res <- globalSearch(xt,qsd,w,Sigma=Sigma,inverted=TRUE,
 										cvm=cvm,check=FALSE,pl=pl,verbose=verbose)
 																 
-								tet <-
-								 if(.isError(res) || anyNA(res$par)){							 
+								if(.isError(res) || anyNA(res$par)) {							 
 									# try to compute evaluation criterion based on a grid
 									# in case of 'globalSearch' fails to return successfully
 									message(paste0("Trying to continue by grid search to compute evaluation criterion.","\n"))
@@ -2413,7 +2425,8 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 								 	Y[id,]
 								} else {
 									res$par									
-								}							
+								}
+								
 							} # sampling at status=2L
 							
 							# compute criterion function at new sample point
@@ -2466,7 +2479,7 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 				# print stopping conditions				
 				.showConditions()							
 															
-				if(status[["global"]] > 1L){				# update and continue sampling				 						  
+				if(status[["global"]] > 0L) {				# update and continue sampling				 						  
 					  xold <- xt							# relative change in `x` measured by local minimizers 
 					  fold <- ft	
 					  xs <- Snext$par						# starting point if no success locally
@@ -2503,12 +2516,13 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 					stop(msg)					
 				}
 				
-				if(status[["global"]] == 1L) {				
+				if(!is.null(newObs)) {				
 					Snext$par <- rbind("xs"=Snext$par,"xt"=Stest$par) 
 					newSim <-
 					 structure(c(newSim,newObs),
 							nsim=c(nsim,locals$nobs),
-					  class="simQL")						 
+					  class="simQL")
+	  				newObs <- NULL
 				} 
 				# update QL model
 				qsd <- .updateQLmodel(qsd, Snext$par, newSim, fit=TRUE,
@@ -2522,12 +2536,13 @@ qle <- function(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 					if(inherits(e,"error"))
 					  msg <- c(msg, conditionMessage(e))
 					stop(msg)
-				}					
+				}				
+				
 				# reset testing
-				Stest <- NULL
+				Stest <- NULL			
 				# get new X sample			
-				X <- as.matrix(qsd$qldata[seq(xdim)])				
-			
+				X <- as.matrix(qsd$qldata[seq(xdim)])
+				
 			}  # end main loop		
 
 			# Last iteration was done at global phase, so try to minimize again

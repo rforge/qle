@@ -294,7 +294,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 								inverted=TRUE,check=FALSE,verbose=verbose)
 						},
 					cl=cl), opt.args))   
-	 }
+	}
 	# check return value
 	if(.isError(RES))
 	  return(RES)	
@@ -407,7 +407,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 			aiqm=aiqm,							# average inverse QI (re-estimated parameters)
 			qi=qi,								# inverse QI at estimated theta
 			relEF=relEF,
-			obs=NULL,							# (MC) observations
+			obs=obs,							# (MC) observations
 			optRes=RES[ok],						# all optimization results
 			mean.score=mScore,					# average score/gradient
 			mpars=mpars,						# re-estimated parameters excluding errors
