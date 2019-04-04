@@ -683,14 +683,17 @@ searchMinimizer <- function(x0, qsd, method = c("qscoring","bobyqa","direct"),
 {
 	x0 <- if(is.matrix(x0))
 		structure(as.numeric(x0),names=colnames(x0))	
-	 else unlist(x0)
-	if(check) .checkArguments(qsd,x0,...)
-	stopifnot(is.numeric(pl) && pl >= 0L )
+	else unlist(x0)
+	if(check){
+	 .checkArguments(qsd,x0,...)
+	 stopifnot(is.numeric(pl) && pl >= 0L )
+    }
   
     fun.name <- ""
 	nms <- names(x0)	
 	scoring <- isTRUE("qscoring" %in% method)
-	
+	# to be sure
+	x0 <- .PROJMED(x0,qsd$lower,qsd$upper)
 	# current sample points
 	xdim <- attr(qsd$qldata,"xdim")
 	if(xdim != length(x0))
@@ -930,7 +933,8 @@ globalSearch <- function(x0, qsd, w, method = c("nloptr","direct"), opts = list(
 		.checkArguments(qsd,x0,...)
 		stopifnot(is.numeric(pl) && pl >= 0L )	
 	}
-		
+	# to be sure project starting point
+	x0 <- .PROJMED(x0,qsd$lower,qsd$upper)
 	# check dimension
 	xdim <- attr(qsd$qldata,"xdim")
 	if(xdim != length(x0))
@@ -1205,6 +1209,7 @@ traceQIconstr <- function(x0, qsd, b, method = c("nloptr"), opts = list(), ... ,
 	}	
 	# check dimension
 	xdim <- attr(qsd$qldata,"xdim")
+	x0 <- .PROJMED(x0,qsd$lower,qsd$upper)
 	# current sampled points (design)
 	X <- data.matrix(qsd$qldata[seq(xdim)])
 	if(length(opts)>0L) {		
@@ -2955,7 +2960,8 @@ qscoring <- function(qsd, x0, opts = list(), Sigma = NULL, ...,
 	 .checkArguments(qsd,x0,Sigma)
   	if(qsd$criterion != "qle")
 	  stop("Quasi-scoring is only valid for criterion `qle`.")
-  
+    # just project to be sure
+    x0 <- .PROJMED(x0,qsd$lower,qsd$upper)
     xdim <- attr(qsd$qldata,"xdim")
   	X <- as.matrix(qsd$qldata[seq(xdim)])  		
 	if(qsd$var.type != "kriging" && is.null(Sigma)){
