@@ -540,8 +540,8 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 }
 
 
-#' @author M. Baaske
-#' @export
+##' @author M. Baaske
+##' @export
 # intern only: update data for QL model
 # add at least one further design point to the existing sample points
 # computes criterion function with these additinal points, updating variance

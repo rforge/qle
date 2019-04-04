@@ -349,8 +349,13 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 	# invert QI for predicted std. error (asymptotic) at estimated theta 
 	qi <- try(gsiInv(I),silent=TRUE)
 	if(inherits(qi,"try-error") || anyNA(qi))
-		message("Inversion of quasi-information matrix failed")
-		 	
+	 message("Inversion of quasi-information matrix failed")
+	
+	# we only need the modified QI after testing and then selecting some
+	# suitable candidate for next evaluation/simulation:
+	# QI is independent of observations, there is no need to recompute 
+	# the criterion function for the original (not simulated) observations but
+	# for the estimated upper quantile 
 	qD <-
 	 tryCatch({			
 		if(criterion == "qle"){		
@@ -367,10 +372,19 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 		.qleError(message=msg,call=sys.call(),error=e)		
 	})
 	if(.isError(qD)){
-	  message(paste0("Cannot continue testing for an approximate solution: ",qD$message))	
-	}
-	# TODO: error/NaN checking!
+	  msg <- .makeMessage("Cannot continue testing approximate root: ",qD$message)
+	  message(msg)
+	  return (qD)
+  	}	
 	St <- sapply(qD,"[[","value")
+	if(any(!is.finite(St))){
+		idx <- which(!is.finite(St))
+		St <- St[-idx]
+		if(length(St) == 0L){
+			msg <- .makeMessage("Criterion values contain 'NAs' in testing approximate root.")
+			return(.qleError(message=msg,call=sys.call(),error=qD))			
+	 	}
+	}	
 	# get efficient score test (with MC parameters)
 	B <- structure(
 			data.frame(
@@ -382,9 +396,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 			"sb"=value, "Sb"=tvals, "St"=St, "test"=criterion)
 	
 	relEF <-
-	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {
-		 ## TODO: which one is better?
-		 #try(abs(1-sqrt(diag(msem))/sqrt(diag(qi))),silent=TRUE)
+	 if(!anyNA(c(msem,qi)) && is.matrix(qi) && is.matrix(msem)) {		
 		  try(abs(1 - sqrt(diag(qi))/sqrt(diag(msem))),silent=TRUE)
 	} else {
 		message("Failed to compute relative difference of empirical and predicted error.")
@@ -398,7 +410,7 @@ checkMultRoot <- function(est, par = NULL, opts = NULL, verbose = FALSE)
 		
 	res <- try(.qleTest(B,alpha),silent=TRUE)					# test results
 	if(inherits(res,"try-error"))
-	 message(paste0('Test result has errors.'))
+	 message(paste0("Test result has errors."))
 	res$par <- par
 	
 	# results

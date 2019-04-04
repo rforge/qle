@@ -2,7 +2,7 @@
 % Please edit documentation in R/qsOpt.R
 \name{traceQIsamp}
 \alias{traceQIsamp}
-\title{Find new local evaluation point}
+\title{Finding a new evaluation point}
 \usage{
 traceQIsamp(x0, qsd, QD, Sig0 = NULL, nsim = 1000, type = 0L,
   fit = FALSE, pmin = 0.25, ..., optInfo = FALSE, cl = NULL,
@@ -42,15 +42,15 @@ list of the criterion function value corresponding to the model parameter which 
  the integrated total prediction variance of the quasi-score vector
 }
 \description{
-Minimizing the integrated total prediction variance of the quasi-score vector
+Minimizing the average total prediction variance of the quasi-score vector
 }
 \details{
 Based on the list of sampling candidates \code{QD} one point at a time is (sequentially) added to
-the current sampling design. The integrated total prediction variance of the quasi-score vector is then
-computed based on this new design over a randomly generated set of evaluation points with a sample covariance
-derived from all candidates. The integral is taken over a discrete set of points either generated uniformly within
-the whole design region if '\code{Sig0}' is \code{NULL} or multivariate normally distributed points with covariance
-matrix '\code{Sig0}' and mean vector '\code{theta0}'.
+the current sampling design. The integrated (averaged) total prediction variance of the quasi-score vector is then
+computed based on this new design over a randomly generated set of candidate evaluation points with a sample covariance
+derived from all sampled candidates. The integral is taken over a discrete set of points either generated uniformly within
+the design region defined by simple bound constraints if '\code{Sig0}' is \code{NULL} or multivariate normally distributed points
+with covariance matrix '\code{Sig0}' and mean parameter vector '\code{theta0}'.
 }
 \seealso{
 \code{\link{quasiDeviance}} 

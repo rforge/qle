@@ -2,17 +2,17 @@
 % Please edit documentation in R/qsOpt.R
 \name{traceQIconstr}
 \alias{traceQIconstr}
-\title{Find new local evaluation point}
+\title{Find a new local evaluation point}
 \usage{
 traceQIconstr(x0, qsd, b, method = c("nloptr"), opts = list(), ...,
   optInfo = FALSE, check = TRUE, pl = 0L, verbose = FALSE)
 }
 \arguments{
-\item{x0}{(named) numeric vector, the starting point}
+\item{x0}{(named) numeric vector, the starting and center point of the feasible region}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{b}{upper bound on either quasi-deviance or mahalanobis distance as a constraint defining the feasible region}
+\item{b}{upper bound on either quasi-deviance or mahalanobis distance criterion function values as an upper bound constraint (as a level set function) which defines the feasible region}
 
 \item{method}{names of possible minimization routines, currently only "\code{nloptr}" is supported (see details)}
 
@@ -29,12 +29,16 @@ traceQIconstr(x0, qsd, b, method = c("nloptr"), opts = list(), ...,
 \item{verbose}{if \code{TRUE} (default), print intermediate output}
 }
 \value{
-list which contains the new evaluation point and the value of the criterion function
+list which contains the new evaluation point as the maximizer and the corresponding value of the criterion function
 }
 \description{
-The function finds the maximum value of the local selection criterion, which basically
- is a distance weighted version of the trace of the quasi-information matrixe over a local region defined 
- by the level set of hight \code{b} w.r.t. the quasi-deviance using the actual observed statistics.
+The function maximizes the total prediction variance of the quasi-score vector in the vicinity of
+ the center point `\code{x0}` (usually the current parameter estimate). More specifically, 
+ a distance weighted version of the trace of the quasi-information matrix is maximized over a local region defined 
+ by a level set of hight `\code{b}` w.r.t. the criterion function (either quasi-deviance or Mahalanobis distance)
+ based on the observed statistics. The function can be used to find a suitable next evaluation point. As one of the
+ global selection criteria the function can be called by \code{\link{qle}} to find a new evaluation point if testing
+ approximate roots is enabled.
 }
 \seealso{
 \code{\link{searchMinimizer}}

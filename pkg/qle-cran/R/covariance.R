@@ -1138,10 +1138,9 @@ updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
 		 }	 
   	  }
 	  
- 	}, error = function(e) {
-	     msg <- .makeMessage("Failed to update covariance models: ",
-				 conditionMessage(e))		
-		return(.qleError(message=msg,call=match.call(),error=e))
+ 	}, error = function(e) {	    	
+		return(.qleError(message=.makeMessage("Failed to update covariance models: ", conditionMessage(e)),
+				 call=match.call(),error=e))
 	})
 
 	return( qsd )

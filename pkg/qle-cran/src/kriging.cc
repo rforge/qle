@@ -523,6 +523,7 @@ SEXP mahalanobis(SEXP R_points, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat
 			 for(;i < np; ++i)
 				fx[i] = qlm.intern_wlogdetMahal(REAL(AS_NUMERIC(VECTOR_ELT(R_points,i))),REAL(R_w)[0]);
 		  } else if(type == COPY_HIGHER) {
+			  WRR("'type==3' not yet implemented for criterion 'mahal'.")
 			  for(i=0; i < np; ++i)
 				  fx[i] = 0; /// TODO:
 		  } else {

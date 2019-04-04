@@ -106,7 +106,7 @@
 	idxx <- rep(1:NROW(X),1)
 	Y <- matrix(c(x), nrow=NROW(X),ncol=length(c(x)),byrow=TRUE)
 	H <- .ISO.NORM(X-Y)
-	return (which(H<xTol,arr.ind=TRUE))
+	return (structure(which(H<xTol,arr.ind=TRUE),"d"=H))
 }
 
 .min.distX <- function(X,Y=X) {

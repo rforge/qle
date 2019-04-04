@@ -204,7 +204,8 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 				  of the current parameter estimate due to a sparse sample or the (hyper)box constraints of the
 				  parameter space could be too restrictive.}
 	 \item{\code{nsample}:}{ sampling size of candidate locations at the local phase}
-	 \item{\code{ntotal}:}{ number of  random samples for evaluation of the integral of total prediction variance of the quasi-score vecotor at the local phase with criterion "\code{VQS}"}
+	 \item{\code{ntotal}:}{ number of  random samples for evaluation of the integral of total prediction variance of the quasi-score vector at
+       the local phase with criterion "\code{VQS}"}
 	 \item{\code{weights}:}{ vector of weights, \eqn{0\leq\code{weights}\leq 1}, for local sampling}
 	 \item{\code{useWeights}:} {logical, if \code{FALSE} (default), dynamically adjust the weights, see vignette}
  \item{\code{ftol_abs}:}{ upper bound on the function criterion: values smaller trigger the local phase
@@ -245,7 +246,10 @@ The function sequentially estimates the unknown model parameter. Basically, the 
   \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
      and predicted error of an approximate root drops below `\code{perr_tol}`}
   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
-	\item{\code{nextSample}:}{ name of next selection criterion of next evaluation point, "\code{ITPV}" (default) or "\code{MTPV}", see details}
+	 \item{\code{nextSample}:}{ name of next selection criterion of next evaluation point, "\code{ITPV}" (default) or "\code{MTPV}", see details}
+  \item{\code{xdist_tol}:}{ maximum allowed distance between consecutive iterates (potential minima of the criterion function), values below
+							   indicate that some local minima and trigger the testing of this parameter estimate } 
+
 }
 }
 \examples{
