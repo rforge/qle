@@ -135,7 +135,7 @@
 		 "maxiter" = 100,									# max number of global iterations
 		 "maxeval" = 100,									# max number of global and local iterations
 		 "sampleTol" = 1e-4,								# minimum (euclidean) distance between samples		 
-	 	 "weights" = c(100,50,25,10,5,2,1),		 
+	 	 "weights" = c(100,50,25,10,8,4,2,1),		 
 		 "nsample" = 1000*(xdim+1),							# number of global random samples
 		 "NmaxRel" = 3,		 
 		 "NmaxfRel" = 5,
