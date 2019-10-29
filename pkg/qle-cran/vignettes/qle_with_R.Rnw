@@ -1981,7 +1981,7 @@ store or cache computational results of functions for a deeper analysis of
 estimation results or even errors. Setting \code{options("qle.cache"=TRUE)}
 persistently stores (and reloads) any results of the following functions:
 \begin{itemize}
- \item[] \code{simQLdata}, \code{prefitCV}, \code{mahalDist}, \code{quasiDeviance},
+ \item[] \code{simQLdata}, \code{prefitCV}, \code{quasiDeviance},
  \item[] \code{fitCov}, \code{fitSIRFk}, \code{updateCovModels}, \code{getQLmodel}
 \end{itemize}
 using package \pkg{digest} \citep{pkg:digest} for hash digests of \proglang{R}
