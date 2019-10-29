@@ -190,8 +190,7 @@ setCovModel <- function(model = "sirfk", param = NULL, npoints = 0, var.sim = NU
 	start <- param
 	if(any(start<lower) || any(start>upper))
 		stop("At least one parameter does not match constraints. Check `lower` and `upper`.")
-	
-			
+		
 	free <-  
 	 if(is.null(fixed.param)){
 		 seq(length(start))
@@ -300,11 +299,11 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), pl = 0L, verbose =
 	              )
 			  	} else { 
 					if(pl > 10L)
-					 message("Could not 'backsolve' in REML objective `fnREML`.") }
-				}
+					 message("Could not 'backsolve' in REML objective `fnREML`.")
+			    }
+			}
 				
-		} else {
-			
+		} else {			
 			msg <- paste0(c("Reciprocal condition number (", rc,") of projected covariance matrix is near zero at covariance parameter \n\t ",
 					format(p, digits=6, justify="right"),"\n"," which might be unreliable."), collapse = " ")
 			if(pl > 10L)
@@ -332,8 +331,8 @@ fnREML <- function(p, y, Xs, P, model, free = seq(length(p)), pl = 0L, verbose =
 				 "info"=list("p"=p, "rcond"=rc, "detW"=detW, "msg"=msg) )	
 		)		
 	  
-	} ,error = function(e) {
-		 stop("Error in function 'fnREML': ",	conditionMessage(e))		  	
+	}, error = function(e) {
+		 stop("Error in function 'fnREML': ",conditionMessage(e))		  	
 	   }
 	)		
 	
@@ -357,23 +356,20 @@ fnGradREML <- function(p, y, Xs, P, model, free = NULL, pl = 0L, verbose = FALSE
 ## TODO add data as parameter
 # arguments '...' manipulate global options for nloptr 
 #' @importFrom nloptr nl.opts
-doREMLfit <- function(model, Xs, opts, pl = 0L, verbose = FALSE )
-{
+doREMLfit <- function(model, Xs, opts, pl = 0L, verbose = FALSE ){
 	# return if all parameters are fixed
 	if(!is.null(model$free) && length(model$free)==0L) {
-	  return(
-		structure(
-		  list(model = model,convergence = 1L),
-		optres=NULL, class = "reml") )
-	}	
+	  return(structure(model, "convergence"=1L, "message"=.makeMessage("All covariance parameters are fixed."),
+			   "optres"=NULL, class = "covModel") ) }	
 	err <- NULL	
 	fn <- fnREML
 	if(!is.null(opts$algorithm) &&
 	   opts$algorithm == "NLOPT_LD_LBFGS") {
-	   message("Caution: using `LBFGS` in REML function might not be stable.")
+	   if(pl>0L)
+   	    message("Caution: using `LBFGS` in REML function might not be stable.")
 	   fn <- fnGradREML
  	}
-	 
+	res <- NULL
  	tryCatch({		
         nms <- names(model$param)				
 		Fmat <- .Call(C_Fmat,Xs,model$trend)		
@@ -389,7 +385,7 @@ doREMLfit <- function(model, Xs, opts, pl = 0L, verbose = FALSE )
 						y = y, Xs = Xs, P = P, model = model, free = model$free,
 						 pl = pl, verbose = verbose)
 		msg <- "Normal convergence."
-		if(inherits(res,"error") || is.null(res) || anyNA(res$solution)){
+		if(is.null(res) || inherits(res,"error") || anyNA(res$solution)){
 			msg <- .makeMessage("Function call to 'nloptr' failed.")				
 			message(msg)
 			return(.qleError(message=msg,call=match.call(),error=res))
@@ -407,7 +403,7 @@ doREMLfit <- function(model, Xs, opts, pl = 0L, verbose = FALSE )
 					 y = y, Xs = Xs, P = P, model = model, free = model$free,
 					  pl = pl, verbose = verbose)
 		
-			if(inherits(res0,"error") || is.null(res0) || anyNA(res0$solution)){
+			if(is.null(res0) || inherits(res0,"error") || anyNA(res0$solution)){
 			   warning(.makeMessage("Local function call to 'nloptr' failed after global optimization."))
 			   res$final <- res0
 		    } else res <- res0
@@ -418,27 +414,23 @@ doREMLfit <- function(model, Xs, opts, pl = 0L, verbose = FALSE )
 		if(res$status >= 0L) {
 			converged <- TRUE
 			model$param[model$free] <- sol						   			   
-	    } else {
-		   verbose <- TRUE
+	    } else {		   
 		   msg <- .makeMessage("Estimation of covariance parameters did not converge.")		   
-		   message(msg)
+		   if(pl>0L)
+		    message(msg)
 	    }		
-	    structure(
-		    list(model=model,
-				 convergence=converged,
-				 message=msg),
-		  optres = if(verbose) res else NULL, class = "reml") 
+	    structure(model,
+			"convergence"=converged,
+			"message"=msg,
+		    "optres"= if(verbose) res else NULL,
+		class = "covModel") 
 				 
-	 }, error = function(e){
-			 msg <- .makeMessage("Nloptr error fitting covariance parameters: ",
-					  conditionMessage(e))
-			 message(msg)
-			 structure(
-				list(model=model,
-					 convergence=FALSE,
-					 message=msg,
-					 call=sys.call()),
-			  error=e)			  		
+	 }, error = function(e){						
+			 structure(model,
+					 "convergence"=FALSE,
+					 "message"=.makeMessage("Nloptr error fitting covariance parameters: ", conditionMessage(e)),
+					 "optres"=if(verbose) res else NULL,
+			   "class"="covModel", "call"=sys.call(), "error"=e)			  		
 		}
 	) 	 
 }
@@ -461,7 +453,7 @@ doREMLfit <- function(model, Xs, opts, pl = 0L, verbose = FALSE )
 #' @param pl		 integer, print level \code{pl=0} (default) 
 #' @param verbose 	 logical, \code{FALSE} (default) for intermediate output
 #' 
-#' @return An object of class \code{reml} which consists of a list of named lists
+#' @return An object of class \code{QLfit} which consists of a list of named lists
 #'  (of elements `\code{model}` and `\code{convergence}`) each storing a fitted covariance model
 #'  together with optimization results from a call to \code{\link[nloptr]{nloptr}} as an attribute
 #'  named `\code{optres}` if \code{verbose=TRUE}. The default method for estimation is \code{\link[nloptr]{mlsl}} which
@@ -502,24 +494,23 @@ fitCov <- function(models, Xs, data, control = list(),
 		opts <- list("algorithm" = "NLOPT_GN_MLSL",
 					"local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",										
 					 					"xtol_rel" = 1.0e-6, "maxeval" = 1000),
-					 "maxeval" = 200, "xtol_rel" = 1.0e-4)	
+					 "maxeval" = 100, "xtol_rel" = 1.0e-4)	
 	}	
 	for(i in 1:length(models))
 	 models[[i]]$dataT <- as.numeric(data[[i]])
 		
- 	mods <- doInParallel(models, doREMLfit, Xs=Xs, opts = opts,
-			  cl=cl, pl = pl, verbose=verbose)
-	  
+ 	mods <- doInParallel(models, doREMLfit, Xs=Xs, opts = opts, cl=cl)
+	mods <- .extractCovModels(covs,verbose)  
 	if(inherits(mods,"error")) {
 		msg <- paste0("REML estimation failed: ",conditionMessage(mods),"\n")
 		message(msg)
 		return(.qleError(message=msg,call=match.call(),error=mods))
 	}	
-	errId <- which(sapply(mods,function(x) .isError(x)))
+	errId <- which(sapply(mods, function(x) .isError(x)))
 	if(any(errId))
-	 message(paste(c("Failed fitting covariance models with index: ",as.character(errId)), collapse=" ")) 
+	 message(paste(c("Failed fitting covariance models: ",as.character(errId)), collapse=" ")) 
 	else {
-	 id <- which(sapply(mods,function(x) x$convergence))
+	 id <- which(sapply(mods,function(x) attr(x,"convergence")))
 	 if(!all(id)) {
 	  message(paste(c("REML failed to converge: ",as.character(id)), collapse=" ")) 
 	 } else
@@ -527,7 +518,7 @@ fitCov <- function(models, Xs, data, control = list(),
 	}
 		
 	structure(mods, opts = opts,
-		error = if(length(errId) > 0L) errId else NULL, class = "QLFit")
+		error = if(length(errId) > 0L) errId else NULL, class = "QLfit")
 }
 
 #' @name QLmodel
@@ -543,8 +534,9 @@ fitCov <- function(models, Xs, data, control = list(),
 #' @param mods			list of (fitted) covariance models (see \code{\link{fitSIRFk}}) 
 #' @param nfit			number of cycles, \code{nfit=1} (default), after which covariance
 #' 						parameters are re-estimated and otherwise only re-used 
-#' @param cv.fit 		logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
+#' @param cv.fit 		logical, \code{FALSE} (default), whether to re-fit CV models (re-estimate covariance parameters)	
 #' @param var.type  	name of the variance approximation method (see \code{\link{covarTx}})
+#' @param krig.type  	name of kriging variant used, either "\code{var}" for kriging with computation of krigin prediction variance or "\code{dual}"
 #' @param criterion 	global criterion function for sampling and minimization, either "\code{qle}" or "\code{mahal}"				    	
 #' @param verbose       logical, \code{FALSE} (default), whether to give intermediate output 
 #' 
@@ -576,9 +568,9 @@ fitCov <- function(models, Xs, data, control = list(),
 #' @author M. Baaske
 #' @rdname QLmodel
 #' @export 
-QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
-		    var.type = c("wcholMean","cholMean","wlogMean","logMean","kriging","const"),
-			 criterion = c("qle","mahal"), verbose = FALSE)
+QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = FALSE,
+		    var.type = c("cholMean","wcholMean","logMean","wlogMean","kriging","logKrig","const"),
+			 krig.type="var", criterion = c("qle","mahal"), verbose = FALSE)
 {	
 	if(!inherits(qldata,"QLdata"))
 	 stop("expected argument `qldata` of class `QLdata`.")
@@ -596,7 +588,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 	if(!is.numeric(obs))
 	  stop("Argument `obs` must be a (named) numeric vector or list.")
   	stopifnot(!is.null(mods$covT))
-	stopifnot(class(mods)=="QLFit")
+	stopifnot(class(mods)=="QLfit")
 	# names of statistics should match all
 	# otherwise overwrite names of observed statistics
 	Tnames <- names(qldata[grep("^mean[.]",names(qldata))])
@@ -609,7 +601,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
   	var.type <- match.arg(var.type)
 	criterion <- match.arg(criterion)
 		
-	if(is.null(mods$covL) && var.type %in% c("kriging"))
+	if(is.null(mods$covL) && var.type %in% c("kriging","logKrig"))
 	  stop("Covariance models for variance matrix interpolation must be set for argument \'var.type\'.")
 	if(!is.numeric(nfit) || length(nfit)>1L )
 	 stop("Argument 'nfit must be numeric of length one.")	
@@ -630,7 +622,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 									"ftol_abs" = .Machine$double.eps,
 									"ftol_rel" = .Machine$double.eps^0.5,
 									"xtol_rel" = 1.0e-6, "maxeval" = 1000),
-				"maxeval" = 200, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6)			  
+				"maxeval" = 100, "xtol_rel" = 1.0e-6, "ftol_rel" = 1.0e-6)			  
 	}
 	# minimum required sample size
 	minN <- ifelse(min(sapply(covT,	function(x) x$trend)) < 2, dx+2, (dx+1)*(dx+2)/2+1)
@@ -647,7 +639,7 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 			 "covL" = covL,			
 			 "obs" = obs,		 
 			 "var.type" = var.type,			 
-			 "krig.type" =  "var",
+			 "krig.type" =  krig.type,
 			 "criterion" = criterion,			 
 			 "minN" = minN,
 			 "nfit" = nfit,
@@ -660,23 +652,16 @@ QLmodel <- function(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 # intern
 .extractCovModels <- function(covs, verbose = FALSE) {
 	if(is.null(covs))
-	  return (NULL)
-    # which one procudces errors in fitting?
-	errId <- which(sapply(covs,function(x) .isError(x)))
-	
-	if(length(errId)>0L)
-	  message(.makeMessage("A total of ",length(errId)," errors detected in fitted covariance models.")) 
-	
-    structure(
-		lapply(covs,
-		 function(x) {
-			if(verbose)
-			 structure(x$model,"optres"=attr(x,"optres"))
-			else x$model
-		 }
-	    ), error = if(length(errId)>0L) errId else NULL,
-	  class = "krige"
- 	)	
+	  return (NULL)    
+  	# which one procudces errors in fitting?
+	err <- NULL
+	errId <- which(sapply(covs,function(x) .isError(x)))	
+	if(length(errId)>0L) {
+	  	msg <- .makeMessage("A total of ",length(errId)," errors detected in covariance models.")
+		message(msg)
+	  	err <- .qleError(message=msg,call=match.call(),errId=errId)
+  	}
+	structure( covs, class = "krige", error = err) 
 }
 
 #' @name fitSIRFk
@@ -796,7 +781,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		)
 
 	 covL <- NULL	 
-	 if(var.type == "kriging"){
+	 if(var.type %in% c("kriging","logKrig")) {
 		 # check input
 		 args <- var.opts
 		 if(length(args)>0L) {
@@ -852,7 +837,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 		 opts <- list("algorithm" = "NLOPT_GN_MLSL",
 				  "local_opts" = list("algorithm" = "NLOPT_LN_COBYLA",									
 					 				  "xtol_rel" = 1.0e-6, "maxeval" = 1000),
-				  "maxeval" = 200, "xtol_rel" = 1.0e-4)		  
+				  "maxeval" = 100, "xtol_rel" = 1.0e-4)		  
 	 }
 	 	 
 	 # REML fit covariance models (statistics and variance matrices)
@@ -880,7 +865,7 @@ fitSIRFk <- function(qldata, set.var = TRUE, var.type = "wcholMean",
 			  	   "var.type" = var.type),
 		     opts = opts,
 			 error = if(length(errId)>0L) errId else NULL,
-			 class = "QLFit")	
+			 class = "QLfit")	
 	 
 	 if(!is.null(covL))
 	  ret$covL <- mods[(nstat+1):length(mods)]
@@ -987,8 +972,7 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, criterion = "qle", ...)
 	}, error = function(e) {
 		msg <- .makeMessage("Failed to setup QL model: ",conditionMessage(e))
 		message(msg)
-		return(.qleError(message=msg,
-				 call=match.call(),error=e))	
+		return(.qleError(message=msg,call=match.call(),error=e))	
 	   }
 	)
 }
@@ -1046,35 +1030,30 @@ getQLmodel <- function(runs, lb, ub, obs, X = NULL, criterion = "qle", ...)
 #' @rdname updateCovModels
 #' @export
 updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
-						control = list(), pl = pl, verbose=FALSE)
+						control = list(), pl = 0L, verbose=FALSE)
 {		
 	stopifnot(class(qsd) == "QLmodel")
 	stopifnot(inherits(nextData,"QLdata"))	
 	
 	nnew <- NROW(nextData)	
 	xdim <- attr(qsd$qldata,"xdim")	
-	nsim.new <- attr(nextData,"nsim")
-	
+	nsim.new <- attr(nextData,"nsim")	
 	nstat <- length(qsd$covT)	
 	stid <- (xdim+1):(xdim+nstat)
-	vid <- c((xdim+nstat+1):(xdim+2*nstat))
-	
-	vars <- qsd$qldata[vid]
+	vid <- c((xdim+nstat+1):(xdim+2*nstat))	
 	vars.new <- nextData[vid]
 	
 	# combine old and new data and
 	# check columns also because L+ might not be given
 	if(ncol(nextData) != ncol(qsd$qldata))
-	  stop("The number of columns of argument `nextData` does not match with `qldata`.")
-	
-	# merge to new data, one (sample point) added
+	  stop("The number of columns of argument `nextData` does not match with `qldata`.")	
+	# merge to new data, one (sample point) added		
 	qsd$qldata <- rbind(qsd$qldata,nextData)	
-	# append number of new simulations (affects nugget evaluation in fitSirfk)
+	# append number of new simulations (affects nugget evaluation in fitSirfk)	
 	attr(qsd$qldata,"nsim") <- c(attr(qsd$qldata,"nsim"),nsim.new)
-	# old sample points
+	# old sample points	
 	Xs <- as.matrix(qsd$qldata[seq(xdim)])
-	np <- nrow(Xs)
-		
+	np <- nrow(Xs)		
 	if(length(control)>0L) {		
 		# set default optimization control
 		opts <- nloptr::nl.opts()
@@ -1085,63 +1064,50 @@ updateCovModels <- function(qsd, nextData, fit = TRUE, cl = NULL,
 	}		 
 	# update function 
 	fitit <- (fit && !(nrow(Xs) %% qsd$nfit))
-	
-	#c(xm$fix.nugget, xm$ptol*data[[i]][-(1:(np-nnew))] )
-	.update <- function(covT, data, vars.new=NULL){
-		mod <- lapply(1:length(covT),		
-				function(i) {		   
-					xm <- covT[[i]]
-					# set starting point
-					xm$start <- xm$param[xm$free]	
-					if(!is.null(xm$fix.nugget)) {					  
-					  xm$fix.nugget <-
-						if(!is.null(vars.new)){							
-						  c(xm$fix.nugget,vars.new[[i]])
-						} else c(xm$fix.nugget,rep(xm$fix.nugget[1],nnew)) # re-use first 
-		   			} # else (not using simulation variance for REML)
-					if(fitit) {
-						# store data for REML (remove afterwards in 'doREMLfit')
-						xm$dataT <- data[[i]]										      			
-					}
-					xm
-				})	
+	# update function called sequentially
+	updateCovList <-
+	 function(mods, data, vars.new=NULL){
+		for(i in 1:length(mods)){
+			# set starting point
+			mods[[i]]$start <- mods[[i]]$param[mods[[i]]$free]	
+			if(!is.null(mods[[i]]$fix.nugget)) {					  
+				mods[[i]]$fix.nugget <-
+				 if(!is.null(vars.new)){							
+					c(mods[[i]]$fix.nugget,vars.new[[i]])
+				 } else c(mods[[i]]$fix.nugget,rep(mods[[i]]$fix.nugget[1],nnew)) # re-use first 
+			} # else (not using simulation variance for REML)
+			# store data for REML (remove afterwards in 'doREMLfit')
+			if(fitit) mods[[i]]$dataT <- data[[i]] 	
+		}			
 		if(fitit) {  				
-			res <- doInParallel(mod, doREMLfit, Xs=Xs, opts=opts,
-					 cl=cl, pl = pl, verbose=verbose)		
-			if(!inherits(res,"error")) {
-				.extractCovModels(res,verbose)
-			} else {
-				msg <- paste0("Error fitting covariance parameters.")
-				message(msg)
-				structure("message"=msg,"error"=res)				
-			}	
-		} else structure(mod, class = "krige")
-	}
-	
+			res <- doInParallel(mods, doREMLfit, Xs=Xs, opts=opts, cl=cl)		
+			if(inherits(res,"error"))
+			 message(.makeMessage("REML fitting of covariance parameters failed. Continue without fitting."))
+		 	mods <- .extractCovModels(res,verbose)				
+		}
+		mods
+	}	
 	tryCatch({
 	  # update kriging models of statistics
-	  qsd$covT <- .update(qsd$covT,qsd$qldata[stid],nextData[vid]/nsim.new)				  
-	  # update kriging VARIANCE models
- 	  # Cholesky terms are the data
-	  if(qsd$var.type == "kriging") {
-		if(is.null(qsd$covL))
-		   stop("A covariance model for kriging the variance matrix must be defined but is `Null`.")
-	    qsd$covL <-
+	  qsd$covT <- updateCovList(qsd$covT,qsd$qldata[stid],nextData[vid]/nsim.new)				  
+	  # update kriged variance of statistics with Cholesky terms as the data	  
+	  qsd$covL <-
+	   if(qsd$var.type == "kriging") {
+		 if(is.null(qsd$covL))
+		   stop("Covariance models for kriging the variance matrix not set.")
+	   	 nms <- names(qsd$qldata)
 	     if(attr(qsd$qldata,"Nb") > 0){ 
-			 # if bootstrrapping nugget variances
-			 # and only use simulations variances at new points
-			 .update(qsd$covL,
-					 qsd$qldata[grep("^L[^b]",names(qsd$qldata))],
-					 nextData[grep("^Lb",names(qsd$qldata))])
+		  # if bootstrrapping nugget variances
+		  # and only use simulations variances at new points
+		   updateCovList(qsd$covL, qsd$qldata[grep("^L[^b]",nms)], nextData[grep("^Lb",nms)])
 		 } else {
-			 .update(qsd$covL,qsd$qldata[grep("^L[^b]",names(qsd$qldata))],NULL) 
+		   updateCovList(qsd$covL,qsd$qldata[grep("^L[^b]",nms)],NULL) 
 		 }	 
-  	  }
-	  
- 	}, error = function(e) {	    	
-		return(.qleError(message=.makeMessage("Failed to update covariance models: ", conditionMessage(e)),
-				 call=match.call(),error=e))
+  	  }	else NULL 
+ 	}, error = function(e) {	
+		msg <- .makeMessage("Failed to update covariance models: ", conditionMessage(e))
+		message(msg)
+		return(.qleError(message=msg,call=match.call(),error=e))
 	})
-
 	return( qsd )
 }

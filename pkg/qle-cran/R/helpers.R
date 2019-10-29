@@ -88,6 +88,10 @@
 	return (.WEIGHT.NORM(X[idxx,]-Y[idxy,],W))
 }
 
+.min.pair.dist <- function(X) {
+  sapply(split(as.vector(stats::dist(X)), rep(1:(NROW(X)-1L), seq((NROW(X)-1L),1L))),min)	
+}
+
 
 .check.distAll <- function(X,xTol=1e-12) {	
 	idxx <- rep(1:NROW(X),NROW(X))
@@ -123,16 +127,16 @@
 	return (which.min(.ISO.NORM(h)))
 }
 
-#.min.distXY <- function(X,Y,W=NULL) {
-#	idxx <- rep(1:NROW(X),NROW(Y))
-#	idxy <- rep(1:NROW(Y),rep(NROW(X),NROW(Y)))
-#	h <- X[idxx,]-Y[idxy,]	
-#	x <- if(!is.null(W)) .WEIGHT.NORM(h,W) else .ISO.NORM(h)	
-#	splt <- split(x, ceiling(seq_along(x)/NROW(X)))
-#	return (as.vector(unlist(lapply(splt,min))))
-#}
+.min.WdistXY <- function(X,Y=X,W=NULL) {
+	idxx <- rep(1:NROW(X),NROW(Y))
+	idxy <- rep(1:NROW(Y),rep(NROW(X),NROW(Y)))
+	h <- X[idxx,]-Y[idxy,]	
+	x <- if(!is.null(W)) .WEIGHT.NORM(h,W) else .ISO.NORM(h)	
+	splt <- split(x, ceiling(seq_along(x)/NROW(X)))
+	return (as.vector(unlist(lapply(splt,min))))
+}
 
-.min.distXY <- function(X,Y) {
+.min.distXY <- function(X,Y=X) {
 	idxx <- rep(1:NROW(X),NROW(Y))
 	idxy <- rep(1:NROW(Y),rep(NROW(X),NROW(Y)))	
 	x <- .ISO.NORM(X[idxx,]-Y[idxy,])	
@@ -141,7 +145,7 @@
 }
 
 
-.min.distXYIdx <- function(X,Y) {
+.min.distXYIdx <- function(X,Y=X) {
 	idxx <- rep(1:NROW(X),NROW(Y))
 	idxy <- rep(1:NROW(Y),rep(NROW(X),NROW(Y)))
 	h <- X[idxx,]-Y[idxy,]	
@@ -162,80 +166,45 @@
 	}))		  
 }
 
-# generalized Eigendecomposition
-geneigen <- function(A = NULL, B, vl=TRUE, vr=TRUE, only.values = TRUE,
-			 check.input = FALSE, verbose = FALSE) {
+# generalized eigenvalue decomposition for symmetric (pos.def.) matrices
+# using Lapack dsygv routine called from C interface
+geneigen <- function(A = NULL, B, only.values = TRUE) {
 	# if only one matrix is given
 	# just return the eigenvalues
 	if(is.null(A)) {
+		stopifnot(is.numeric(B))
 		maxE <- try(eigen(B,only.values=TRUE),silent=TRUE)
-		if(inherits(maxE,"try-error")) {
-			message("Failed to get Eigen values.")
-			return (1)
-		}
+		if(inherits(maxE,"try-error"))
+		 stop("Failed to compute eigenvalue decompostion by `eigen` function.")		
 		return (maxE$values)		
 	}	
-	# now generalized decomposition
+	stopifnot(is.numeric(A) && is.numeric(B))
 	A <- as.matrix(A)
-	B <- as.matrix(B)
+	B <- as.matrix(B)	
+	stopifnot(is.matrix(A) && is.matrix(B) &&
+			  length(dim(A))==2L && length(dim(B))==2L )
 	N <- NROW(A)
-	if(check.input) {
-		if (!N) stop("0 x 0 matrix")
-		if (NROW(A)!=NCOL(A) || NROW(B)!=NCOL(B))
-			stop("non-square matrix in 'geneigen'")
-		if (NROW(A)!=NROW(B) || NCOL(B)!=NCOL(A))
-			stop("dimension of matrices do not match in 'geneigen'")
-		N <- as.integer(N)
-		if(is.na(N))
-			stop("invalid nrow(x) in 'geneigen'")
-	}
-
-	if(only.values) {
-		JOBVL <- "N"
-		JOBVR <- "N"
-	} else  {
-		JOBVL <- if(vl) "V" else "N"
-		JOBVR <- if(vr) "V" else "N"
-	}
-
-	N <- as.integer(N)
-	LWORK <- as.integer(max(1,8*N))
-
-	res <- tryCatch( {
-			.Fortran(C_dggev, JOBVL, JOBVR, N, A, N, B, N,
-						ALPHAR=numeric(N), ALPHAI=numeric(N),BETA=numeric(N),
-						vl=if(JOBVL=="V") matrix(0,nrow=N,ncol=N) else numeric(1), N,
-						vr=if(JOBVR=="V") matrix(0,nrow=N,ncol=N) else numeric(1), N,
-						double(max(1,LWORK)), LWORK, info=integer(1L))} ,
-			error = function(e) {				
-				msg <- paste(.makeMessage("'geneigen' failed: "),conditionMessage(e))
-				message(msg)
-				structure(list(message=msg, call=sys.call()), 
-						class=c("error","condition"), error = e)
-			}			
-	)
-	if(verbose && res$info >0)
-	  print(paste("'geneigen': lapack info:  ", res$info))
-	if( all(res$ALPHAI==0) ) {
-        alpha  <- res$ALPHAR
-        beta   <- res$BETA
-		values <- alpha/beta
-    } else {
-        alpha <- complex(real=res$ALPHAR,imaginary=res$ALPHAI)
-        beta  <- res$BETA
-		values <- alpha/beta
-    }
-	if(only.values) {
-		return( values )
-	} else {
-		vl = if(JOBVL=="V") res$vl else NULL
-		vr = if(JOBVR=="V") res$vr else NULL
-		
-		return(list("values"=values,
-					"alpha"=alpha,
-					"beta"=beta,"vl"=vl,"vr"=vr))	
-	}
-    
+	if (!N) stop("0 x 0 matrix")
+	if (NROW(A)!=NCOL(A) || NROW(B)!=NCOL(B))
+		stop("non-square matrix in 'geneigen'")
+	if (NROW(A)!=NROW(B) || NCOL(B)!=NCOL(A))
+		stop("dimension of matrices do not match in 'geneigen'")			
+	
+	lwork <- as.integer((N+2L)*N)
+	res <- try(.C(C_geneigen,
+				 dimA=as.integer(dim(A)),
+				 A=as.numeric(A),
+				 dimB=as.integer(dim(B)),
+			     B=as.numeric(B),
+				 W=numeric(N),
+				 lwork=lwork,
+				 work=numeric(lwork),
+				 values=as.integer(only.values)),silent=TRUE)
+	
+	if(only.values) { res$W }
+	 else  {
+	  list("values"=res$W,"vectors"=structure(res$A,dim=c(N,N)))
+	}    
 }
 
 gsiSolve <- function(X,B=diag(1,NROW(X)),cond=1e-12,...,use.solve=TRUE) {

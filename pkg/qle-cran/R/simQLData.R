@@ -10,9 +10,9 @@
 # internal, default: create and use a local cluster object of size one
 #' @importFrom digest digest
 doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
-					cores = getOption("mc.cores",1L), 						# force sequential processing if cores=1L
+					cores = getOption("mc.cores",0L), 			# force sequential processing if cores == 1L
 					  cache = getOption("qle.cache",FALSE),
-			  		   	 fun = getOption("qle.multicore","lapply"))
+			  		   	 fun = getOption("qle.multicore","mclapply"))
 {
 	SIM <- if(cache) {
 			for(i in 1:length(X))
@@ -37,56 +37,37 @@ doInParallel <- function(X, FUN, ... , cl = NULL, iseed = NULL,
 					 class=c("error","condition"), error=e)
 		        })
 		   } else FUN	    
-    
-   noCluster <- is.null(cl)
-   if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
-   
+         
    tryCatch({
-		if(cores > 1L || !noCluster) {
-			if(noCluster && fun == "mclapply" ){
-				# Only for L'Ecuyer-CMRG we get reproducible results
-				if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
-				  set.seed(iseed)		   
-			    if(.Platform$OS.type != "windows")
-					parallel::mclapply(X, SIM, ..., mc.cores = cores)
-				else {
-				  options(mc.cores=1L)
-				  lapply(X, SIM, ...)
-				}
-			} else {
-				if(noCluster){
-					## only a 'local' cluster is supported here
-					type <- if(Sys.info()["sysname"] == "Linux")
-								"FORK" else "PSOCK"
-					cl <- parallel::makeCluster(cores,type=type)				
-			    }
-				if(any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))){
-					# Only for L'Ecuyer-CMRG we get reproducible results for a cluster				
-					if(!is.null(iseed) && RNGkind()[1L] == "L'Ecuyer-CMRG")
-					  parallel::clusterSetRNGStream(cl,iseed)
-				    parallel::parLapply(cl, X = X, fun = SIM, ...)
-				} else {
-				   stop(paste0("Failed to initialize cluster: unsupported cluster class: ",class(cl)))
-			    }
-		    }
-		} else {
-			noCluster <- FALSE
-			lapply(X, SIM, ...)	
-		}
-		
+	 if(!is.null(cl) && any(class(cl) %in% c("MPIcluster","SOCKcluster","cluster"))) {	   
+		 if(!is.null(iseed))		     
+		  parallel::clusterSetRNGStream(cl,iseed)	  	 
+		 structure(parallel::parLapply(cl, X = X, fun = SIM, ...),iseed=iseed)
+	 } else if(.Platform$OS.type != "windows" && fun == "mclapply"){
+		 if(cores == 0L) {
+			if(!inherits(np <- try(detectCores(),silent=TRUE),"try-error"))
+			 cores <- np		
+		 }
+		 # force L'Ecuyer-CMRG RNG
+		 if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE) || RNGkind()[1] != "L'Ecuyer-CMRG"){
+			 RNGkind("L'Ecuyer-CMRG")
+			 if(!is.null(iseed)) 
+			  set.seed(iseed)
+		 } 
+		 .Random.seed <<- parallel::nextRNGStream(.Random.seed)
+		 structure(parallel::mclapply(X, SIM, ..., mc.set.seed = TRUE, mc.cores = cores),iseed=iseed)
+	 } else {
+		 if(!is.null(iseed)) 
+		  set.seed(iseed)
+		 else if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
+		 structure(lapply(X, SIM, ...),iseed=iseed)
+	 }		
    },error = function(e) {
 			return(
 			  structure(
 				 list(message=.makeMessage("Calling `",deparse(substitute(SIM)), "` failed: ",conditionMessage(e)),
 						 call=sys.call()),
-			   class = c("error", "condition"), error = e))
-   },finally = {
-	   if(noCluster && !is.null(cl)){
-		   if(inherits(try(parallel::stopCluster(cl),silent=TRUE),"try-error"))
-			  message(.makeMessage("Failed to stop cluster object."))
-		   cl <- NULL
-		   invisible(gc)
-	  }
+			   class = c("error", "condition"), error = e) )
    })
 }
 
@@ -169,8 +150,7 @@ simQLdata <-
 	
   	# run simulations	
 	stopifnot(!missing(nsim) || is.numeric(nsim))
-	arg.list <- list(X=lapply(rep(X,each=nsim),unlist),
-			      FUN=simFun, cl=cl, iseed=iseed)
+	arg.list <- list(X=lapply(rep(X,each=nsim),unlist), FUN=simFun, cl=cl, iseed=iseed)
 			
     # simulate model
 	if(verbose)
@@ -319,14 +299,14 @@ varCHOLdecomp <- function(matList) {
 				paste0("var.",colnames(mvars)))			   
 		}			
 	colnames(qld) <- nms	
-	Nb <- if(var.type != "kriging") 0 else Nb
+	if( !(var.type %in% c("kriging","logKrig"))) Nb <- 0L
 	
 	# Cholesky decompositions unless we have a constant variance matrix 	
 	if(var.type != "const") {
 		# covariance decompositions	
 		if(verbose)
 		 cat("Cholesky decompositon of covariance matrices...\n")
-		vmats <- lapply(res,"[[","V" )
+		vmats <- lapply(res,"[[","V" )		
 		L <- try(varCHOLdecomp(vmats),silent=TRUE)
 		if(.isError(L)) {
 			msg <- paste0("Cholseky decomposition failed: ","\n")
@@ -342,13 +322,14 @@ varCHOLdecomp <- function(matList) {
 			warning(paste0("A total of ",length(L)-length(ok), " Cholesky decomposition(s) failed."))
 			qld <- qld[ok,,drop=FALSE]
 		}
-		# Cholesky decompositions
-		cvmats <- as.data.frame(do.call(rbind, L[ok]))
-		colnames(cvmats) <- paste("L", rep(1:NCOL(cvmats)),sep="")
-		
+		cvmats <- 
+		 if(var.type == "kriging") {
+			 as.data.frame(do.call(rbind, L[ok]))		# Cholesky decompositions
+		} else varLOGdecomp(do.call(rbind,L[ok]))		# log decomposition of variance matrices		
+		colnames(cvmats) <- paste("L", rep(1:NCOL(cvmats)),sep="")		
 		# bootstrap variances of covariances 
 		# a local nugget variances
-		if(Nb > 0 && var.type == "kriging"){
+		if(Nb > 0 && var.type %in% c("kriging","logKrig")) {
 			Lb <- lapply(res,"[[","Lb")			
 			Lbmats <- as.data.frame(do.call(rbind,Lb[ok]))
 			colnames(Lbmats) <- paste("Lb", rep(1:NCOL(Lbmats)),sep="")
@@ -370,7 +351,7 @@ varCHOLdecomp <- function(matList) {
 #'
 #' @param runs		list or matrix of simulation results obtained from \code{\link{simQLdata}}
 #' @param X			list or matrix of (design) points, i.e. model parameters
-#' @param var.type	name of variance matrix approximation type: "\code{cholMean}" (default)
+#' @param var.type	name of variance matrix approximation type, "\code{wcholMean}" (default)
 #' @param Nb		number of bootstrap samples, \code{=0} (default, no bootstrap used), to be generated for kriging the variance matrix,
 #' 				    only if `\code{var.type}`=`\code{kriging}`
 #' @param na.rm 	if \code{TRUE} (default), remove `NA` values from simulation results
@@ -425,8 +406,7 @@ varCHOLdecomp <- function(matList) {
 #' @author M. Baaske
 #' @rdname 	setQLdata
 #' @export
-setQLdata <- function(runs, X = NULL, var.type="cholMean",
-						Nb = 0, na.rm = TRUE, verbose = FALSE) {		
+setQLdata <- function(runs, X = NULL, var.type="wcholMean",	Nb = 0, na.rm = TRUE, verbose = FALSE) {		
 	nErrors <- 0
 	nWarnings <- 0	
 	nsim <- attr(runs,"nsim")
@@ -452,7 +432,7 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 		 dataT <- dataT[!rowSums(is.na(dataT)) > 0L,,drop=FALSE]
 
 		V <- try( var(dataT, na.rm=na.rm),silent=TRUE)
-	    if (is.na(V) || !is.numeric(V) || inherits(V,"try-error") ) {
+	    if (inherits(V,"try-error") || anyNA(V)) {
 			msg <- paste0("Failed to get variance matrix of statistics.","\n")
 			message(msg)
 	        return(.qleError(message=msg,call=match.call(),error=V))
@@ -467,7 +447,7 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 					"vars" = diag(vmat),					  
 					"is.pos" = is.pos)
 		
-		if(Nb > 0 && var.type == "kriging"){
+		if(Nb > 0 && var.type %in% c("kriging","logKrig")){
 		  ret$Lb <- try(.resampleCov(dataT,Nb),silent=TRUE)
 		  if(inherits(ret$Lb,"try-error"))
 			attr(ret,"error") <- TRUE			  
@@ -544,7 +524,7 @@ setQLdata <- function(runs, X = NULL, var.type="cholMean",
 ##' @export
 # intern only: update data for QL model
 # add at least one further design point to the existing sample points
-# computes criterion function with these additinal points, updating variance
+# computes criterion function with these additional points, updating variance
 # matrix, statistics (including new fixed (local) nuggets
 updateQLdata <- function(QD, qsd, fit = FALSE, cl = NULL, pl = 0L, verbose = FALSE)
 {		
@@ -566,9 +546,10 @@ updateQLdata <- function(QD, qsd, fit = FALSE, cl = NULL, pl = 0L, verbose = FAL
 				 var.type=qsd$var.type,
 				 Nb=attr(qsd$qldata,"Nb"),
 				 verbose=verbose)
-	     }, error = function(err) {
-				 msg <- .makeMessage("Failed to construct QL data: ", conditionMessage(err))				
-	 			.qleError(message=msg,call=match.call(),error=err)		
+	     }, error = function(e) {
+				 msg <- .makeMessage("Failed to construct QL data: ", conditionMessage(e))				
+	 			 message(msg)
+				 .qleError(message=msg,call=match.call(),error=e)		
 			 }
 		 )}
 	)	
@@ -581,7 +562,7 @@ updateQLdata <- function(QD, qsd, fit = FALSE, cl = NULL, pl = 0L, verbose = FAL
  	if(length(ok) == 0L){
 		msg <- .makeMessage("Construction of quasi-likelihood data failed.")				
 		message(msg)
-		.qleError(message=msg,call=match.call(),error=nextData)			
+		return(.qleError(message=msg,call=match.call(),error=nextData))			
     } else if(length(ok) < length(nextData)) {
 		message(.makeMessage("At least one construction of quasi-likelihood data failed."))
 	}

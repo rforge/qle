@@ -53,17 +53,14 @@
 #' @author M. Baaske
 #' @rdname estim
 #' @export
-estim <- function(models, points, Xs, data,
-		  krig.type=c("dual","var","both")) {   
+estim <- function(models, points, Xs, data,krig.type=c("dual","var")) {   
 	UseMethod("estim",models)
 }
 
 #' @method estim krige 
 #' @export
-estim.krige <- function(models, points, Xs, data,
-				krig.type = c("dual","var","both")) { 
-	krig.type <- match.arg(krig.type)
-		
+estim.krige <- function(models, points, Xs, data, krig.type = c("dual","var")) { 
+	krig.type <- match.arg(krig.type)		
 	if(!is.list(data) || length(data)!=length(models))
 		stop("Expected 'data' as  a list of same length as 'models'.")	 		 	 
 	
@@ -75,8 +72,7 @@ estim.krige <- function(models, points, Xs, data,
 
 #' @method estim covModel
 #' @export 
-estim.covModel <- function(models, points, Xs, data,
-					krig.type=c("dual","var","both")) {	
+estim.covModel <- function(models, points, Xs, data,krig.type=c("dual","var")) {	
 	krig.type <- match.arg(krig.type)		
 	if(!is.matrix(points))
 		points <- .LIST2ROW(points)
@@ -97,15 +93,13 @@ estim.covModel <- function(models, points, Xs, data,
 #' @rdname estim
 #' 
 #' @export
-jacobian <- function(models, points, Xs, data,
-				krig.type=c("dual","var","both")) {
+jacobian <- function(models, points, Xs, data, krig.type=c("dual","var")) {
 	UseMethod("jacobian",models)
 }
 
 #' @method jacobian krige 
 #' @export
-jacobian.krige <- function(models, points, Xs, data,
-					krig.type=c("dual","var","both")) {
+jacobian.krige <- function(models, points, Xs, data,krig.type=c("dual","var")) {
 	krig.type <- match.arg(krig.type)	
 	if(!is.list(data) || length(data)!=length(models))
 		stop("Expected \'data\' as  a list of same length as 'models'.")	
@@ -116,8 +110,7 @@ jacobian.krige <- function(models, points, Xs, data,
 
 #' @method jacobian covModel 
 #' @export
-jacobian.covModel <- function(models, points, Xs, data,
-						krig.type=c("dual","var","both")) {
+jacobian.covModel <- function(models, points, Xs, data,krig.type=c("dual","var")) {
 	krig.type <- match.arg(krig.type)	
 	if(!is.list(points))
 	  points <- .ROW2LIST(points)
@@ -229,7 +222,13 @@ varLOGdecomp <- function(L) {
 				   as.vector(m[col(Xs)>=row(Xs)])
 				 }
 		       )
-	as.data.frame(unlist(do.call(rbind,decomp)), ncol=length(decomp[[1L]] ) )
+   err <- sapply(decomp, function(x) .isError(x))
+   if(any(err)) {
+	   msg <- paste0("Matrix logarithm decomposition failed: ")
+	   message(msg)
+	   return(.qleError(n=msg,call=match.call(), hasError=which(err), error=decomp))
+   }
+   as.data.frame(unlist(do.call(rbind,decomp)), ncol=length(decomp[[1L]] ) )
 }
 
 #' @title Variance matrix approximation
@@ -245,28 +244,22 @@ varLOGdecomp <- function(L) {
 #' @return
 #' 	List of variance matrices with the following structure:
 #' 	\item{VTX}{ variance matrix approximation}
-#'  \item{sig2}{kriging prediction variances of statistics at `\code{theta}`}
-#'  \item{var}{ matrix `\code{VTX}` with added variances `\code{sig2}` to the diagonal terms}
-#'  \item{inv}{ if applicable, the inverse of either `\code{VTX}` or `\code{var}`}
+#'  \item{sig2}{kriging prediction variances of statistics at \code{theta}}
+#'  \item{inv}{ if applicable, the inverse of either \code{VTX}}
 #'
-#' @details	The function estimates the variance matrix of statistics at some (unsampled) point `\code{theta}` by either
+#' @details	The function estimates the variance matrix of statistics at some (unsampled) point \code{theta} by either
 #'  averaging (the \emph{Cholesky} decomposed terms or matrix logarithms) over all simulated variance matrices
 #'  of statistics at previously evaluated points of the parameter space or by a kriging approach which treats the Cholesky
 #'  decomposed terms of each variance matrix as a data vector for kriging.
 #' 
 #'  In addition, a Nadaraya-Watson kernel-weighted average approximation can also be applied in order to bias the variance
 #'  estimation towards a more locally weighted estimation, where smaller weights are assigned to points being more
-#'  distant to an estimate of the model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
-#'  `\code{W}` of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
-#'  different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}",
-#'  "\code{kriging}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
-#'  defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
-#'  the approximation type. If `\code{theta}` is not given, then no prediction variances are included and thus the variance matrix estimate of the statistics only refers to the variances due to simulation replications
-#'  and not the ones due to the use of kriging approximations of the statistics. Otherwise, the mean variance matrix estimate is given by
-#'  \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} where \eqn{\hat{V}} denotes one of the above variance approximation types.
-#' 
-#'  The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
-#'  cross-validation (CV) approach, see vignette for details.
+#'  distant to an estimate of the model parameter \code{theta}. A reasonable symmetric weighting matrix 
+#'  \code{W} of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
+#'  different types of weighted variance averaging methods such as "\code{wcholMean}", "\code{wlogMean}",
+#'  "\code{kriging}" (kriging the variance matrix of statitics) defined by \code{qsd$var.type}. If \code{theta} is given, then prediction variances
+#'  of the statistics are either derived from the kriging results of the statistics at \code{theta} or based on a (possibly more robust)
+#'  cross-validation (CV) approach, see the vignette for details.
 #'    
 #' @examples 
 #'  data(normal)
@@ -286,12 +279,12 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 	krig.type <- qsd$krig.type
 	Tnames <- names(qsd$obs)
 	dataT <- qsd$qldata[(xdim+1L):(xdim+nstat)]
-	dataL <- qsd$qldata[(xdim+2*nstat+1L):ncol(qsd$qldata)]					# Cholesky decomposed terms
+	dataL <- qsd$qldata[grep("^L[^b]",names(qsd$qldata))]					# Cholesky decomposed terms
 	nc <- ncol(dataL)
 		
 	sig2 <-
 	 if(!is.null(theta)) {
-		 if(!is.null(cvm)) {		  
+		 if(!is.null(cvm) && class(cvm) == "cv") {		  
 		 	tryCatch({							
 				Y <- estim(qsd$covT,theta,Xs,dataT,krig.type="var")
 				# cross-validation variance/RMSE of statistics
@@ -301,12 +294,11 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 		 } else if((krig.type == "var")) {
 		       try(varKM(qsd$covT,theta,Xs,dataT),silent=TRUE)
 		 } 
-	} else NULL 
-	
+	} else NULL 	
 	 
 	if(.isError(sig2)) {
 		message(.makeMessage("Failed to get prediction variances. "),
-				if(inherits(sig2,"error")) conditionMessage(sig2))		
+		  if(inherits(sig2,"error")) conditionMessage(sig2))		
 		sig2 <- NULL
 	}	
 	if(!is.null(W)) {
@@ -319,17 +311,11 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 		## get list of covariance matrices
 		## one for each prediction point
 		if(var.type %in% c("logMean","wlogMean")) {
-			mlogV <- try(varLOGdecomp(dataL),silent=TRUE)
+			mlogV <- try(varLOGdecomp(dataL[1:length(qsd$covL)]),silent=TRUE)
 			if(.isError(mlogV)) {
 				msg <- paste0("Matrix logarithm failed.")
 				message(msg)
 				return(.qleError(message=msg,call=match.call(), error=mlogV ) )
-			}
-			err <- unlist(lapply(mlogV, function(x) .isError(x)))
-			if(any(err)) {
-				msg <- paste0("Matrix logarithm failed: ")
-				message(msg)
-				return(.qleError(n=msg,call=match.call(),error=mlogV))
 			}			
 			if(var.type=="logMean" || is.null(W) || is.null(theta))
 			  return (varCHOLmerge(rbind(colMeans(mlogV)),sig2, var.type, doInvert))
@@ -357,43 +343,45 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 			} 				
 			varCHOLmerge(rbind(colSums(dataL*matrix(rep(d,nc),nrow(dataL),nc))/sum(d)),
 					sig2,var.type,doInvert,Tnames)
-		} else if(var.type == "kriging") {			
+		} else if(var.type %in% c("kriging","logKrig")) {		
 			## the following krigin of variance matrix is only used for
 			## functions in R code, any other code calling C does its own
 			## kriging more efficiently
 			if(is.null(qsd$covL) || is.null(theta))
-			  stop("Kriging the variance matrix requires arguments `qsd$covL` and `theta` to be given.")			
-					  	
+			  stop("Kriging the variance matrix requires arguments `qsd$covL` and `theta` to be given.")	 
+			
 			# nCovL: number of Cholesky decomposed terms (excluding bootstrap variances)		
 			L <- estim(qsd$covL,theta,Xs,dataL[1:length(qsd$covL)],krig.type="var")			
 			Lm <- do.call(rbind,sapply(L,"[","mean"))
 			Lsig <- try(sqrt(do.call(rbind,sapply(L,"[","sigma2"))),silent=TRUE)
 			if(inherits(Lsig, "try-error") || anyNA(Lsig))
-			 stop("Could not extract Kriging variances of variance matrix interpolation models.")		 	
-			VTX <- varCHOLmerge(Lm,NULL,var.type,doInvert,Tnames)		
+			  stop("Could not extract Kriging variances of variance matrix interpolation models.")		 	
+			
+		    VTX <- varCHOLmerge(Lm,NULL,var.type,doInvert,Tnames)		
 			lapply(seq_len(NROW(Lm)),
-				function(i) {
-					Sig2 <- try(.chol2var(as.numeric(Lsig[i,])),silent=TRUE)
-					if(inherits(Sig2,"try-error")){
-					    msg <- paste0("'chol2var' failed to compute the kriging variance of (kriging) variance matrix models.")
-						message(msg)
-						return(.qleError(message=msg,error=Sig2))
-				  	}
-				    V <- VTX[[i]]
-					res <- 
-					 structure(
-					  list("VTX"=V$VTX,
-						   "var"=V$VTX+diag(diag(Sig2),nstat), 	# with kriging variance of statistics mean 'sig2'				   				  
-						   "sig2"=diag(Sig2))									# a matrix: kriging variances of variance matrix models
-		   			  )					  
-					  if(doInvert) {
-						  res$inv <- try(do.call("gsiInv",list(res$var)),silent=TRUE)
-						  if (inherits(res$inv,"try-error") || !is.numeric(res$inv) || any(is.na(res$inv)))
-						   message("Variance matrix inversion failed for kriging the variance matrix.")			
-					  }
-					  res
+					function(i) {
+						Sig2 <- if(var.type == "kriging")
+						  try(.chol2var(as.numeric(Lsig[i,])),silent=TRUE)
+					  	else try(expm::expm(.mergeMatrix(as.numeric(Lsig[i,]))),silent=TRUE)
+						if(inherits(Sig2,"try-error")){
+						    msg <- paste0("'chol2var' failed to compute the kriging variance of (kriging) variance matrix models.")
+							message(msg)
+							return(.qleError(message=msg,error=Sig2))
+					  	}
+					    V <- VTX[[i]]
+						res <- 
+						 structure(
+						  list("VTX"=V$VTX, #V$VTX+diag(diag(Sig2),nstat), 	# with kriging variance of statistics mean 'sig2'				   				  
+							   "sig2"=diag(Sig2))					# a matrix: kriging variances of variance matrix models
+			   			  )					  
+						  if(doInvert) {
+							  res$inv <- try(do.call("gsiInv",list(res$VTX)),silent=TRUE)
+							  if (inherits(res$inv,"try-error") || !is.numeric(res$inv) || any(is.na(res$inv)))
+							   message("Variance matrix inversion failed for kriging the variance matrix.")			
+						  }
+						  res
 				}
-			)
+			)		  
 		} else {			
 			stop("Variance matrix of statistics cannot be computed.")
 		}	
@@ -429,8 +417,11 @@ covarTx <- function(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 }
 
 # sig2 is matrix: rows are kriging variance => put as diagonal matrix
-varCHOLmerge <- function(Xs, sig2=NULL,var.type="cholMean",doInvert=FALSE,Tnames = NULL) UseMethod("varCHOLmerge",Xs)
-varCHOLmerge.matrix <- function(Xs,sig2=NULL,var.type="cholMean", doInvert=FALSE,Tnames = NULL) {
+varCHOLmerge <- function(Xs, sig2=NULL,var.type="wcholMean",doInvert=FALSE,Tnames = NULL){
+	UseMethod("varCHOLmerge",Xs)
+} 
+
+varCHOLmerge.matrix <- function(Xs,sig2=NULL,var.type="wcholMean", doInvert=FALSE,Tnames = NULL) {
 	if(!is.null(sig2) && is.matrix(sig2) )
 		structure(lapply(seq_len(NROW(sig2)),
 			function(i) varCHOLmerge(Xs[1L,],sig2[i,],var.type,doInvert,Tnames) ),"var.type"=var.type)
@@ -439,7 +430,7 @@ varCHOLmerge.matrix <- function(Xs,sig2=NULL,var.type="cholMean", doInvert=FALSE
 
 # intern
 #' @importFrom expm expm
-varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FALSE, Tnames = NULL) {
+varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="wcholMean", doInvert=FALSE, Tnames = NULL) {
    err <- 
 	  function(e) {
 			message(paste0(.makeMessage("try to invert again...\n")))
@@ -466,10 +457,8 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 		n <- length(sig2)
 		stopifnot(nrow(VTX)==n)
 		res$sig2 <- sig2
-		res$var <- VTX + diag(sig2,n,n)
-
 		if(doInvert) {
-			res$inv <- try(do.call("gsiInv",list(res$var)),silent=TRUE)
+			res$inv <- try(do.call("gsiInv",list(res$VTX)),silent=TRUE)
 			if (inherits(res$inv,"try-error") || !is.numeric(res$inv) || any(is.na(res$inv)))
 			  return(.qleError(message="Variance matrix inversion failed: ",call=sys.call(),error=res))			
 		}
@@ -510,10 +499,12 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param qsd		    object of class \code{\link{QLmodel}} 
 #' @param Sigma		    variance matrix estimate of statistics (see details)
 #' @param ...		    further arguments passed to \code{\link{covarTx}}
-#' @param cvm			list of cross-validation models (see \code{\link{prefitCV}})
+#' @param cvm			optional, ether list of covariance models of the statistics for cross-validation based estimation of prediction variances of the statistics or
+#' 					    of class \code{cv} or list of cross-validation models of class \code{cvfull} of the QL model \code{qsd} for computation of the quasi-deviance
+#' 						and error estimation of the quasi-score approximation w.r.t the kriging prediction models (see \code{\link{prefitCV}})
 #' @param obs	 	    numeric vector of observed statistics, this overwrites `\code{qsd$obs}`, if supplied
-#' @param inverted 		logical, \code{FALSE} (default), currently ignored
 #' @param w			    numeric value, \code{=0.5} (default) as scalar weight, \code{0<=w<=1}, for evaluation of candidate points
+#' @param criterion		name of criterion function, either "\code{qle}" (default) or "\code{mahal}" which overwrites stored type name in `\code{qsd}`
 #' @param check			logical, \code{TRUE} (default), whether to check input arguments
 #' @param value.only  	if \code{TRUE} only the values of the QD are returned
 #' @param na.rm 		logical, if \code{TRUE} (default) remove `Na`s from the result
@@ -521,14 +512,13 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #' @param verbose   	logical, \code{TRUE} for intermediate output
 #'
 #' @return Numeric vector of QD values, if values only, or a list with elements:
-#' \item{value}{ quasi-deviance value}
+#' \item{value}{ either quasi-deviance value or Mahalanobis distance value }
 #' \item{par}{ parameter estimate}
 #' \item{I}{ quasi-information matrix}
 #' \item{score}{ quasi-score vector}
 #' \item{jac}{ Jacobian of sample average statistics}
 #' \item{varS}{ estimated variance of quasi-score, if applicable}
 #' \item{Iobs}{ observed quasi-information}
-#' \item{qval}{ quasi-deviance using the inverse of `\code{varS}` as a weighting matrix}
 #' 
 #'  The matix `\code{Iobs}` is called the \eqn{\emph{observed quasi-information}} (see [2, Sec. 4.3]),
 #'  which, in our setting, can be calculated at least numerically as the Jacobian of the quasi-score vector.
@@ -551,7 +541,7 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #'   Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}}),
 #'   then the QD value is calculated rather locally w.r.t. to an estimated parameter `\code{theta}`. A constant variance
 #'   matrix is also applicable to the computation of the QD. However, if supplied, `\code{Sigma}` is used
-#'   as is with kriging variances added at the `\code{points}` as diagonal terms (see also \code{\link{mahalDist}}).    
+#'   as is with kriging variances added at the `\code{points}` as diagonal terms.    
 #' 
 #' 	 \subsection{Use of prediction variances}{ 
 #' 	 In order to not only account for the simulation variance but additionally for the approximation error of the
@@ -570,132 +560,8 @@ varCHOLmerge.numeric <- function(Xs, sig2=NULL, var.type="cholMean", doInvert=FA
 #'   the approximation of the variance matrix. 
 #'   }
 #' 
-#' 
-#' @examples
-#' data(normal)
-#' quasiDeviance(c(2,1), qsd)
-#'  
-#' @author M. Baaske
-#' @rdname quasiDeviance
-#' @export
-quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL, 
-					 inverted = FALSE, check = TRUE, w = 0.5, value.only=FALSE, na.rm = TRUE,
-					  cl = NULL, verbose=FALSE)
-{		
-	if(check)
-	 .checkArguments(qsd,Sigma=Sigma) 
- 	stopifnot(is.numeric(w))
-	if(!is.list(points))
-	 points <- .ROW2LIST(points) 	
- 	X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])
- 	
-	# overwrite (observed) statistics	
-	if(!is.null(obs)) {
-		obs <- unlist(obs)
-		if(anyNA(obs) | any(!is.finite(obs)))
-			warning("`NA` or `Inf` values detected in `obs`.")
-		if(!is.numeric(obs) || length(obs) != length(qsd$covT))
-		 stop("`obs` must be a (named) `numeric` vector or list of length equal to the given statistics in `qsd`.")
-		qsd$obs <- obs
-	}
-	# Unless Sigma is given always continuously update variance matrix.
-	# If using W, theta or Sigma for average approximation, then
-	# at least update added kriging prediction variances at each point.
-	tryCatch({				
-		if(!(qsd$var.type %in% c("kriging","const"))){
-			# 'Sigma' is inverted at C level because of added prediction variances
-			Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX
-		} else if(qsd$var.type=="const" && !inverted){
-			# Only for constant Sigma, which is used as is!
-			if(is.null(Sigma))
-			  stop("`Sigma` cannot be NULL if used as a constant variance matrix.")			
-			inverted <- TRUE			
-			Sigma <- try(gsiInv(Sigma),silent=TRUE)
-			if(inherits(Sigma,"try-error")) {
-				msg <- paste0("Inversion of constant variance matrix failed.")
-				message(msg)
-				return(.qleError(message = msg,error=Sigma))
-			}
-		}
-		
-	    qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm))
-					   
-		ret <-
-		  if(length(points) >= 100 && (length(cl) > 1L || getOption("mc.cores",1L) > 1L)){
-				m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)		
-				M <- .splitList(points, m)
-				names(M) <- NULL
-			    unlist(
-				   do.call(doInParallel,
-					  c(list(X=M,
-					    FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only, w) {
-							.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only,w)	 
-						}, cl=cl),
-				     list(qsd, qlopts, X, Sigma, cvm, value.only, w))),
-	             recursive = FALSE)
- 							
-		} else {
-			.Call(C_quasiDeviance,points,qsd,qlopts,X,Sigma,cvm,value.only,w)
-		}
-		
-		# check for NAs
-		if(na.rm){
-			has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
-			if(length(has.na) == length(ret)){
-				stop("All quasi-deviance calculations produced `NA` values.")
-			}
-			if(length(has.na > 0L)){		
-				message("Removing `NA` values from results of quasi-deviance calculation.")
-				return( structure(ret[-has.na],  "hasNa"=has.na))
-			}
-		}
-		return(ret)
-
-	}, error = function(e) {
-		message(.makeMessage("Calculation of quasi-deviance failed: ",conditionMessage(e)))
-	 	stop(e)  # re-throw error
-	})
-}
-
-
-
-#' @name mahalDist
-#'
-#' @title Mahalanobis distance of statistics
-#'
-#' @description
-#'  Compute the Mahalanobis distance (MD) based on the kriging models of statistics  	 
-#' 
-#' @param points	  either matrix or list of points or a vector of parameters (but then considered
-#' 					  as a single (multidimensional) point)
-#' @param qsd		  object of class \code{\link{QLmodel}} 
-#' @param Sigma		  either a constant variance matrix estimate or an prespecified value 
-#' @param ...		  further arguments passed to \code{\link{covarTx}} for variance average approximation
-#' @param cvm		  list of fitted cross-validation models (see \code{\link{prefitCV}})
-#' @param obs         numeric vector of observed statistics (overwrites `\code{qsd$obs}` if given)
-#' @param inverted    logical, \code{FALSE} (default), whether `\code{Sigma}` is already inverted when
-#' 					  used as constant variance matrix only
-#' @param check       logical, \code{TRUE} (default), whether to check all input arguments
-#' @param w			  numeric value, scalar weight, \code{0<=w<=1}, for evaluation of sampling criterion 
-#' @param value.only  integer, \code{=0} (default), return the value of the MD only if \code{=1} and the criterion sampling value if \code{=2}
-#' @param na.rm   	  logical, if \code{TRUE} (default) remove `Na` values from the results
-#' @param cl		  cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
-#' @param verbose     if \code{TRUE}, then print intermediate output
-#' 
-#' @return Either a vector of MD values or a list of lists, where each contains the following elements:
-#' \item{value}{ Mahalanobis distance value}
-#' \item{par}{ parameter estimate}
-#' \item{I}{ approximate variance matrix of the parameter estimate}
-#' \item{score}{ gradient of MD (for constant `\code{Sigma}`)}
-#' \item{jac}{ Jacobian of sample mean values of statistics}
-#' \item{varS}{ estimated variance matrix of `\code{score}`}
-#' 
-#' and the following attributes:
-#' 
-#' \item{Sigma}{ estimate of variance matrix}
-#' \item{inverted}{ whether `\code{Sigma}` was inverted} 
-#'  
-#' @details	The function computes the Mahalanobis distance of the given statistics \eqn{T(X)\in R^p} with different options
+#'  \subsection{Mahalanobis Distance}{ 
+#' 	 The function computes the Mahalanobis distance of the given statistics \eqn{T(X)\in R^p} with different options
 #'  for the approximation type of the variance matrix. The Mahalanobis distance can be used as an alternative criterion function
 #'  for estimating the unknown model parameter during the main estimation function \code{\link{qle}}.
 #'  
@@ -717,109 +583,121 @@ quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL
 #'  formal function argument `\code{points}`. Each time a value of the criterion function is calculated at any parameter
 #'  `\code{points}` the variance matrix is estimated by the correpsonding approach with added prediction variances as explained above.
 #'  Note that in this case the argument `\code{Sigma}` is ignored.
+#'  }
 #' 
 #' @examples
-#'  data(normal)
-#'  # (weighted) least squares
-#'  mahalDist(c(2,1), qsd, Sigma=diag(2))
-#'  
-#'  # generalized LS with variance average approximation 
-#' 	# here: same as quasi-deviance
-#'  mahalDist(c(2,1), qsd)  
-#'  
+#' data(normal)
+#' quasiDeviance(c(2,1), qsd)
+#' # (weighted) least squares
+#' quasiDeviance(c(2,1), qsd, Sigma=diag(2), criterion = "mahal")
+#' 
 #' @author M. Baaske
-#' @rdname mahalDist
+#' @rdname quasiDeviance
 #' @export
-mahalDist <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-		               inverted = FALSE, check = TRUE, w = 0.5, value.only = FALSE, na.rm = TRUE,
-					    cl = NULL, verbose = FALSE)
-{
-	  
-	  if(check)
-	   .checkArguments(qsd,Sigma=Sigma)
-   	  stopifnot(is.numeric(w))
-	  if(!is.list(points))
-	 	 points <- .ROW2LIST(points)	  	  
-	  X <- as.matrix(qsd$qldata[seq(attr(qsd$qldata,"xdim"))])  
-
-	  # may overwrite (observed) statistics	
+quasiDeviance <- function(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL, 
+					check = TRUE, w = 0.5, criterion = NULL, value.only = FALSE,
+						na.rm = TRUE,  cl = NULL, verbose = FALSE)
+{		
+	if(check)
+	 .checkArguments(qsd,Sigma=Sigma) 
+ 	stopifnot(is.numeric(w)) 		
+	if(!is.list(points))
+	 points <- .ROW2LIST(points) 	
+	xdim <- attr(qsd$qldata,"xdim")	
+	
+	# Unless Sigma is given always continuously update variance matrix.
+	# If using W, theta or Sigma for average approximation, then
+	# at least update added kriging prediction variances at each point.
+	tryCatch({ 
+	  Sigma <- varMatrix(qsd,Sigma,...,cvm=cvm)
+	  if(.isError(Sigma)){
+		  msg <- .makeMessage("Could not compute variance matrix.")
+		  message(msg)
+		  return(.qleError(message=msg,error=Sigma))
+	  }  			
+	  qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm) && class(cvm)=="cv")
+	  # overwrite (observed) statistics	
 	  if(!is.null(obs)) {
 		  obs <- unlist(obs)
 		  if(anyNA(obs) | any(!is.finite(obs)))
-			 warning("`NA` or `Inf`values detected in `obs.")
-		  if(!is.numeric(obs) || length(obs)!=length(qsd$covT))
-			 stop("`obs` must be a (named) `numeric` vector or list \n
-							  of length equal to the given statistics in `qsd`.")
+		   warning("`NA` or `Inf` values detected in `obs`.")
+		  if(!is.numeric(obs) || length(obs) != length(qlm$covT))
+		   stop("`obs` must be a (named) `numeric` vector or list of length equal to the given statistics in `qsd`.")
 		  qsd$obs <- obs
-	  }  
+	  }
+	  # overwrite criterion if given
+	  if(!is.null(criterion)) {
+		  criterion <- match.arg(criterion,c("qle","mahal"))
+		  qsd$criterion <- criterion
+	  }	  
+	  # full QL model
+	  args.qsd <- list("qlm"=qsd,"VTX"=Sigma,"X"=as.matrix(qsd$qldata[seq(xdim)]))
 	  
-	  # Priorities:
- 	  #  1. kriging approx.
-	  #  2. Average approx. computed by W and at theta; or by kriging
-	  #  3. Sigma constant
-	  tryCatch({		   
-		   if(!(qsd$var.type %in% c("kriging","const"))) {			   
-			   # Sigma is inverted at C level
-			   Sigma <- covarTx(qsd,...,cvm=cvm)[[1L]]$VTX			   
-		   } else if(qsd$var.type == "const" && !inverted){
-			   if(is.null(Sigma))
-				 stop("`Sigma` cannot be NULL if used as a constant variance matrix.")	
-			   # Only for constant Sigma, which is used as is!
-				inverted <- TRUE
-				# now try to invert
-				Sigma <- try(gsiInv(Sigma),silent=TRUE)
-				if(inherits(Sigma,"try-error")) {
-				  msg <- paste0("Inversion of constant variance matrix failed.")
-				  message(msg)
-				  return(.qleError(message = msg,error=Sigma))
-			    }
-		   }
-			
-		   qlopts <- list("varType"=qsd$var.type, "useCV"=!is.null(cvm)) 
-		  
-		   ret <-
-		    if(length(points) >= 100 && (length(cl)>1L || getOption("mc.cores",1L) > 1L)){
-			   m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)			   				
-			   M <- .splitList(points, m)
-			   names(M) <- NULL
-			   unlist(
-				   do.call(doInParallel,
-						c(list(X=M,
-							   FUN=function(points, qsd, qlopts, X, Sigma, cvm, value.only,w) {
-								   .Call(C_mahalanobis,points,qsd,qlopts,X,Sigma,cvm,value.only,w)	 
-							   }, cl=cl),
-					   list(qsd, qlopts, X, Sigma, cvm, value.only,w))),
-				recursive = FALSE)			  
-			   
-		    } else {
-			  .Call(C_mahalanobis,points,qsd,qlopts,X,Sigma,cvm,value.only,w)
+	  # LOO CV models patch
+      if(!is.null(cvm) && class(cvm) == "cvfull") {
+		 cvm <- doInParallel(cvm,
+				  function(qlm, criterion, obs,...) {				
+					  Sigma <- varMatrix(qlm,...)
+					  if(.isError(Sigma))						  
+					    return(.qleError(message=.makeMessage("Could not compute variance matrix for CV models."),error=Sigma))					  
+					  qlm$obs <- obs
+					  qlm$criterion <- criterion				
+					  list("qlm"=qlm,"VTX"=Sigma,"X"=as.matrix(qlm$qldata[seq(attr(qlm$qldata,"xdim"))]))				
+				  }, criterion=criterion,obs=obs,Sigma=Sigma,...) 
+		 hasErr <- which(sapply(cvm,function(x) .isError(x)))
+		 if(length(hasErr)>0) {
+			 msg <- .makeMessage("Failed to compute variance matrix for cross-validation models.")
+			 message(msg)
+			 return(.qleError(message=msg,error=cvm))
+		 }		  
+	  }	  
+	 
+	  ret <-
+		  if(length(points) >= 100 &&
+			(length(cl) > 1L || getOption("mc.cores",1L) > 1L))
+	      {
+				m <- if(!is.null(cl)) length(cl) else getOption("mc.cores",1L)		
+				M <- .splitList(points, m)
+				names(M) <- NULL
+			    fargs <- 
+ 				 if(qsd$criterion == "qle") {
+					c(list(X=M,
+						FUN=function(points, args.qsd, qlopts, cvm, value.only, w) {
+							.Call(C_quasiDeviance,points,args.qsd,qlopts,cvm,value.only,w)	 
+						}, cl=cl),
+					list(args.qsd, qlopts, cvm, value.only, w))
+				 } else {
+					 c(list(X=M,
+						 FUN=function(points, args.qsd, qlopts, cvm, value.only, w) {
+							 .Call(C_mahalanobis,points,args.qsd,qlopts,cvm,value.only,w)	 
+						 }, cl=cl),
+					 list(args.qsd, qlopts, cvm, value.only, w))
+				}				
+				unlist( do.call(doInParallel,fargs), recursive = FALSE)
+ 							
+		} else {
+			switch(qsd$criterion,
+			 "qle" = .Call(C_quasiDeviance,points,args.qsd,qlopts,cvm,value.only,w),
+			 "mahal" = .Call(C_mahalanobis,points,args.qsd,qlopts,cvm,value.only,w) )			
+		}		
+		# check for NAs
+		if(na.rm){
+			has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
+			if(length(has.na) == length(ret)){
+				stop("All quasi-deviance computations have `NA` values.")
 			}
-			
-			# if it is computed by W, theta
-			# or the constant Sigma passed
-			if(qsd$var.type=="const")			 
-			 attr(Sigma,"inverted") <- inverted					  
-	 		
-			# check for NAs/NaNs
-			if(na.rm){
-				has.na <- as.numeric(which(is.na(sapply(ret,"[",1))))	
-				if(length(has.na) == length(ret)){
-					stop("All  Mahalanobis distance calculations produced `NA` values.")
-				}
-				if(length(has.na>0L)){
-					warning("Removed `NA` values from results of Mahalanobis distance calculation.")
-					return(	structure(ret[-has.na],	"hasNa"=has.na))
-			    }				
+			if(length(has.na > 0L)){		
+				message("Removing `NA` values from results of quasi-deviance calculation.")				
+				return( structure(ret[-has.na], "hasNa"=has.na))				
+			} else if(length(has.na) == length(points)) {				
+				stop(.makeMessage("All return values are `NA` while computing quasi-deviance."))
 			}
-			return(ret)					
-							
-		}, error = function(e) {
-			 message(.makeMessage("Calculation of Mahalanobis-distance failed: ",
-					conditionMessage(e)))
-			 stop(e)  
 		}
-	)
-	
+		return(ret)
+	}, error = function(e) {
+		message(.makeMessage("Calculation of quasi-deviance failed: ",conditionMessage(e)))
+	 	stop(e)  # re-throw error
+	})
 }
 
 #' @name multiDimLHS
@@ -910,16 +788,16 @@ multiDimLHS <- function(N, lb, ub, method = c("randomLHS","maximinLHS","augmentL
 #' @param theta 	list or matrix of points where to compute the criterion function
 #' 				 	and to choose `\code{kmax}` statistics given the QL model `\code{qsd}`
 #' @param qsd		object of class \code{\link{QLmodel}} 
-#' @param kmax   	number of statistics to be selectnred (q <= \code{kmax} <= p)
+#' @param kmax   	number of statistics to be selected with q <= \code{kmax} <= p
 #' @param cumprop	numeric vector either of length one (then replicated) or equal to the length of `\code{theta}` which sets the
 #' 				    proportions (0 < \code{cumprop} <= 1) of minimum overall contributions to each parameter component given the statistics 					
-#' @param ...		further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}
+#' @param ...		further arguments passed to \code{\link{quasiDeviance}}
 #' @param cl		cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}
-#' @param verbose  	logical, \code{TRUE} for intermediate output
+#' @param verbose  	logical, \code{FALSE} (default) for intermediate output
 #' 
 #' @return A list which consists of 
 #' 	\item{id}{ indices of corresponding statistics}
-#' 	\item{names}{ names of statistics (if provided)}
+#' 	\item{Tmax}{ named vector of \code{id} corresponding maximum values of statistics}
 #'  \item{cumprop}{ cumulated proportions of contributions of selected statistics to each of the parameter components} 
 #'  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of proportional contributions to the quasi-information}  
 #' 
@@ -951,8 +829,10 @@ optStat <- function(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL, verbose=F
 	
 	# evaluate statistics at theta
 	ret <- doInParallel(QD,
-			FUN=function(x,q,p,kmax,prop) {
+			FUN=function(x,q,p,kmax,prop) {				
+				### TODO: kriging variances for average approximation?	Unterscheidung kriging wcholMean?			
 				V <- attr(x,"Sigma")	  
+				###
 				nms <- colnames(V)
 				if(is.null(nms)){
 					nms <- paste0("V",1:p)
@@ -1002,9 +882,11 @@ optStat <- function(theta, qsd, kmax = p, cumprop = 1, ..., cl = NULL, verbose=F
 				rankM <- matrix(0,nrow=q,ncol=p)
 				dimnames(rankM) <- list(names(theta),nms)
 				for(i in 1:nrow(rankM))
-					rankM[i,] <- pmatch(colnames(rankM),names(M[[i]]))
+				 rankM[i,] <- pmatch(colnames(rankM),names(M[[i]]))
 				
-				structure(list("id"=id, "names"=names(T),
+				structure(
+				  list("id"=id,
+					"Tmax"=apply(do.call(rbind,M)[,names(T)],2,max),
 					"cumprop"=apply(L, 1, function(x) sum(x[id])),
 					"sorted"=M, "rankMat"=rankM))		
 			}, q=q, p=p, kmax=kmax, prop=cumprop,
