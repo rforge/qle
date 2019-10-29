@@ -10,7 +10,7 @@
 library(qle)
 data(normal)
 
-qsd$var.type <- "cholMean"
+qsd$var.type <- "wcholMean"
 
 (S0 <- qscoring(qsd,
   x0=c("mu"=3.5,"sigma"=1.5), 

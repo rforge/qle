@@ -21,7 +21,9 @@ Tstat <- qsd$qldata[c(3,4)]
 pred <- estim(qsd$covT,x0,Xs,Tstat,krig.type="var")[[1]]
 
 ## dual kriging
-# pred2 <- estim(qsd$covT,x0,Xs,Tstat,krig.type="dual")[[1]]
+pred2 <- estim(qsd$covT,x0,Xs,Tstat,krig.type="dual")[[1]]
+
+jacobian(qsd$covT,x0,Xs,Tstat,krig.type="dual")
 
 # compute quasi-deviance with use of kriging variances
 #X <- rbind(x0,x0+c(0.1,0.2),x0+c(1,1))
@@ -29,6 +31,7 @@ pred <- estim(qsd$covT,x0,Xs,Tstat,krig.type="var")[[1]]
 #quasiDeviance(X,qsd,value.only=3,verbose=TRUE)
 
 D <- quasiDeviance(x0,qsd,verbose=TRUE)[[1]]
+D$stats
 pred
 
 # remove kriging variances from variance matrix approximation
@@ -51,11 +54,13 @@ t(B)%*%(S)%*%B
 # variance of quasi-score vector as modified quasi-information
 D$varS
 (C <- t(B)%*%(S+diag(D$sig2))%*%B)
+#t(B)%*%(diag(D$sig2))%*%B
 
 # variance matrix of statistics Var_{\theta}(T(X))
 print(S)
-covarTx(qsd)			# no added kriging variances
-covarTx(qsd,theta=x0)   # adding kriging variances at theta
+covarTx(qsd)				 # no added kriging variances
+covarTx(qsd,theta=x0)[[1]]   # adding kriging variances of predicting variances at theta
+
 
 # modified quasi-deviance value based on modified quasi-information matrix
 D$value
@@ -74,7 +79,7 @@ crit <- function(qd,w=0.5) {
 	w*log(det(varS))+(1-w)*(t(qd$score)%*%solve(varS)%*%qd$score)
 }
 
-crit(D,w=.5)
+as.numeric(crit(D,w=.5))
 quasiDeviance(x0,qsd,w=0.5,verbose=TRUE,value.only=2L)
 
 # first term

@@ -12,15 +12,15 @@ library(qle)
 data(normal)
 
 # options set when during initilization of `qsd`
+qsd$criterion <- "qle"
 qsd$var.type <- "wcholMean"
-qsd$criterion <- "mahal"
 
 # some parameters of the statistical model for evaluation
 theta <- c("mu"=2,"sigma"=0.95) 
 
 # compare criterion functions
-MD <- mahalDist(theta,qsd)
 QD <- quasiDeviance(theta,qsd)
+MD <- quasiDeviance(theta,qsd,criterion="mahal")
 
 # must be equal due to the same
 # number of parameters (q) and statistics (p)
@@ -28,8 +28,7 @@ all.equal(MD[[1]]$value,QD[[1]]$value)
 
 # least-squares (constant variance)
 qsd$var.type <- "const"
-qsd$criterion <- "mahal"
-LQ <- mahalDist(theta,qsd,Sigma=diag(2))[[1]]
+LQ <- quasiDeviance(theta,qsd,Sigma=diag(2),criterion="mahal")[[1]]
 (S <- attr(LQ,"Sigma")) # actually already inverted
 Xs <- as.matrix(qsd$qldata[c(1,2)])
 Tstat <- qsd$qldata[c(3,4)]
@@ -57,14 +56,14 @@ crit <- function(qd,w=0.5) {
 # weighted average approximation
 crit(MD[[1]],w=.5)
 qsd$var.type <- "wcholMean"
-mahalDist(theta,qsd,w=0.5,verbose=TRUE,value.only=2L)
+quasiDeviance(theta,qsd,w=0.5,criterion="mahal",verbose=TRUE,value.only=2L)
 
 # using a constant Sigma
 qsd$var.type <- "const"
-qd <- mahalDist(theta,qsd,Sigma=diag(2),w=0.5,verbose=TRUE,value.only=0L)[[1]]
+qd <- quasiDeviance(theta,qsd,Sigma=diag(2),w=0.5,criterion="mahal",verbose=TRUE,value.only=0L)[[1]]
 qd$sig2 <- rep(0,2)
 crit(qd,w=.5)
-mahalDist(theta,qsd,Sigma=diag(2),w=0.5,verbose=TRUE,value.only=2L)
+quasiDeviance(theta,qsd,Sigma=diag(2),w=0.5,criterion="mahal",verbose=TRUE,value.only=2L)
 #quasiDeviance(theta,qsd,Sigma=diag(2),w=0.5,verbose=TRUE,value.only=2L)
 
 # first term
