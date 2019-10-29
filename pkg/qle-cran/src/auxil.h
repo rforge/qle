@@ -23,6 +23,10 @@ inline const T &MIN(const T &a, const T &b)
 typedef void (*Fp_merger)(double *, double*, int*);
 typedef void (*fnCompare_wrap) (double *x, void *data, double *f, int &err);
 
+/* Interface to expm package. */
+typedef enum { Ward_2, Ward_1, Ward_buggy_octave } precond_type;
+static void(*expm)(double*, int, double*, precond_type) = 0;
+
 typedef struct qr_data_s {
 	  double *qr, *tau;
 	  int  rank, nrow, ncol, ntau;
@@ -70,6 +74,7 @@ void solveQR(double *X, int nrx, int ncx, double *y, int ncy, int &err);
 void solveCH(double *X, int n, double *y, int ncoly, int &err);
 void solveDSPTRS( double *A, int n, double *B, int nrhs, int &err);
 void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork, int &err, inversion_type type);
+void geneigen(int *dimA, double *A, int *dimB, double *B, double *W, int *lwork, double *work, int *values);
 //
 void factorize_chol_L(double *A, int *nA, int &err);
 void solve_chol_factorized(double *A, int *nA, double *B, int *nB, int &err);
@@ -91,7 +96,8 @@ void basis0(double *f);
 void basis1(double *x, int lx, int dx, double *f);
 void basis2(double *x, int lx, int dx, double *f);
 
-
+int exp_mergeMatrix(double *x, double *z, int n, double *y);
+//void (*expm)(double *x, int n, double *z, precond_type type);
 
 #ifdef  __cplusplus
 }

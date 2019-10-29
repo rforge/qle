@@ -15,6 +15,29 @@
 
 #define SVD_TOL 1e-12
 
+int exp_mergeMatrix(double *x, double *z, int n, double *y) {
+  int info=0, i,j,k;
+  double tmp=0;
+  for(k=j=0; j<n; j++) {
+      for(i=0;i<j+1; i++,k++) {
+          y[j*n+i] = x[k];
+          tmp = y[j*n+i];
+          if (!R_FINITE(tmp))
+            { info=1; }
+          if(i!=j) y[i*n+j] = tmp;
+      }
+  }
+  if (info>0)
+   WRR("`NaN` detected in `exp_mergeMatrix`.");
+  if(!expm) {
+   expm = (void (*) (double*, int, double*, precond_type)) R_GetCCallable("expm", "expm");
+  }
+  expm(y,n,z,Ward_1);
+  return info;
+}
+
+
+
 int check_Lapack_error( int info, const char* name, int line, const char *file);
 
 /** \brief Merge cholesky decomposition into matrix
@@ -74,6 +97,7 @@ int chol2var(double *x, double *z, int nx, double *y) {
  *
  * @return void
  */
+//fdJacobian(x,dx,score,dx,qiobs,qld->fdscore,&wrap_intern_quasiScore,(void*) this,FD_EPS,ONE_ELEMENT,info);
 void fdJacobian(double *x, int dx, double *fval, int m, double *jac, double *fdwork,
 	  fnCompare_wrap func, void *data, double eps, int to_negative, int &info) {
 
@@ -697,6 +721,24 @@ ErrHandler:
 
 }
 
+/**
+ *  \brief generalized eigenvalue decomposition for symmetric p.d. matrices
+ *    The result is stored in 'W'.
+ */
+void geneigen(int *dimA, double *A, int *dimB, double *B, double *W, int *lwork, double *work, int *values) {
+  int n = dimA[0];
+  if( *lwork < (n+2)*n )
+    ERR("length of workspace storage vector is too short.");
+
+  int info = 0;
+  const int itype =1;
+  const char uplo = 'U';
+  const char jobz = (*values ? 'N' : 'V');
+
+  F77_NAME(dsygv)(&itype,&jobz,&uplo,dimA+1,A,dimA,B,dimB,W,work,lwork,&info);
+  if(check_Lapack_error(info," `dsygv` failed.",__LINE__, __FILE__) != NO_ERROR )
+	LOG_ERROR(LAPACK_ERROR, "geneigen");
+}
 
 void gsiSolve(double *A, int n, double *B, int nrhs, double *Awork,
 				int &err, inversion_type type) {

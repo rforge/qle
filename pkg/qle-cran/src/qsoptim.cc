@@ -98,10 +98,10 @@ void fnGrad(qfs_options qfs, double *g, double *d, int fntype, int &info){
  * @return result object
  */
 
-SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP R_cm, SEXP R_opt) {
+SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_cvT, SEXP R_opt) {
 
-    int nProtected = 0, info = 0,
-    	fntype=0, xdim = LENGTH(R_start);
+    int nProtected = 0, info = 0, fntype=0,
+    	xdim = LENGTH(R_start), nqsd = LENGTH(R_qsd);
 
     /*! set start vector */
     SEXP R_sol = R_NilValue;
@@ -111,9 +111,8 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     double *xsol = REAL(R_sol);
     double *start = REAL(AS_NUMERIC(R_start));
     MEMCPY(xsol,start,xdim);
-
-    ql_model_t qlm(R_qsd, R_qlopts, R_X, R_Vmat, R_cm, COPY_ZERO);
-
+    /* init QL model */
+    ql_model_t qlm(R_qsd, R_qlopts, R_cvT);
     /*! Set optimization options*/
     qfs_options_t qfs(&qlm,R_opt);
 
@@ -154,10 +153,9 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
     MEMCPY(REAL(R_S),qlm.score,xdim);
     MEMCPY(REAL(R_jac),qlm.jac,xdim*qlm.nCov);
     MEMCPY(REAL(R_varS),qlm.varS,xdim*xdim);
-
-    /* variance quasi-score */
+    /* copy original quasi-information */
 	PROTECT(R_I = allocMatrix(REALSXP,qlm.dx,qlm.dx)); ++nProtected;
-	qlm.intern_quasiInfo(qlm.jac,REAL(R_I));
+	MEMCPY(REAL(R_I),qlm.qimat,xdim*xdim);
 
 	// Iobs must be called as the last statement
     if(qfs.doIobs){
@@ -167,14 +165,14 @@ SEXP QSopt(SEXP R_start, SEXP R_qsd, SEXP R_qlopts, SEXP R_X, SEXP R_Vmat, SEXP 
        	++nProtected;
        	info = qlm.intern_quasiObs(xsol, qlm.score, REAL(R_Iobs));
        	if( info != NO_ERROR )
-       	  XWRR( info, "inter_quasiObs")
+       	  XWRR( info, "intern_quasiObs")
     }
 
     // names variance matrix
     SEXP R_VmatNames;
     PROTECT(R_VmatNames = allocVector(VECSXP,2));
     ++nProtected;
-    SEXP R_obs = getListElement( R_qsd, "obs" );
+    SEXP R_obs = getListElement( VECTOR_ELT(R_qsd,0), "obs" );
     SET_DIMNAMES_MATRIX(R_VmatNames,R_obs)
 
     // not for dual kriging: prediction variances would not be available

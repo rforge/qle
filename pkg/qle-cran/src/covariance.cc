@@ -116,7 +116,7 @@ SEXP covVector (SEXP R_Xmat, SEXP R_Yvec, SEXP R_CovStruct) {
 
 int intern_covVector(double *x, int dx, int lx, double *y, int ly, double *z, cov_model* cov) {
 	int have_na=0;
-	double h=0, *px=x;
+	double h=0, zero=0.0, *px=x;
 	cov_func cf=cov->cf;
 
 	for (int i = 0; i < lx; i++, px++) {
@@ -124,15 +124,14 @@ int intern_covVector(double *x, int dx, int lx, double *y, int ly, double *z, co
 		/* filter out nugget-effect component, that is, estimate
 		 * the simulation variance free value of the statistics */
 		z[i] = (*cf)(cov,&h);
-		if(!R_FINITE(z[i]))
-		  { have_na=1; break; }
-
-	    /* not filtering out the nugget-effect component, that is, kriging as an exact interpolator */
+		/* not filtering out the nugget-effect component, that is, kriging as an exact interpolator */
 		//if( h < MIN_DISTANCE) {
-		//   z[i] = (*cf)(cov,&zero) + cov->nugget + cov->nuggfix[i];
+		//  z[i] = (*cf)(cov,&zero) + cov->nugget + cov->nuggfix[i];
 		//} else {
-		//   z[i] = (*cf)(cov,&h);
+		//  z[i] = (*cf)(cov,&h);
 		//}
+		if(!R_FINITE(z[i]))
+		 { have_na=1; break; }
 	}
 	return have_na;
 }
