@@ -5,7 +5,7 @@
 \title{Update covariance models}
 \usage{
 updateCovModels(qsd, nextData, fit = TRUE, cl = NULL,
-  control = list(), pl = pl, verbose = FALSE)
+  control = list(), pl = 0L, verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}} which is to be updated}

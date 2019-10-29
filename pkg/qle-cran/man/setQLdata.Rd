@@ -4,7 +4,7 @@
 \alias{setQLdata}
 \title{Setup of quasi-likelihood data for estimation}
 \usage{
-setQLdata(runs, X = NULL, var.type = "cholMean", Nb = 0,
+setQLdata(runs, X = NULL, var.type = "wcholMean", Nb = 0,
   na.rm = TRUE, verbose = FALSE)
 }
 \arguments{
@@ -12,7 +12,7 @@ setQLdata(runs, X = NULL, var.type = "cholMean", Nb = 0,
 
 \item{X}{list or matrix of (design) points, i.e. model parameters}
 
-\item{var.type}{name of variance matrix approximation type: "\code{cholMean}" (default)}
+\item{var.type}{name of variance matrix approximation type, "\code{wcholMean}" (default)}
 
 \item{Nb}{number of bootstrap samples, \code{=0} (default, no bootstrap used), to be generated for kriging the variance matrix,
 only if `\code{var.type}`=`\code{kriging}`}

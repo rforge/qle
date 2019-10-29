@@ -5,7 +5,7 @@
 \title{Quasi-deviance computation}
 \usage{
 quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
-  inverted = FALSE, check = TRUE, w = 0.5, value.only = FALSE,
+  check = TRUE, w = 0.5, criterion = NULL, value.only = FALSE,
   na.rm = TRUE, cl = NULL, verbose = FALSE)
 }
 \arguments{
@@ -17,15 +17,17 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 
 \item{...}{further arguments passed to \code{\link{covarTx}}}
 
-\item{cvm}{list of cross-validation models (see \code{\link{prefitCV}})}
+\item{cvm}{optional, ether list of covariance models of the statistics for cross-validation based estimation of prediction variances of the statistics or
+of class \code{cv} or list of cross-validation models of class \code{cvfull} of the QL model \code{qsd} for computation of the quasi-deviance
+and error estimation of the quasi-score approximation w.r.t the kriging prediction models (see \code{\link{prefitCV}})}
 
 \item{obs}{numeric vector of observed statistics, this overwrites `\code{qsd$obs}`, if supplied}
-
-\item{inverted}{logical, \code{FALSE} (default), currently ignored}
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 
 \item{w}{numeric value, \code{=0.5} (default) as scalar weight, \code{0<=w<=1}, for evaluation of candidate points}
+
+\item{criterion}{name of criterion function, either "\code{qle}" (default) or "\code{mahal}" which overwrites stored type name in `\code{qsd}`}
 
 \item{value.only}{if \code{TRUE} only the values of the QD are returned}
 
@@ -37,14 +39,13 @@ quasiDeviance(points, qsd, Sigma = NULL, ..., cvm = NULL, obs = NULL,
 }
 \value{
 Numeric vector of QD values, if values only, or a list with elements:
-\item{value}{ quasi-deviance value}
+\item{value}{ either quasi-deviance value or Mahalanobis distance value }
 \item{par}{ parameter estimate}
 \item{I}{ quasi-information matrix}
 \item{score}{ quasi-score vector}
 \item{jac}{ Jacobian of sample average statistics}
 \item{varS}{ estimated variance of quasi-score, if applicable}
 \item{Iobs}{ observed quasi-information}
-\item{qval}{ quasi-deviance using the inverse of `\code{varS}` as a weighting matrix}
 
  The matix `\code{Iobs}` is called the \eqn{\emph{observed quasi-information}} (see [2, Sec. 4.3]),
  which, in our setting, can be calculated at least numerically as the Jacobian of the quasi-score vector.
@@ -72,7 +73,7 @@ The function calculates the QD (see [1]). It is the primary function criterion t
   Further, if we use a weighted variance average approximation of statistics (see \code{\link{covarTx}}),
   then the QD value is calculated rather locally w.r.t. to an estimated parameter `\code{theta}`. A constant variance
   matrix is also applicable to the computation of the QD. However, if supplied, `\code{Sigma}` is used
-  as is with kriging variances added at the `\code{points}` as diagonal terms (see also \code{\link{mahalDist}}).    
+  as is with kriging variances added at the `\code{points}` as diagonal terms.    
 
 	 \subsection{Use of prediction variances}{ 
 	 In order to not only account for the simulation variance but additionally for the approximation error of the
@@ -90,11 +91,38 @@ The function calculates the QD (see [1]). It is the primary function criterion t
   the prediction variances of the sample means of the statistics. In particular, the CV approach is recommended in case one favours kriging type for
   the approximation of the variance matrix. 
   }
+
+ \subsection{Mahalanobis Distance}{ 
+	 The function computes the Mahalanobis distance of the given statistics \eqn{T(X)\in R^p} with different options
+ for the approximation type of the variance matrix. The Mahalanobis distance can be used as an alternative criterion function
+ for estimating the unknown model parameter during the main estimation function \code{\link{qle}}.
+ 
+ There are several options how to estimate or choose the variance matrix of the statistics \eqn{\Sigma}.
+ First, in case of a given constant variance matrix estimate `\code{Sigma}`, the Mahalanobis distance reads
+	\deqn{ (T(x)-E_{\theta}[T(X)])^t\Sigma^{-1}(T(x)-E_{\theta}[T(X)]) }
+ and `\code{Sigma}` is used as given.
+
+ As a second option, the variance matrix \eqn{\Sigma} can be estimated by the average approximation 
+ \deqn{\bar{V}=\frac{1}{n}\sum_{i=1}^n V_i  }
+ based on the simulated variance matrices \eqn{V_i=V(\theta_i)} of statistics over all sample points
+ \eqn{\theta_1,...,\theta_n} (see vignette).
+ Unless `\code{qsd$var.type}` equals "\code{const}" additional prediction variances are added as diagonal terms in order
+ to account for the kriging approximation error of the statistics using kriging. A weighted version of these average approximation
+ types is also available (see \code{\link{covarTx}}).
+ 
+ As a continuous variance approximation we use a kriging approach (see [1]). Then \deqn{\Sigma(\theta) = Var_{\theta}(T(X))}
+ denotes the variance matrix which depends on the parameter \eqn{\theta\in R^q} and corresponds to the
+ formal function argument `\code{points}`. Each time a value of the criterion function is calculated at any parameter
+ `\code{points}` the variance matrix is estimated by the correpsonding approach with added prediction variances as explained above.
+ Note that in this case the argument `\code{Sigma}` is ignored.
+ }
 }
 \examples{
 data(normal)
 quasiDeviance(c(2,1), qsd)
- 
+# (weighted) least squares
+quasiDeviance(c(2,1), qsd, Sigma=diag(2), criterion = "mahal")
+
 }
 \author{
 M. Baaske

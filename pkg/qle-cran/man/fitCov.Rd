@@ -25,7 +25,7 @@ first column corresponds to the first model in the list `\code{models}` and so f
 \item{verbose}{logical, \code{FALSE} (default) for intermediate output}
 }
 \value{
-An object of class \code{reml} which consists of a list of named lists
+An object of class \code{QLfit} which consists of a list of named lists
  (of elements `\code{model}` and `\code{convergence}`) each storing a fitted covariance model
  together with optimization results from a call to \code{\link[nloptr]{nloptr}} as an attribute
  named `\code{optres}` if \code{verbose=TRUE}. The default method for estimation is \code{\link[nloptr]{mlsl}} which

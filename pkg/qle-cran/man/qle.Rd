@@ -4,11 +4,11 @@
 \alias{qle}
 \title{Simulated quasi-likelihood parameter estimation}
 \usage{
-qle(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
-  Sigma = NULL, global.opts = list(), local.opts = list(),
-  method = c("qscoring", "bobyqa", "direct"), qscore.opts = list(),
-  control = list(), errType = "kv", pl = 0L, verbose = TRUE,
-  use.cluster = FALSE, cl = NULL, iseed = NULL, plot = FALSE)
+qle(qsd, sim, ..., nsim, fnsim = NULL, obs = NULL, Sigma = NULL,
+  qle.opts = list(), method = c("qscoring", "bobyqa", "direct"),
+  qscore.opts = list(), control = list(), errType = "cv", pl = 0L,
+  verbose = TRUE, use.cluster = FALSE, cl = NULL, iseed = NULL,
+  plot = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -23,15 +23,11 @@ qle(qsd, sim, ..., nsim, fnsim = NULL, x0 = NULL, obs = NULL,
 sample point with the current environment of calling function \code{qle},
 default is the initial value `\code{qsd$nsim}`, respectively `\code{nsim}`}
 
-\item{x0}{optional, numeric vector of starting parameters}
-
 \item{obs}{optional, numeric vector of observed statistics, overwrites `\code{qsd$obs}` if given}
 
 \item{Sigma}{optional, constant variance matrix estimate of statistics (see details)}
 
-\item{global.opts}{options for global search phase}
-
-\item{local.opts}{options for local search phase}
+\item{qle.opts}{options for local search phase}
 
 \item{method}{vector of names of local search methods which are applied in consecutive order}
 
@@ -39,7 +35,9 @@ default is the initial value `\code{qsd$nsim}`, respectively `\code{nsim}`}
 
 \item{control}{list of control arguments passed to any of the routines defined in `\code{method}`}
 
-\item{errType}{type of prediction variances, choose one of "\code{kv}","\code{cv}", "\code{max}" (see details)}
+\item{errType}{type of prediction variances used for error estimation of the quasi-score, one of "\code{kv}"
+(kriging prediction variance), "\code{cv}" (cross-validation variances of the statistics),
+ "\code{max}" (using the maximum of both) or "\code{cvfull}" (cross-validation of quasi-score) (see details)}
 
 \item{pl}{print level, use \code{pl}>0 to print intermediate results}
 
@@ -81,7 +79,7 @@ List of the following objects:
 			 according to a multivariate normal distribution with this variance and the current root as its mean parameter.}
    \item{theta:}{ the parameter corresponding to \code{W}, typically an approximate root or local minimzer of the criterion function} 
 	  \item{status:}{ status of `qle` optimization, whether last iteration was global, local and minimzed}
-	  \item{minimized:}{ whether last local minimization was successful}
+	  \item{minimum:}{ whether last local minimization was successful}
 	  \item{useCV:}{ logical, whether the cross-validation approach was applied}
 	  \item{method:}{ name of final search method applied}
    \item{nsim:}{ number of simulation replications at each evaluation point}
@@ -99,7 +97,8 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  initial sample points and the covariance models of the involved statistics (see \code{\link{QLmodel}}). In addition, it sets
  the criterion function by `\code{qsd$criterion}`, which is either used to monitor the sampling process or minimized itself. The user
  also has the option to choose among different types of prediction variances: either "\code{kv}" (kriging variances), "\code{cv}"
- (cross-validation-based variances) or the maximum of both, set by "\code{max}", are available.
+ (cross-validation-based variances) or "\code{cvfull}" using cross-validation of the quasi-score to estimate the prediction variance
+ of the quasi-score induced by the kriging models, are available.
 
  \subsection{Criterion functions}{
  The QD as a criterion function follows the quasi-likelihood estimation principle (see vignette)
@@ -129,11 +128,11 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  This procedure also allows for a stopping condition derived from the reults of the MC test. We can compare the estimated mean squared error (MSE) with the
  predicted error of the approximate root by its relative difference and terminate in case this value drops below a user-defined bound `\code{perr_tol}`
  (either as a scalar value or numeric vector of length equal to the dimension of the unknown parameter). A value close to zero suggests a good match of both
- error measures. The testing procedure is disabled by default. Set `\code{local.opts$test=TRUE}` for testing an approximate root during the estimation.
- In this case, if for some value of the criterion function its value exceeds `\code{local.opts$ftol_abs}`, then the corresponding minimizer is tested for an approximate root.
+ error measures. The testing procedure is disabled by default. Set `\code{qle.opts$test=TRUE}` for testing an approximate root during the estimation.
+ In this case, if for some value of the criterion function its value exceeds `\code{qle.opts$ftol_abs}`, then the corresponding minimizer is tested for an approximate root.
  Otherwise the last evaluation point is used as a starting point for next local searches  by a multistart approach when the algorithm is in its global phase.
  Note that this approach has the potential to escape regions where the criterion function value is quite low but, however, is not considered trustworthy as an
- approximate root. If testing is disabled, then a local minimizer whose criterion function drops below the upper bound `\code{local.opts$ftol_abs}` is considered
+ approximate root. If testing is disabled, then a local minimizer whose criterion function drops below the upper bound `\code{qle.opts$ftol_abs}` is considered
  as a root of the quasi-score and the algorithm stays in or switches to its local phase. The same holds, if the quasi-score vector matches the numerical tolerance for 
  being zero. A multistart approach for searching a minimizer during the local phase is only enabled if any of the local search methods fail to converge since most of the
  time the iteration is started from a point which is already near a root. The re-estimation of parameters during the test procedure also uses
@@ -157,14 +156,14 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  or the (numerical) convergence of the local solvers failed, the global phase of the algorithm is invoked and selects new potential
  candidates accross the whole search space based on a weighted selection criterion. This assigns large weights to candidates
  with low criterion function values and vise versa. During both phases the cycling between local and global candidates is
- controlled by the weights `\code{global.opts$weights}` and `\code{locals.opts$weights}`, respectively. Besides this, the smaller
+ controlled by the weights `\code{global.opts$weights}` and `\code{qle.opts.opts$weights}`, respectively. Besides this, the smaller
  the weights the more the candidates tend to be globally selected and vice versa during the global phase. Within the local phase,
  weights approaching one result in selecting candidates close to the current minimizer of the criterion
  function. Weights approximately zero maximize the minimum distance between candidates and previously sampled points and
  thus densely sample the search space almost everywhere if the algorithm is allowed to run infinitely. The choice of weights
  is somewhat ad hoc but may reflect the users preference on guiding the whole estimation more biased towards either a local
  or global search. In addition the local weights can be dynamically adjusted if `\code{useWeights}` is \code{FALSE}
- depending on the current progress of estimation. In this case the first weight given by `\code{locals.opts$weights}` is 
+ depending on the current progress of estimation. In this case the first weight given by `\code{qle.opts.opts$weights}` is 
  initially used for this kind of adjustment. Make sure to export all functions to the cluster environment `\code{cl}` beforehand,
  loading required packages on each cluster/compute node, which are used in the model simulation function (see \code{\link{clusterExport}}
  and \code{\link{clusterApply}}). 
@@ -191,7 +190,7 @@ The function sequentially estimates the unknown model parameter. Basically, the 
  For a 2D parameter estimation problem the function can visualize the sampling and selection process, which
  requires an active 2D graphical device in advance.    
 
- The following controls `\code{local.opts}` for the local search phase are available:
+ The following controls `\code{qle.opts}` for the local search phase are available:
   \itemize{
   \item{\code{lam_max}:}{ upper bound on the maximum eigenvalue of the generalized eigenvalue decomposition of
 		the quasi-information matrix and estimated interpolation error (variance) of quasi-score.
@@ -206,64 +205,43 @@ The function sequentially estimates the unknown model parameter. Basically, the 
 	 \item{\code{nsample}:}{ sampling size of candidate locations at the local phase}
 	 \item{\code{ntotal}:}{ number of  random samples for evaluation of the integral of total prediction variance of the quasi-score vector at
        the local phase with criterion "\code{VQS}"}
-	 \item{\code{weights}:}{ vector of weights, \eqn{0\leq\code{weights}\leq 1}, for local sampling}
-	 \item{\code{useWeights}:} {logical, if \code{FALSE} (default), dynamically adjust the weights, see vignette}
+	 \item{\code{weights}:}{ vector of weights, \eqn{0\leq\code{weights}\leq 1}, for weighted error sensitivity sampling}
+   \item{\code{dtol}:}{ scalar value, factor of the mean value of all minimum distances between sample points as a cluster threshold }
  \item{\code{ftol_abs}:}{ upper bound on the function criterion: values smaller trigger the local phase
    treating the current minimzer as an approximate root otherwise forces the algorithm to switch to the global phase and vice versa
    unless testing is enabled in which case, depending on the result of testing, could even stay in the local phase.}
-  \item{\code{eta}:}{ values for decrease and increase of the local weights for the sampling criterion, which is intended to faciliate convergence
-		 while sampling new points more and more around the current best parameter estimate.} 
-  \item{\code{alpha}:}{ significance level for computation of empirical quantiles of one of the test statistics, that is,
-         testing a parameter to be a	root of the quasi-score vector in probability.}
-  \item{perr_tol}{ upper bound on the relative difference of the empirical and predicted error of an approximate root}
-  \item{\code{nfail}:}{ maximum number of consecutive failed iterations}
-  \item{\code{nsucc}:}{ maximum number of consecutive successful iterations}
-  \item{\code{nextSample}:}{ either "\code{LQS}" (default),  "\code{WQD}" or "\code{VQS}", see details} 
-  }
-
- The following controls `\code{global.opts}` for the global search phase are available:   
-	\itemize{
   \item{\code{stopval}:}{ stopping value related to the criterion function value, the main iteration terminates
 				     as soon as the criterion function value drops below this value. This might be preferable to a time consuming
 					 sampling procedure if one whishes to simply minimize the criterion function or find a first
 					 approximation to the unknown model parameter.}
-  \item{\code{lam_rel}:}{ upper bound on the relative change of `\code{lam_max}`, see `\code{local.opts}`
-        The algorithm terminates	its value drops below after a number of `\code{global.opts$NmaxCV}` 
+  \item{\code{lam_rel}:}{ upper bound on the relative change of `\code{lam_max}`, see `\code{qle.opts}`
+        The algorithm terminates	its value drops below after a number of `\code{global.opts$NmaxLamRel}` 
         consecutive iterations.}
 	 \item{\code{xtol_rel}:}{ relative change of found minimizer of the criterion function or root of quasi-score.}
 	 \item{\code{ftol_rel}:}{ relative change of the criterion function value.}
- \item{\code{maxiter}:}{ maximum allowed global phase iterations }
-	 \item{\code{maxeval}:}{ maximum allowed global and local iterations }
+  \item{\code{maxiter}:}{ maximum allowed global phase iterations }
 	 \item{\code{sampleTol}:}{ minimum allowed distance between sampled locations at global phase}	
 	 \item{\code{weights}:}{ vector of \eqn{\code{weights}>0} for global sampling}
   \item{\code{nsample}:}{ sampling size of candidate locations at the global phase}
   \item{\code{NmaxRel}:}{ maximum number of consecutive iterates until stopping according to `\code{xtol_rel}`}
-  \item{\code{NmaxCV}:}{ maximum number of consecutive iterates until stopping according to `\code{lam_rel}`}
+  \item{\code{NmaxLamRel}:}{ maximum number of consecutive iterates until stopping according to `\code{lam_rel}`}
   \item{\code{NmaxSample}:}{ maximum number of consecutive iterations until stopping according to `\code{sampleTol}`}
   \item{\code{NmaxLam}:}{ maximum number of consecutive iterations until stopping for which the generalized eigenvalue of the variance
 		 of the quasi-score vector within the kriging approximation model and its total variance measured by the quasi-information matrix
-      at some estimated parameter drops below the upper bound `\code{local.opts$lam_max}` }
-  \item{\code{NmaxQI}:}{ maximum number of consecutive iterations until stopping for which the relative difference of the empirical error
-     and predicted error of an approximate root drops below `\code{perr_tol}`}
+      at some estimated parameter drops below the upper bound `\code{qle.opts$lam_max}` }
   \item{\code{nstart}:}{ number of random starting points, \code{10*(xdim+1)} (default), if local searches do not converge}
-	 \item{\code{nextSample}:}{ name of next selection criterion of next evaluation point, "\code{ITPV}" (default) or "\code{MTPV}", see details}
-  \item{\code{xdist_tol}:}{ maximum allowed distance between consecutive iterates (potential minima of the criterion function), values below
-							   indicate that some local minima and trigger the testing of this parameter estimate } 
-
-}
+ }
 }
 \examples{
 data(normal)
  
 # main estimation with new evaluations
 # (simulations of the statistical model)
-OPT <- qle(qsd,qsd$simfn,nsim=10,
-		    global.opts=list("maxeval"=1),
- 		local.opts=list("test"=FALSE)) 
+OPT <- qle(qsd,qsd$simfn,nsim=10,qle.opts=list("maxiter"=1)) 
 
 }
 \seealso{
-\code{\link{mahalDist}}, \code{\link{quasiDeviance}}, \code{\link{qleTest}}
+\code{\link{quasiDeviance}}, \code{\link{qleTest}}
 }
 \author{
 M. Baaske

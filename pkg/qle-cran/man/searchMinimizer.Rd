@@ -20,7 +20,7 @@ searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
 
 \item{control}{list of control arguments passed to \code{\link[nloptr]{nloptr}} routines defined in \code{method}}
 
-\item{...}{further arguments passed to \code{\link{covarTx}}}
+\item{...}{further arguments passed to \code{\link{covarTx}}, \code{\link{qscoring}} and \code{\link{quasiDeviance}}}
 
 \item{obs}{numeric vector of observed statistics, overwrites `\code{qsd$obs}`}
 
@@ -28,7 +28,7 @@ searchMinimizer(x0, qsd, method = c("qscoring", "bobyqa", "direct"),
 
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 
-\item{minimize}{logical, \code{TRUE} (defualt), unless \code{method} is not "\code{qscoring}", whether to minimize or maximize the quasi-deviance}
+\item{minimize}{logical, \code{TRUE} (defualt), unless \code{method} is not "\code{qscoring}", the posterior density is maximized}
 
 \item{restart}{logical, \code{TRUE} (default), whether to restart optimization in case of non convergence}
 
@@ -90,9 +90,11 @@ The function provides an interface to local and global numerical minimization ro
  limited computational budget, we can always apply the direct search method `\code{direct}` leading to a globally exhaustive search.
  Note that we must always supply a starting point `\code{x0}`, which could be any vector valued parameter of the parameter space unless
  method `\code{direct}` is chosen. Then `\code{x0}` is still required but ignored as a starting point since it uses the "center point" of
- the (hyper)box constraints internally. In addition, if cross-validation models `\code{cvm}` are given, the cross-validation prediction variances
- are inherently used during consecutive iterations of all methods. This results in additional computational efforts due to the repeated evaluations
- of the statistics to calculate these variances during each new iteration.  
+ the (hyper)box constraints internally. In addition, if a list of cross-validation models either `\code{cvm}` of the covariance models of
+ the statistics or of the full quasi-score are given, then these cross-validation prediction variances
+ are inherently used instead of kriging prediction variances for estimation of the variance of the quasi-score during consecutive iterations
+ of all optimization methods. This results in some additional computational effort due to the repeated computations of the statistics or
+ quasi-score vector, respectively, to calculate these variances during each new iteration.  
 }
 }
 \examples{
@@ -101,7 +103,7 @@ searchMinimizer(c("mu"=2.5,"sd"=0.2),qsd,method=c("qscoring","bobyqa"),verbose=T
 
 }
 \seealso{
-\code{\link[nloptr]{nloptr}}, \code{\link{qscoring}}, \code{\link{multiSearch}}
+\code{\link{prefitCV}}, \code{\link[nloptr]{nloptr}}, \code{\link{qscoring}}, \code{\link{multiSearch}}
 }
 \author{
 M. Baaske

@@ -4,9 +4,10 @@
 \alias{QLmodel}
 \title{Construct the quasi-likelihood approximation model}
 \usage{
-QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
-  var.type = c("wcholMean", "cholMean", "wlogMean", "logMean", "kriging",
-  "const"), criterion = c("qle", "mahal"), verbose = FALSE)
+QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = FALSE,
+  var.type = c("cholMean", "wcholMean", "logMean", "wlogMean", "kriging",
+  "logKrig", "const"), krig.type = "var", criterion = c("qle",
+  "mahal"), verbose = FALSE)
 }
 \arguments{
 \item{qldata}{data frame of (initial) simulation results (see \code{\link{setQLdata}})}
@@ -22,9 +23,11 @@ QLmodel(qldata, lb, ub, obs, mods, nfit = 1, cv.fit = TRUE,
 \item{nfit}{number of cycles, \code{nfit=1} (default), after which covariance
 parameters are re-estimated and otherwise only re-used}
 
-\item{cv.fit}{logical, \code{TRUE} (default), whether to re-fit CV models (re-estimate covariance parameters)}
+\item{cv.fit}{logical, \code{FALSE} (default), whether to re-fit CV models (re-estimate covariance parameters)}
 
 \item{var.type}{name of the variance approximation method (see \code{\link{covarTx}})}
+
+\item{krig.type}{name of kriging variant used, either "\code{var}" for kriging with computation of krigin prediction variance or "\code{dual}"}
 
 \item{criterion}{global criterion function for sampling and minimization, either "\code{qle}" or "\code{mahal}"}
 

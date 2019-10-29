@@ -4,18 +4,24 @@
 \alias{nextLOCsample}
 \title{Generate a random sample of points}
 \usage{
-nextLOCsample(S, x, n, lb, ub, pmin = 0.05, invert = FALSE)
+nextLOCsample(S = NULL, x = NULL, n, lb, ub, X = NULL, eps = 1e-05,
+  pmin = 0.05, invert = FALSE)
 }
 \arguments{
-\item{S}{variance matrix of sample points (usually chosen as the information matrix)}
+\item{S}{variance matrix, \code{NULL} (default), of sample points}
 
-\item{x}{an approximate root as the mean value if the multivariate normal distribution}
+\item{x}{numeric vector, \code{NULL} (default), multivariate mean vector of the normal distribution from
+which the random sample is going to be generated if \code{S} is given#'}
 
-\item{n}{number of points to randomly sample}
+\item{n}{number of points to sample}
 
 \item{lb}{vector of lower bounds of the (hyper)box}
 
 \item{ub}{vector of upper bounds of the (hyper)box}
+
+\item{X}{matrix of surrogate design points, default \code{NULL}, no minimum distance checks used}
+
+\item{eps}{minimum required distance of two neighboring locations}
 
 \item{pmin}{minimum required ratio of points falling inside the hyperbox of parameters}
 
@@ -28,9 +34,11 @@ Matrix of sampled locations.
 Generate a random sample of points as a set of candidate points for evaluation
 }
 \details{
-The function generates a random sample of points with mean and variance given by `\code{x}`
-	 and `\code{S}`, respectively, according to a (truncated) multivariate normal distribution (using
-  rejection sampling) to match the parameter space given by the lower and upper bound vectors.
+If `\code{S}` is given, then the function generates a random sample of points with mean and
+  variance given by `\code{x}` and `\code{S}`, respectively, according to a (truncated) multivariate
+  normal distribution (using rejection sampling) to match the parameter space given by the lower and
+  upper bound vectors. Otherwise random points are generated according to a uniform distribution on
+  the parameter space.
 }
 \examples{
  X <- nextLOCsample(matrix(c(1,0,0,1),nr=2), c(0,0), 10, c(-0.5,-0.5), c(0.5,0.5))

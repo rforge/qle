@@ -5,9 +5,9 @@
 \alias{jacobian}
 \title{Kriging prediction and numerical approximation of derivatives}
 \usage{
-estim(models, points, Xs, data, krig.type = c("dual", "var", "both"))
+estim(models, points, Xs, data, krig.type = c("dual", "var"))
 
-jacobian(models, points, Xs, data, krig.type = c("dual", "var", "both"))
+jacobian(models, points, Xs, data, krig.type = c("dual", "var"))
 }
 \arguments{
 \item{models}{object of class \code{krige} either as a list of covariance models or

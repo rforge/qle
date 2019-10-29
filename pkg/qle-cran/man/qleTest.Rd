@@ -4,15 +4,19 @@
 \alias{qleTest}
 \title{Monte Carlo testing}
 \usage{
-qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = "qle",
-  nsim = 100, fnsim = NULL, obs = NULL, alpha = 0.05,
-  multi.start = 0L, na.rm = TRUE, cores = 1L, cl = NULL,
-  iseed = NULL, verbose = FALSE)
+qleTest(par0, qsd, cvm = NULL, useCV = FALSE, obs0 = NULL, ..., sim,
+  type = c("qle", "mahal", "quasiWald"), nsim = 100, fnsim = NULL,
+  obs = NULL, alpha = 0.05, multi.start = 0L, na.rm = TRUE,
+  cores = 1L, cl = NULL, iseed = NULL, verbose = FALSE)
 }
 \arguments{
-\item{est}{object of class \code{qle} or \code{mahal}, estimation results after calling function \code{\link{qle}}}
+\item{par0}{vector of parameter for the null hypothesis}
 
-\item{par0}{optional, vector of parameter for the null hypothesis}
+\item{qsd}{object of class \code{\link{QLmodel}}}
+
+\item{cvm}{list of prefitted covariance models obtained from function \code{\link{prefitCV}}}
+
+\item{useCV}{logical, \code{FALSE} (default), use CV mean version of test statistic \code{type}}
 
 \item{obs0}{optional, vector of observed statistics corresponding to `\code{par0}`}
 
@@ -20,7 +24,7 @@ qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = "qle",
 
 \item{sim}{user supplied simulation function, see \code{\link{qle}}}
 
-\item{criterion}{optional, \code{NULL} (default), name of the test statistic, either "\code{qle}" or "\code{mahal}" which overwrites the function criterion used for estimation of the model parameter}
+\item{type}{name of test statistic, \code{"qle"} (default), either "\code{qle}" or "\code{mahal}" or "\code{quasiWald}" which overwrites the function criterion}
 
 \item{nsim}{numeric, number of (initial) simulation replications for each new sample point}
 
@@ -28,7 +32,7 @@ qleTest(est, par0 = NULL, obs0 = NULL, ..., sim, criterion = "qle",
 sample point with the current environment of calling function \code{qle},
 default is the initial value `\code{qsd$nsim}`, respectively `\code{nsim}`}
 
-\item{obs}{optional, \code{NULL} (default), simulated statistics at the hypothesised parameter, if not given, these are generated at `\code{par0}` or at `\code{est$par}`}
+\item{obs}{optional, \code{NULL} (default), simulated statistics at the hypothesised parameter, if not given, these are generated at `\code{par0}`}
 
 \item{alpha}{significance level for testing the hypothesis}
 

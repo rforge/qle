@@ -5,7 +5,8 @@
 \title{Prediction variances by cross-validation}
 \usage{
 crossValTx(qsd, cvm, theta = NULL, type = c("rmsd", "msd", "cve",
-  "scve", "acve", "mse", "ascve", "sigK"), cl = NULL)
+  "scve", "acve", "mse", "ascve", "sigK", "cvmix", "nmsd", "aae",
+  "sig2LOO"), cl = NULL)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}

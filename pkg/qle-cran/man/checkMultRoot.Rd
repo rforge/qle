@@ -17,8 +17,8 @@ checkMultRoot(est, par = NULL, opts = NULL, verbose = FALSE)
 }
 \value{
 A data frame with columns named corresponding to each component of the investigated parameter,
- `\code{minor}`, `\code{det}`, `\code{value}`, `\code{score_max}`, `\code{logdetI}`, `\code{lamI_min}`,
- `\code{lamIm_max}` and `\code{varS_trace}` (see vignette for details). The first column shows the leading minor of
+ `\code{minor}`, `\code{det}`, `\code{value}`, `\code{score_max}`,
+ `\code{lamIm_max}` (see vignette for details). The first column shows the leading minor of
   the observed QI matrix which is not positive definite. Estimated model parameters for which the observed QI matrix
   is not positive definite are excluded from further root selection.
 }

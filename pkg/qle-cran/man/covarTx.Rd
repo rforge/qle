@@ -20,32 +20,26 @@ covarTx(qsd, W = NULL, theta = NULL, cvm = NULL, doInvert = FALSE)
 \value{
 List of variance matrices with the following structure:
 	\item{VTX}{ variance matrix approximation}
- \item{sig2}{kriging prediction variances of statistics at `\code{theta}`}
- \item{var}{ matrix `\code{VTX}` with added variances `\code{sig2}` to the diagonal terms}
- \item{inv}{ if applicable, the inverse of either `\code{VTX}` or `\code{var}`}
+ \item{sig2}{kriging prediction variances of statistics at \code{theta}}
+ \item{inv}{ if applicable, the inverse of either \code{VTX}}
 }
 \description{
 Approximating the variance-covariance matrix of statistics
 }
 \details{
-The function estimates the variance matrix of statistics at some (unsampled) point `\code{theta}` by either
+The function estimates the variance matrix of statistics at some (unsampled) point \code{theta} by either
  averaging (the \emph{Cholesky} decomposed terms or matrix logarithms) over all simulated variance matrices
  of statistics at previously evaluated points of the parameter space or by a kriging approach which treats the Cholesky
  decomposed terms of each variance matrix as a data vector for kriging.
 
  In addition, a Nadaraya-Watson kernel-weighted average approximation can also be applied in order to bias the variance
  estimation towards a more locally weighted estimation, where smaller weights are assigned to points being more
- distant to an estimate of the model parameter `\code{theta}`. A reasonable symmetric weighting matrix 
- `\code{W}` of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
- different types of variance averaging methods such as "\code{cholMean}", "\code{wcholMean}", "\code{logMean}", "\code{wlogMean}",
- "\code{kriging}" (kriging variance matrix adding three times the prediction standard errors for each Cholesky entry)
- defined by `\code{qsd$var.type}`, where the prefix "\code{w}" indicats its corresponding weighted version of
- the approximation type. If `\code{theta}` is not given, then no prediction variances are included and thus the variance matrix estimate of the statistics only refers to the variances due to simulation replications
- and not the ones due to the use of kriging approximations of the statistics. Otherwise, the mean variance matrix estimate is given by
- \deqn{ \hat{V}+\textrm{diag}(\sigma(\theta)),} where \eqn{\hat{V}} denotes one of the above variance approximation types.
-
- The prediction variances \eqn{\sigma} are either derived from the kriging results of statistics or based on a (possibly more robust)
- cross-validation (CV) approach, see vignette for details.
+ distant to an estimate of the model parameter \code{theta}. A reasonable symmetric weighting matrix 
+ \code{W} of size equal to the problem dimension, say \code{q}, can be freely chosen by the user. In addition, the user can select
+ different types of weighted variance averaging methods such as "\code{wcholMean}", "\code{wlogMean}",
+ "\code{kriging}" (kriging the variance matrix of statitics) defined by \code{qsd$var.type}. If \code{theta} is given, then prediction variances
+ of the statistics are either derived from the kriging results of the statistics at \code{theta} or based on a (possibly more robust)
+ cross-validation (CV) approach, see the vignette for details.
 }
 \examples{
  data(normal)

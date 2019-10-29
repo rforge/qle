@@ -4,8 +4,8 @@
 \alias{qscoring}
 \title{Quasi-scoring iteration}
 \usage{
-qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
-  check = TRUE, cvm = NULL, Iobs = TRUE, verbose = FALSE)
+qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., check = TRUE,
+  cvm = NULL, Iobs = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
@@ -14,17 +14,17 @@ qscoring(qsd, x0, opts = list(), Sigma = NULL, ..., inverted = FALSE,
 
 \item{opts}{quasi-scoring options, see details}
 
-\item{Sigma}{a prespecified variance matrix estimate}
+\item{Sigma}{a prespecified constant variance matrix estimate}
 
 \item{...}{further arguments passed to the function \code{\link{covarTx}}}
 
-\item{inverted}{currently ignored}
-
 \item{check}{logical, \code{TRUE} (default), whether to check input arguments}
 
-\item{cvm}{list of covariance models for cross-validation (see \code{\link{prefitCV}})}
+\item{cvm}{optional, either list of covariance models of the statistics for cross-validation based estimation of prediction variances of the statistics or
+of class \code{cv} or list of cross-validation models of class \code{cvfull} of the QL model \code{qsd} for computation of the quasi-deviance
+and error estimation of the quasi-score approximation w.r.t the kriging prediction models (see \code{\link{prefitCV}})}
 
-\item{Iobs}{logical, \code{FALSE} (default), whether to compute the observed quasi-information matrix at the final estimate}
+\item{Iobs}{optional, if \code{TRUE} (default), compute observed quasi-information by finite difference approximations of the quasi-score vector}
 
 \item{verbose}{logical, \code{FALSE} (default), otherwise print intermediate output}
 }
@@ -60,8 +60,7 @@ The function implements a step-length controlled quasi-scoring iteration with si
  are included in the computation during all iterations through the inverse quasi-information matrix as part of the search direction. If fitted covariance models `\code{cvm}` are supplied by the user
  in advance (see \code{\link{prefitCV}}), the variances of prediction errors of each statistic are separately evaluated by the proposed CV
  approach for each new point. For the price of relatively high computational costs those prediction variances
- are intended to increase the robustness against false roots due to simulation and approximation errors of the quasi-score function.
-  
+ are intended to increase the robustness against false roots due to simulation and approximation errors of the quasi-score function.#'   
  }
 
  The following algorithmic options, which can be set by `\code{opts}`, are available:

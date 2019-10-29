@@ -14,21 +14,21 @@ and to choose `\code{kmax}` statistics given the QL model `\code{qsd}`}
 
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
-\item{kmax}{number of statistics to be selectnred (q <= \code{kmax} <= p)}
+\item{kmax}{number of statistics to be selected with q <= \code{kmax} <= p}
 
 \item{cumprop}{numeric vector either of length one (then replicated) or equal to the length of `\code{theta}` which sets the
 proportions (0 < \code{cumprop} <= 1) of minimum overall contributions to each parameter component given the statistics}
 
-\item{...}{further arguments passed to \code{\link{quasiDeviance}} or \code{\link{mahalDist}}}
+\item{...}{further arguments passed to \code{\link{quasiDeviance}}}
 
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
 
-\item{verbose}{logical, \code{TRUE} for intermediate output}
+\item{verbose}{logical, \code{FALSE} (default) for intermediate output}
 }
 \value{
 A list which consists of 
 	\item{id}{ indices of corresponding statistics}
-	\item{names}{ names of statistics (if provided)}
+	\item{Tmax}{ named vector of \code{id} corresponding maximum values of statistics}
  \item{cumprop}{ cumulated proportions of contributions of selected statistics to each of the parameter components} 
  \item{sorted}{ list of statistics (for each parameter) sorted in decreasing order of proportional contributions to the quasi-information}
 }

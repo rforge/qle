@@ -4,21 +4,25 @@
 \alias{prefitCV}
 \title{Covariance parameter estimation for cross-validation}
 \usage{
-prefitCV(qsd, reduce = TRUE, type = c("cv", "max"), control = list(),
-  cl = NULL, verbose = FALSE)
+prefitCV(qsd, reduce = TRUE, type = c("cv", "cvfull"),
+  control = list(), cl = NULL, verbose = FALSE)
 }
 \arguments{
 \item{qsd}{object of class \code{\link{QLmodel}}}
 
 \item{reduce}{if \code{TRUE} (default), reduce the number of covariance models to refit}
 
-\item{type}{type of prediction variances, "\code{cv}" (default) and "\code{max}", see \code{\link{crossValTx}}}
+\item{type}{type of prediction variances, "\code{cv}" (default) or "\code{cvfull}", see \code{\link{crossValTx}}}
 
 \item{control}{control arguments for REML estimation, passed to \code{\link[nloptr]{nloptr}}}
 
 \item{cl}{cluster object, \code{NULL} (default), of class \code{MPIcluster}, \code{SOCKcluster}, \code{cluster}}
 
 \item{verbose}{if \code{TRUE}, print intermediate output}
+
+\item{stats.only}{logical, \code{TRUE} (default), only return list of updated cross-validation covariance models of statistics}
+
+\item{return.qsd}{logical, \code{FALSE} (default), return list of QL models for cross-validation}
 }
 \value{
 A list of certain length depending on the current sample size (number of evaluated points).
