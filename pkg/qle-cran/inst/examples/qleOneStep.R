@@ -21,11 +21,9 @@ ctls <- list("stopval"=1e-10,"maxeval"=1000)
 
 ## Using `nloptr`directly,
 ## though quite slow but possible	 
-S0 <- nloptr::direct("mahalDist",
-					 lower=lower,
-					 upper=upper,
-					 control=ctls,
-			    qsd=qsd, value.only=TRUE)
+S0 <- nloptr::direct("quasiDeviance",
+		 lower=lower, upper=upper, control=ctls,
+		 qsd=qsd, criterion="mahal", value.only=TRUE)
 
 print(S0) 
 
